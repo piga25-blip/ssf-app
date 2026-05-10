@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.claude/
+
+# Fichiers de backup
+*.bak
+*.bak2
+assets/SSF_old.ico
+
+# Binaires compilés du bootstrapper
+bootstrapper/SSF-Bootstrap.exe
+bootstrapper/SSF-Bootstrap2.exe
+
+# Documents Office
+*.docx
+
+# Fichiers HTML de l'ancienne version standalone
+App_SSF_*.html

@@ -1,0 +1,20 @@
+{
+  "name": "ssf-app",
+  "productName": "Application SSF",
+  "version": "13.37.0",
+  "description": "Application SSF - Secours Souterrain Français",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "set NODE_TLS_REJECT_UNAUTHORIZED=0 && electron-builder build --win",
+    "build:dir": "set NODE_TLS_REJECT_UNAUTHORIZED=0 && electron-builder build --win --dir",
+    "publish": "set NODE_TLS_REJECT_UNAUTHORIZED=0 && electron-builder build --win --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}

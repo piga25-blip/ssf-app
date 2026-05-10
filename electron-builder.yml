@@ -1,0 +1,36 @@
+appId: fr.ssf.app
+productName: Application SSF
+copyright: Copyright © 2026 Secours Souterrain Français
+
+directories:
+  output: dist
+  buildResources: assets
+
+files:
+  - "**/*"
+  - "!dist/**"
+  - "!.git/**"
+  - "!.claude/**"
+  - "!App_SSF_*"
+
+win:
+  icon: assets/SSF.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Application SSF
+
+publish:
+  provider: github
+  owner: piga25-blip
+  repo: ssf-app
+  releaseType: release
+  private: false
