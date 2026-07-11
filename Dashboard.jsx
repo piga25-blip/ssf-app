@@ -564,6 +564,7 @@ const DashboardTab = ({
     const [showReportPreview, setShowReportPreview] = React.useState(false);
     const [dashboardSauveteurPage, setDashboardSauveteurPage] = React.useState(0);
     const [modalSauveteurPage, setModalSauveteurPage] = React.useState(0);
+    useCloseOnEscape(showReportPreview ? () => setShowReportPreview(false) : null);
 
     // Fonction pour générer un rapport de fin de mission
     const generateMissionReport = () => {
@@ -1281,7 +1282,8 @@ const DashboardTab = ({
 
             {/* Modal de Prévisualisation du Rapport */}
             {showReportPreview && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <ModalErrorBoundary onClose={() => setShowReportPreview(false)}>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
                         {/* En-tête du modal */}
                         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 flex justify-between items-center">
@@ -1631,6 +1633,7 @@ const DashboardTab = ({
                         </div>
                     </div>
                 </div>
+                </ModalErrorBoundary>
             )}
         </div>
     );

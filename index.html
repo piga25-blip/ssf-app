@@ -29,9 +29,11 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
 
-        /* --- FIX: Priorité d'affichage des modales (supérieur au z-index 120 du planning) --- */
-        .fixed.inset-0 {
-            z-index: 9999 !important;
+        /* --- FIX: Priorité d'affichage des modales (supérieur au z-index 120 du planning) ---
+           Scopé à .modal-overlay (et non à tout .fixed.inset-0) pour qu'un backdrop
+           orphelin ailleurs dans l'app ne se retrouve pas au-dessus de tout par défaut. */
+        .modal-overlay {
+            z-index: 1000 !important;
         }
         
         :root {
@@ -977,8 +979,9 @@
             // Composant Modal Sauvegardes
             const AutoSaveModal = () => {
                 const saves = getAutoSaves();
+                useCloseOnEscape(() => setShowAutoSaveModal(false));
                 return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
                         <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-auto">
                             <div className="p-6">
                                 <div className="flex justify-between items-center mb-4">
@@ -1593,6 +1596,17 @@
                                         <input type="file" accept=".json" onChange={handleImportEventsOnly} className="hidden" />
                                     </label>
                                 )}
+
+                                {/* Bouton Import/Fusion avec aperçu (MC Secondaire) */}
+                                {(!mcMode || mcMode === 'principale') && (
+                                    <button
+                                        onClick={() => setShowImportMcModal(true)}
+                                        className="bg-purple-800 text-white px-4 py-2 rounded-lg hover:bg-purple-900 font-semibold text-sm"
+                                        title="Importer une MC Secondaire avec aperçu de la fusion avant confirmation"
+                                    >
+                                        📥 Importer MC (aperçu)
+                                    </button>
+                                )}
                                 
                                 <button 
                                     onClick={toggleFullscreen}
@@ -1745,80 +1759,94 @@
 
                         {/* MODALES */}
                         {showGestionSecretaires && (
-                            <GestionSecretairesModal 
-                                secretaires={secretaires}
-                                setSecretaires={setSecretaires}
-                                onClose={() => setShowGestionSecretaires(false)}
-                            />
+                            <ModalErrorBoundary onClose={() => setShowGestionSecretaires(false)}>
+                                <GestionSecretairesModal
+                                    secretaires={secretaires}
+                                    setSecretaires={setSecretaires}
+                                    onClose={() => setShowGestionSecretaires(false)}
+                                />
+                            </ModalErrorBoundary>
                         )}
 
                         {showGestionPointsPhone && (
-                            <GestionPointsPhoneModal 
-                                pointsPhone={pointsPhone}
-                                setPointsPhone={setPointsPhone}
-                                events={events}
-                                setEvents={setEvents}
-                                onClose={() => setShowGestionPointsPhone(false)}
-                            />
+                            <ModalErrorBoundary onClose={() => setShowGestionPointsPhone(false)}>
+                                <GestionPointsPhoneModal
+                                    pointsPhone={pointsPhone}
+                                    setPointsPhone={setPointsPhone}
+                                    events={events}
+                                    setEvents={setEvents}
+                                    onClose={() => setShowGestionPointsPhone(false)}
+                                />
+                            </ModalErrorBoundary>
                         )}
 
                         {showGestionListe && (
-                            <GestionListeModal 
-                                masterSauveteursList={masterSauveteursList}
-                                setMasterSauveteursList={setMasterSauveteursList}
-                                activeSauveteurIds={activeSauveteurIds}
-                                onClose={() => setShowGestionListe(false)}
-                            />
+                            <ModalErrorBoundary onClose={() => setShowGestionListe(false)}>
+                                <GestionListeModal
+                                    masterSauveteursList={masterSauveteursList}
+                                    setMasterSauveteursList={setMasterSauveteursList}
+                                    activeSauveteurIds={activeSauveteurIds}
+                                    onClose={() => setShowGestionListe(false)}
+                                />
+                            </ModalErrorBoundary>
                         )}
 
                         {showGestionPlanning && (
-                            <GestionPlanningModal 
-                                masterSauveteursList={masterSauveteursList}
-                                activeSauveteurIds={activeSauveteurIdsPresents}
-                                setActiveSauveteurIds={setActiveSauveteurIds}
-                                teams={teams}
-                                setTeams={setTeams}
-                                events={events}
-                                setEvents={setEvents}
-                                nextEventNumber={nextEventNumber}
-                                setNextEventNumber={setNextEventNumber}
-                                planning={planning}
-                                setPlanning={setPlanning}
-                                totalDays={totalDays}
-                                onClose={() => setShowGestionPlanning(false)}
-                                handleAddSauveteurToPlanning={handleAddSauveteurToPlanning}
-                                mcMode={mcMode}
-                                mcIdentifiant={mcIdentifiant}
-                                startHour={startHour}
-                            />
+                            <ModalErrorBoundary onClose={() => setShowGestionPlanning(false)}>
+                                <GestionPlanningModal
+                                    masterSauveteursList={masterSauveteursList}
+                                    activeSauveteurIds={activeSauveteurIdsPresents}
+                                    setActiveSauveteurIds={setActiveSauveteurIds}
+                                    teams={teams}
+                                    setTeams={setTeams}
+                                    events={events}
+                                    setEvents={setEvents}
+                                    nextEventNumber={nextEventNumber}
+                                    setNextEventNumber={setNextEventNumber}
+                                    planning={planning}
+                                    setPlanning={setPlanning}
+                                    totalDays={totalDays}
+                                    onClose={() => setShowGestionPlanning(false)}
+                                    handleAddSauveteurToPlanning={handleAddSauveteurToPlanning}
+                                    mcMode={mcMode}
+                                    mcIdentifiant={mcIdentifiant}
+                                    startHour={startHour}
+                                />
+                            </ModalErrorBoundary>
                         )}
 
                         {showGestionEquipes && (
-                            <GestionEquipesModal 
-                                teams={teams}
-                                setTeams={setTeams}
-                                usedTeamNumbers={usedTeamNumbers}
-                                setUsedTeamNumbers={setUsedTeamNumbers}
-                                masterSauveteursList={masterSauveteursList}
-                                activeSauveteurIds={activeSauveteurIds}
-                                events={events}
-                                setEvents={setEvents}
-                                nextEventNumber={nextEventNumber}
-                                setNextEventNumber={setNextEventNumber}
-                                onClose={() => setShowGestionEquipes(false)}
-                                mcMode={mcMode}
-                                mcIdentifiant={mcIdentifiant}
-                                startHour={startHour}
-                                totalDays={totalDays}
-                                planning={planning}
-                                setPlanning={setPlanning}
-                                 verifierEtPropagerAvantAction={verifierEtPropagerAvantAction}
-                                 pointsPhone={pointsPhone}
-                                 sauveursAyantQuitte={sauveursAyantQuitte}
-                            />
+                            <ModalErrorBoundary onClose={() => setShowGestionEquipes(false)}>
+                                <GestionEquipesModal
+                                    teams={teams}
+                                    setTeams={setTeams}
+                                    usedTeamNumbers={usedTeamNumbers}
+                                    setUsedTeamNumbers={setUsedTeamNumbers}
+                                    masterSauveteursList={masterSauveteursList}
+                                    activeSauveteurIds={activeSauveteurIds}
+                                    events={events}
+                                    setEvents={setEvents}
+                                    nextEventNumber={nextEventNumber}
+                                    setNextEventNumber={setNextEventNumber}
+                                    onClose={() => setShowGestionEquipes(false)}
+                                    mcMode={mcMode}
+                                    mcIdentifiant={mcIdentifiant}
+                                    startHour={startHour}
+                                    totalDays={totalDays}
+                                    planning={planning}
+                                    setPlanning={setPlanning}
+                                     verifierEtPropagerAvantAction={verifierEtPropagerAvantAction}
+                                     pointsPhone={pointsPhone}
+                                     sauveursAyantQuitte={sauveursAyantQuitte}
+                                />
+                            </ModalErrorBoundary>
                         )}
 
-                        {showAutoSaveModal && <AutoSaveModal />}
+                        {showAutoSaveModal && (
+                            <ModalErrorBoundary onClose={() => setShowAutoSaveModal(false)}>
+                                <AutoSaveModal />
+                            </ModalErrorBoundary>
+                        )}
 
                         {/* ── MODALE DURÉE DE REPOS (niveau racine — visible depuis tous les onglets) ── */}
                         {modalRepos && (() => {
@@ -1918,20 +1946,26 @@
                         })()}
 
                         {(!mcConfigured || showMcConfigModal) && (
-                            <McConfigModal
-                                mcMode={mcMode}
-                                setMcMode={setMcMode}
-                                mcIdentifiant={mcIdentifiant}
-                                setMcIdentifiant={setMcIdentifiant}
-                                onConfirm={() => {
-                                    setMcConfigured(true);
-                                    setShowMcConfigModal(false);
-                                }}
-                                onClose={() => mcConfigured && setShowMcConfigModal(false)}
-                            />
+                            <ModalErrorBoundary onClose={() => mcConfigured && setShowMcConfigModal(false)}>
+                                <McConfigModal
+                                    mcMode={mcMode}
+                                    setMcMode={setMcMode}
+                                    mcIdentifiant={mcIdentifiant}
+                                    setMcIdentifiant={setMcIdentifiant}
+                                    onConfirm={() => {
+                                        try {
+                                            setMcConfigured(true);
+                                        } finally {
+                                            setShowMcConfigModal(false);
+                                        }
+                                    }}
+                                    onClose={() => mcConfigured && setShowMcConfigModal(false)}
+                                />
+                            </ModalErrorBoundary>
                         )}
 
                         {showMissionInfoModal && (
+                            <ModalErrorBoundary>
                             <MissionInfoModal
                                 initialMissionInfo={missionInfo}
                                 onSkip={() => {
@@ -1939,73 +1973,88 @@
                                     setShowModeSelectionModal(true);
                                 }}
                                 onConfirm={(info) => {
-                                    setMissionInfo(info);
-                                    if (info.rouvrir) {
-                                        setCurrentRescueId(info.rescueId);
-                                        setTempRescueIdInput(info.rescueId);
-                                        // Charger directement depuis les données brutes passées
-                                        if (info.rawData) {
-                                            try {
-                                                const data = JSON.parse(info.rawData);
-                                                setMasterSauveteursList(data.masterSauveteursList || []);
-                                                setActiveSauveteurIds(data.activeSauveteurIds || []);
-                                                setSauveteurPermanentNumbers(data.sauveteurPermanentNumbers || {});
-                                                setNextPermanentNumber(data.nextPermanentNumber || 1);
-                                                setTeams(data.teams || []);
-                                                setUsedTeamNumbers(data.usedTeamNumbers || []);
-                                                setSecretaires(data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
-                                                const loadedPP = data.pointsPhone || [];
-                                                if (!loadedPP.find(pp => (typeof pp === 'object' ? pp.lettre : pp) === 'PC')) {
-                                                    loadedPP.unshift({ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 });
+                                    try {
+                                        setMissionInfo(info);
+                                        if (info.rouvrir) {
+                                            setCurrentRescueId(info.rescueId);
+                                            setTempRescueIdInput(info.rescueId);
+                                            // Charger directement depuis les données brutes passées
+                                            if (info.rawData) {
+                                                try {
+                                                    const data = JSON.parse(info.rawData);
+                                                    setMasterSauveteursList(data.masterSauveteursList || []);
+                                                    setActiveSauveteurIds(data.activeSauveteurIds || []);
+                                                    setSauveteurPermanentNumbers(data.sauveteurPermanentNumbers || {});
+                                                    setNextPermanentNumber(data.nextPermanentNumber || 1);
+                                                    setTeams(data.teams || []);
+                                                    setUsedTeamNumbers(data.usedTeamNumbers || []);
+                                                    setSecretaires(data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
+                                                    const loadedPP = data.pointsPhone || [];
+                                                    if (!loadedPP.find(pp => (typeof pp === 'object' ? pp.lettre : pp) === 'PC')) {
+                                                        loadedPP.unshift({ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 });
+                                                    }
+                                                    setPointsPhone(loadedPP);
+                                                    if (data.missionInfo) setMissionInfo(data.missionInfo);
+                                                    if (data.clotureInfo) setClotureInfo(data.clotureInfo);
+                                                    setEvents(data.events || []);
+                                                    setNextEventNumber(data.nextEventNumber || 1);
+                                                    setPlanning(data.planning || {});
+                                                    setStartHour(data.startHour || 0);
+                                                    setTotalDays(data.totalDays || DEFAULT_TOTAL_DAYS);
+                                                    setMcMode(data.mcMode || 'principale');
+                                                    setMcIdentifiant(data.mcIdentifiant || '');
+                                                    setMcConfigured(data.mcConfigured || false);
+                                                } catch(e) {
+                                                    console.error('Erreur chargement dossier:', e);
                                                 }
-                                                setPointsPhone(loadedPP);
-                                                if (data.missionInfo) setMissionInfo(data.missionInfo);
-                                                if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                                                setEvents(data.events || []);
-                                                setNextEventNumber(data.nextEventNumber || 1);
-                                                setPlanning(data.planning || {});
-                                                setStartHour(data.startHour || 0);
-                                                setTotalDays(data.totalDays || DEFAULT_TOTAL_DAYS);
-                                                setMcMode(data.mcMode || 'principale');
-                                                setMcIdentifiant(data.mcIdentifiant || '');
-                                                setMcConfigured(data.mcConfigured || false);
-                                            } catch(e) {
-                                                console.error('Erreur chargement dossier:', e);
                                             }
+                                        } else {
+                                            // Nouveau dossier : générer l'ID
+                                            const today = new Date();
+                                            const dateStr = String(today.getDate()).padStart(2,'0') + '-' +
+                                                            String(today.getMonth()+1).padStart(2,'0') + '-' +
+                                                            today.getFullYear();
+                                            const typeLabel = info.typeSecours === 'exercice' ? 'EXERCICE' : 'SECOURS';
+                                            const generatedId = `${typeLabel} - ${info.nomCavite} - ${dateStr}`;
+                                            setCurrentRescueId(generatedId);
+                                            setTempRescueIdInput(generatedId);
                                         }
-                                        setShowMissionInfoModal(false);
-                                        setShowModeSelectionModal(true);
-                                    } else {
-                                        // Nouveau dossier : générer l'ID
-                                        const today = new Date();
-                                        const dateStr = String(today.getDate()).padStart(2,'0') + '-' +
-                                                        String(today.getMonth()+1).padStart(2,'0') + '-' +
-                                                        today.getFullYear();
-                                        const typeLabel = info.typeSecours === 'exercice' ? 'EXERCICE' : 'SECOURS';
-                                        const generatedId = `${typeLabel} - ${info.nomCavite} - ${dateStr}`;
-                                        setCurrentRescueId(generatedId);
-                                        setTempRescueIdInput(generatedId);
+                                    } catch (error) {
+                                        console.error('Erreur au démarrage de la mission :', error);
+                                        alert('⚠️ Une erreur est survenue au démarrage. Vous allez être redirigé vers l\'étape suivante.');
+                                    } finally {
+                                        // Toujours passer à l'étape suivante, même en cas d'erreur ci-dessus,
+                                        // pour ne jamais laisser cette modale de démarrage bloquée à l'écran.
                                         setShowMissionInfoModal(false);
                                         setShowModeSelectionModal(true);
                                     }
                                 }}
                             />
+                            </ModalErrorBoundary>
                         )}
 
                         {showModeSelectionModal && (
+                            <ModalErrorBoundary>
                             <ModeSelectionModal
                                 onConfirm={(mode, id) => {
-                                    setMcMode(mode);
-                                    setMcIdentifiant(id);
-                                    setMcConfigured(true);
-                                    setStandaloneMode(mode === 'principale' ? 'terrain' : 'base');
-                                    setShowModeSelectionModal(false);
-                                    
-                                    // Sauvegarder dans localStorage
-                                    storageSet('ssf_standalone_mode', mode);
-                                    storageSet('ssf_standalone_id', id);
+                                    try {
+                                        setMcMode(mode);
+                                        setMcIdentifiant(id);
+                                        setMcConfigured(true);
+                                        setStandaloneMode(mode === 'principale' ? 'terrain' : 'base');
+
+                                        // Sauvegarder dans localStorage
+                                        storageSet('ssf_standalone_mode', mode);
+                                        storageSet('ssf_standalone_id', id);
+                                    } catch (error) {
+                                        console.error('Erreur lors de la sélection du mode :', error);
+                                        alert('⚠️ Une erreur est survenue, mais la fenêtre va se fermer.');
+                                    } finally {
+                                        setShowModeSelectionModal(false);
+                                    }
                                 }}
                             />
+                            </ModalErrorBoundary>
                         )}
 
                         {/* Modal d'alertes urgentes (déplaçable) */}
@@ -2105,21 +2154,25 @@
                             </div>
                         )}
                         {showSecretaireModal && (
-                            <SecretaireModal
-                                currentSecretaire={currentSecretaire}
-                                setCurrentSecretaire={setCurrentSecretaire}
-                                onClose={() => setShowSecretaireModal(false)}
-                            />
+                            <ModalErrorBoundary onClose={() => setShowSecretaireModal(false)}>
+                                <SecretaireModal
+                                    currentSecretaire={currentSecretaire}
+                                    setCurrentSecretaire={setCurrentSecretaire}
+                                    onClose={() => setShowSecretaireModal(false)}
+                                />
+                            </ModalErrorBoundary>
                         )}
 
                         {showImportMcModal && (
-                            <ImportMcModal
-                                events={events}
-                                setEvents={setEvents}
-                                nextEventNumber={nextEventNumber}
-                                setNextEventNumber={setNextEventNumber}
-                                onClose={() => setShowImportMcModal(false)}
-                            />
+                            <ModalErrorBoundary onClose={() => setShowImportMcModal(false)}>
+                                <ImportMcModal
+                                    events={events}
+                                    setEvents={setEvents}
+                                    nextEventNumber={nextEventNumber}
+                                    setNextEventNumber={setNextEventNumber}
+                                    onClose={() => setShowImportMcModal(false)}
+                                />
+                            </ModalErrorBoundary>
                         )}
                     </div>
                 </div>

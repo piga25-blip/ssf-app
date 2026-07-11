@@ -7,6 +7,7 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [sortColumn, setSortColumn] = useState('numero'); // numero, secretaire, timestamp, categorie
     const [sortDirection, setSortDirection] = useState('desc'); // asc ou desc
+    useCloseOnEscape(onClose);
 
     const now = new Date();
 
@@ -87,7 +88,7 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
                 case 'numero':
                     // Extraire le nombre du numéro (ex: "001" -> 1, "A-001" -> 1)
                     const getNumericPart = (num) => {
-                        const match = num.match(/(\d+)$/);
+                        const match = (num || '').match(/(\d+)$/);
                         return match ? parseInt(match[1]) : 0;
                     };
                     compareA = getNumericPart(a.numero);
@@ -140,7 +141,7 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
             <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto">
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
@@ -459,6 +460,12 @@ const MainCouranteTab = ({
     const focusDestinataire = () => setTimeout(() => refDestinataire.current?.focus(), 60);
     // ────────────────────────────────────────────────────────────────────
     const [editingEvent, setEditingEvent] = useState(null); // Événement en cours d'édition
+    useCloseOnEscape(() => {
+        // handleCancelEdit est défini plus bas dans ce composant ; la closure
+        // capture la liaison à jour, résolue au moment où Echap est réellement pressé.
+        if (insertAfterEvent) setInsertAfterEvent(null);
+        if (editingEvent) handleCancelEdit();
+    });
     const [editFormData, setEditFormData] = useState({
         secretaire: '',
         messageImportant: false,
@@ -1248,7 +1255,7 @@ const MainCouranteTab = ({
         // Générer le nouveau numéro en ajoutant un suffixe (ex: 5a, 5b)
         const baseNumero = insertAfterEvent.numero;
         const existingSuffixes = events
-            .filter(e => e.numero.startsWith(baseNumero) && e.numero !== baseNumero)
+            .filter(e => e.numero && e.numero.startsWith(baseNumero) && e.numero !== baseNumero)
             .map(e => e.numero.replace(baseNumero, ''))
             .filter(s => s.match(/^[a-z]$/));
         
@@ -1388,7 +1395,8 @@ const MainCouranteTab = ({
         <div>
             {/* Modal d'insertion d'événement */}
             {insertAfterEvent && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <ModalErrorBoundary onClose={() => setInsertAfterEvent(null)}>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
                     <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-auto">
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-6">
@@ -1660,6 +1668,7 @@ const MainCouranteTab = ({
                         </div>
                     </div>
                 </div>
+                </ModalErrorBoundary>
             )}
 
             <div className="space-y-4 mb-6">
@@ -2157,10 +2166,12 @@ const MainCouranteTab = ({
 
             {/* Modal de recherche */}
             {showSearchModal && (
-                <RechercheMainCouranteModal 
-                    events={events}
-                    onClose={() => setShowSearchModal(false)}
-                />
+                <ModalErrorBoundary onClose={() => setShowSearchModal(false)}>
+                    <RechercheMainCouranteModal
+                        events={events}
+                        onClose={() => setShowSearchModal(false)}
+                    />
+                </ModalErrorBoundary>
             )}
 
             {/* Barre de recherche rapide */}
@@ -2217,7 +2228,7 @@ const MainCouranteTab = ({
                             case 'numero':
                                 const parseNumero = (num) => {
                                     // Extraire la partie numérique et le suffixe alphabétique
-                                    const match = num.match(/^(\d+)([a-z]*)$/i);
+                                    const match = (num || '').match(/^(\d+)([a-z]*)$/i);
                                     if (match) {
                                         return {
                                             numeric: parseInt(match[1]),
@@ -2283,7 +2294,8 @@ const MainCouranteTab = ({
 
             {/* Modal d'édition d'événement */}
             {editingEvent && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <ModalErrorBoundary onClose={handleCancelEdit}>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
                     <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto">
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-6">
@@ -2534,6 +2546,7 @@ const MainCouranteTab = ({
                         </div>
                     </div>
                 </div>
+                </ModalErrorBoundary>
             )}
 
 
@@ -2619,7 +2632,7 @@ const MainCouranteTab = ({
                                     case 'numero':
                                         const parseNumero = (num) => {
                                             // Extraire la partie numérique et le suffixe alphabétique
-                                            const match = num.match(/(\d+)([a-z]*)$/i);
+                                            const match = (num || '').match(/(\d+)([a-z]*)$/i);
                                             if (match) {
                                                 return {
                                                     numeric: parseInt(match[1]),
@@ -2667,7 +2680,7 @@ const MainCouranteTab = ({
                             }).map((event) => {
                                 // Calculer le numéro maximum (sans suffixe) pour déterminer si on peut insérer
                                 const getBaseNumeric = (num) => {
-                                    const match = num.match(/(\d+)/);
+                                    const match = (num || '').match(/(\d+)/);
                                     return match ? parseInt(match[1]) : 0;
                                 };
                                 

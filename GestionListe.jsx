@@ -8,6 +8,7 @@ const GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, acti
     const [sortField, setSortField] = useState('name');
     const [sortDirection, setSortDirection] = useState('asc');
     const [searchTerm, setSearchTerm] = useState('');
+    useCloseOnEscape(onClose);
 
     // Générer le prochain ID automatiquement
     const genererProchainId = () => {
@@ -172,7 +173,7 @@ const GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, acti
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
             <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-auto">
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">

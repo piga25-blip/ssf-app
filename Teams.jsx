@@ -19,6 +19,7 @@ const GestionEquipesModal = ({
     const [equipeLieu, setEquipeLieu] = useState(''); // 'souterre', 'surface', 'horssite' — vide = non sélectionné
     const [draggedMember, setDraggedMember] = useState(null); // Membre en cours de glissement
     const [draggedTeamId, setDraggedTeamId] = useState(null); // ID de l'équipe concernée
+    useCloseOnEscape(onClose);
     const [editingTeam, setEditingTeam] = useState(null); // Équipe en cours d'édition
     const [showKeywordsModal, setShowKeywordsModal] = useState(false); // Modal de gestion des mots-clés
 
@@ -974,6 +975,7 @@ const GestionEquipesModal = ({
         const [editingTypes, setEditingTypes] = useState(JSON.parse(JSON.stringify(typesMission)));
         const [editingTypeId, setEditingTypeId] = useState(null);
         const [newKeyword, setNewKeyword] = useState('');
+        useCloseOnEscape(() => setShowKeywordsModal(false));
 
         const ajouterMotCle = (typeId) => {
             if (!newKeyword.trim()) return;
@@ -1009,7 +1011,7 @@ const GestionEquipesModal = ({
         };
 
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4 modal-overlay">
                 <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto">
                     <div className="p-6">
                         <div className="flex justify-between items-center mb-6">
@@ -1097,7 +1099,7 @@ const GestionEquipesModal = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
             <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto">
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
@@ -1119,7 +1121,11 @@ const GestionEquipesModal = ({
                         <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                     </div>
 
-                    {showKeywordsModal && <ModalMotsCles />}
+                    {showKeywordsModal && (
+                        <ModalErrorBoundary onClose={() => setShowKeywordsModal(false)}>
+                            <ModalMotsCles />
+                        </ModalErrorBoundary>
+                    )}
 
                     <div className="grid grid-cols-2 gap-6">
                         <div className="bg-amber-50 p-4 rounded-lg">

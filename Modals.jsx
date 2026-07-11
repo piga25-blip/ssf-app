@@ -3,6 +3,7 @@
 // ============================================
 const GestionSecretairesModal = ({ secretaires, setSecretaires, onClose }) => {
     const [nouveauSecretaire, setNouveauSecretaire] = useState('');
+    useCloseOnEscape(onClose);
 
     const ajouterSecretaire = () => {
         if (!nouveauSecretaire.trim()) {
@@ -24,7 +25,7 @@ const GestionSecretairesModal = ({ secretaires, setSecretaires, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
             <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto">
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
@@ -82,6 +83,7 @@ const GestionPlanningModal = ({
 }) => {
     const [selectedSauveteurs, setSelectedSauveteurs] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    useCloseOnEscape(onClose);
 
     const listePrefectorale = masterSauveteursList
         .filter(s => !activeSauveteurIds.includes(s.id))
@@ -208,7 +210,7 @@ const GestionPlanningModal = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
             <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-auto">
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
@@ -301,19 +303,26 @@ const GestionPlanningModal = ({
 const McConfigModal = ({ mcMode, setMcMode, mcIdentifiant, setMcIdentifiant, onConfirm, onClose }) => {
     const [localMode, setLocalMode] = React.useState(mcMode || 'principale');
     const [localId, setLocalId] = React.useState(mcIdentifiant || '');
+    useCloseOnEscape(onClose);
 
     const handleConfirm = () => {
 if (localMode === 'secondaire' && !localId.trim()) {
     alert('Veuillez saisir un identifiant pour la main courante secondaire (ex: A, B, CT1, CT2...)');
     return;
 }
-setMcMode(localMode);
-setMcIdentifiant(localMode === 'secondaire' ? localId.trim().toUpperCase() : '');
-onConfirm();
+try {
+    setMcMode(localMode);
+    setMcIdentifiant(localMode === 'secondaire' ? localId.trim().toUpperCase() : '');
+} catch (error) {
+    console.error('Erreur configuration Main Courante :', error);
+    alert('⚠️ Une erreur est survenue, mais la fenêtre va se fermer.');
+} finally {
+    onConfirm();
+}
     };
 
     return (
-<div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4">
+<div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[100] p-4 modal-overlay">
     <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full">
         <div className="p-8">
             <div className="text-center mb-8">
@@ -430,20 +439,27 @@ onConfirm();
 // Modal de changement de secrétaire
 const SecretaireModal = ({ currentSecretaire, setCurrentSecretaire, onClose }) => {
     const [newName, setNewName] = React.useState(currentSecretaire || '');
+    useCloseOnEscape(onClose);
 
     const handleSave = () => {
-if (newName.trim()) {
+if (!newName.trim()) {
+    alert('⚠️ Veuillez entrer un nom');
+    return;
+}
+try {
     setCurrentSecretaire(newName.trim());
     localStorage.setItem('ssf_current_secretaire', newName.trim());
     alert(`✅ Secrétaire enregistré : ${newName.trim()}\n\nCe nom sera automatiquement utilisé pour vos prochains événements.`);
+} catch (error) {
+    console.error('Erreur enregistrement secrétaire :', error);
+    alert('⚠️ Une erreur est survenue, mais la fenêtre va se fermer.');
+} finally {
     onClose();
-} else {
-    alert('⚠️ Veuillez entrer un nom');
 }
     };
 
     return (
-<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
     <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-blue-800">👤 Secrétaire de ce PC</h2>
@@ -562,7 +578,7 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
     const isExercice = typeSecours === 'exercice';
 
     return (
-<div className="fixed inset-0 flex items-center justify-center z-[200] p-4"
+<div className="fixed inset-0 flex items-center justify-center z-[200] p-4 modal-overlay"
     style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
     <div className="bg-white rounded-2xl shadow-2xl w-full overflow-hidden" style={{ maxWidth: '680px', maxHeight: '95vh', display: 'flex', flexDirection: 'column' }}>
 
@@ -754,26 +770,33 @@ const ModeSelectionModal = ({ onConfirm }) => {
     const [identifiant, setIdentifiant] = React.useState('');
 
     const handleConfirm = () => {
-if (selectedMode === 'terrain') {
-    // PC de Terrain : mode principale, numérotation simple
-    onConfirm('principale', '');
-} else if (selectedMode === 'planning') {
-    // Mode Planning Déporté : mode secondaire, identifiant PLANNING
-    onConfirm('secondaire', 'PLANNING');
-} else if (selectedMode === 'base') {
-    // PC Base Arrière : mode secondaire, avec identifiant
-    if (!identifiant.trim()) {
-        alert('⚠️ Veuillez saisir un identifiant pour le PC Base Arrière');
-        return;
-    }
-    onConfirm('secondaire', identifiant.trim());
-} else {
+if (selectedMode === 'base' && !identifiant.trim()) {
+    alert('⚠️ Veuillez saisir un identifiant pour le PC Base Arrière');
+    return;
+}
+if (!['terrain', 'planning', 'base'].includes(selectedMode)) {
     alert('⚠️ Veuillez sélectionner un mode');
+    return;
+}
+try {
+    if (selectedMode === 'terrain') {
+        // PC de Terrain : mode principale, numérotation simple
+        onConfirm('principale', '');
+    } else if (selectedMode === 'planning') {
+        // Mode Planning Déporté : mode secondaire, identifiant PLANNING
+        onConfirm('secondaire', 'PLANNING');
+    } else {
+        // PC Base Arrière : mode secondaire, avec identifiant
+        onConfirm('secondaire', identifiant.trim());
+    }
+} catch (error) {
+    console.error('Erreur sélection du mode :', error);
+    alert('⚠️ Une erreur est survenue lors de la configuration du mode. Veuillez réessayer.');
 }
     };
 
     return (
-<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
     <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full p-8">
         <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-blue-800 mb-2">Application SSF Unifiée{APP_VERSION ? ' - Version ' + APP_VERSION : ''}</h1>
@@ -918,6 +941,7 @@ const ImportMcModal = ({ events, setEvents, nextEventNumber, setNextEventNumber,
     const [importedData, setImportedData] = React.useState(null);
     const [mergePreview, setMergePreview] = React.useState([]);
     const [showConfirm, setShowConfirm] = React.useState(false);
+    useCloseOnEscape(onClose);
 
     const handleFileUpload = (e) => {
 const file = e.target.files[0];
@@ -981,25 +1005,32 @@ return new Date(0);
     const confirmMerge = () => {
 if (!importedData) return;
 
-// Mettre à jour les événements
-setEvents(mergePreview);
+try {
+    // Mettre à jour les événements
+    setEvents(mergePreview);
 
-// Mettre à jour le prochain numéro si nécessaire
-const maxNum = Math.max(
-    nextEventNumber,
-    ...(importedData.events || []).map(e => {
-        const match = e.numero.match(/\d+/);
-        return match ? parseInt(match[0], 10) + 1 : 0;
-    })
-);
-setNextEventNumber(maxNum);
+    // Mettre à jour le prochain numéro si nécessaire
+    const importedEvents = importedData.events || [];
+    const maxNum = Math.max(
+        nextEventNumber,
+        ...importedEvents.map(e => {
+            const match = e.numero && e.numero.match(/\d+/);
+            return match ? parseInt(match[0], 10) + 1 : 0;
+        })
+    );
+    setNextEventNumber(maxNum);
 
-alert(`✓ ${importedData.events.length} événement(s) de la MC "${importedData.mcIdentifiant}" fusionné(s) avec succès !`);
-onClose();
+    alert(`✓ ${importedEvents.length} événement(s) de la MC "${importedData.mcIdentifiant}" fusionné(s) avec succès !`);
+} catch (error) {
+    console.error('Erreur lors de la fusion des événements importés :', error);
+    alert('❌ Une erreur est survenue pendant la fusion. La fenêtre va se fermer sans appliquer la fusion.');
+} finally {
+    onClose();
+}
     };
 
     const getSourceBadge = (event) => {
-if (!event.numero.match(/^[A-Z]+[0-9]*-/)) {
+if (!event.numero || !event.numero.match(/^[A-Z]+[0-9]*-/)) {
     return <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-bold">PC</span>;
 }
 const prefix = event.numero.split('-')[0];
@@ -1007,7 +1038,7 @@ return <span className="bg-amber-500 text-white px-2 py-1 rounded text-xs font-b
     };
 
     return (
-<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4 modal-overlay">
     <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto">
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
