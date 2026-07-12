@@ -4,10 +4,9 @@
 // Version extraite du nom de fichier — calculée ici ET dans le script pré-Babel
 const APP_VERSION = (() => {
     // Priorité 1 : version Electron injectée par preload.js (app packagée ou npm start)
-    // Format package.json : "13.36.0" → affiché "13.36"
+    // Format package.json affiché tel quel : "13.39.1" → "13.39.1"
     if (window.electronAPI?.appVersion) {
-        const parts = window.electronAPI.appVersion.split('.');
-        return parts.slice(0, 2).join('.');
+        return window.electronAPI.appVersion;
     }
     // Priorité 2 : valeur calculée par le script pré-Babel (mode HTML standalone)
     if (window._SSF_VERSION) return window._SSF_VERSION;
