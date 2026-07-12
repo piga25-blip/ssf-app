@@ -1,7 +1,7 @@
 ﻿// ============================================
 // MODAL - LISTE PRÉFECTORALE
 // ============================================
-const GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, activeSauveteurIds, onClose }) => {
+let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, activeSauveteurIds, onClose }) => {
     const [nouveauSauveteur, setNouveauSauveteur] = useState({ id: '', nom: '', prenom: '', role: '', ssf: '' });
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
@@ -335,3 +335,4 @@ const GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, acti
         </div>
     );
 };
+GestionListeModal = React.memo(GestionListeModal);

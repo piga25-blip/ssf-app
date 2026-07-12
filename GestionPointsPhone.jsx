@@ -1,7 +1,7 @@
 ﻿// ============================================
 // MODAL - GESTION POINTS PHONE
 // ============================================
-const GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents, onClose }) => {
+let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents, onClose }) => {
     const [nouveauNom, setNouveauNom] = useState('');
     const [nouveauTypePP, setNouveauTypePP] = useState('');
     const [nouveauOrdre, setNouveauOrdre] = useState('');
@@ -294,3 +294,4 @@ const GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvent
         </div>
     );
 };
+GestionPointsPhoneModal = React.memo(GestionPointsPhoneModal);

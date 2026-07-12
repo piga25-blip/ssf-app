@@ -1,7 +1,7 @@
 // ============================================
 // MODAL - ÉQUIPES
 // ============================================
-const GestionEquipesModal = ({ 
+let GestionEquipesModal = ({
     teams, setTeams, usedTeamNumbers, setUsedTeamNumbers, masterSauveteursList, activeSauveteurIds,
     events, setEvents, nextEventNumber, setNextEventNumber, onClose, mcMode, mcIdentifiant,
     startHour, totalDays, planning, setPlanning, verifierEtPropagerAvantAction, pointsPhone, sauveursAyantQuitte
@@ -1746,3 +1746,4 @@ const GestionEquipesModal = ({
         </div>
     );
 };
+GestionEquipesModal = React.memo(GestionEquipesModal);

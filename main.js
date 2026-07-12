@@ -14,8 +14,10 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      // Babel standalone charge les JSX via XHR file://, nécessite webSecurity: false
-      webSecurity: false,
+      // Babel standalone charge les JSX via XHR file:// ; allowFileAccessFromFileURLs
+      // autorise ces requêtes locales sans désactiver toute la Same-Origin Policy
+      // (webSecurity: false était suspecté de causer un bug de focus clavier Electron/Windows)
+      allowFileAccessFromFileURLs: true,
     },
     title: 'Application SSF',
   });
@@ -57,6 +59,39 @@ ipcMain.on('install-update', () => {
 });
 
 ipcMain.handle('get-app-version', () => app.getVersion());
+
+// Filet de sécurité (léger) : nudge de focus côté webContents, insuffisant
+// à lui seul contre le bug ci-dessous mais conservé au cas où il aide dans
+// d'autres situations.
+ipcMain.on('refocus-window', () => {
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()) {
+    mainWindow.webContents.focus();
+  }
+});
+
+// Contournement d'un bug connu Electron/Chromium sur Windows : après la
+// fermeture d'une boîte de dialogue native bloquante (alert/confirm), la
+// fenêtre parente reste parfois bloquée côté routage clavier OS — elle est
+// visuellement au premier plan mais ne reçoit plus aucune entrée, même les
+// raccourcis DevTools. Un minimiser/restaurer force Windows à recalculer le
+// focus correctement, mais provoque une animation visible et désagréable.
+// setEnabled(false)/setEnabled(true) est l'équivalent bas niveau Windows
+// (EnableWindow) de ce qu'un dialogue natif modal fait à la fenêtre parente
+// pour la bloquer/débloquer — sans déplacer ni minimiser la fenêtre, donc
+// sans effet visuel. On reproduit ce cycle automatiquement juste après
+// chaque alert()/confirm() (voir index.html), au lieu de demander à
+// l'utilisateur de minimiser/restaurer manuellement.
+ipcMain.on('unstick-window', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.setEnabled(false);
+  setTimeout(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.setEnabled(true);
+    mainWindow.blur();
+    mainWindow.focus();
+    mainWindow.webContents.focus();
+  }, 30);
+});
 
 // Version synchrone pour preload.js (disponible avant le chargement de la page)
 ipcMain.on('get-app-version-sync', (event) => {

@@ -1,7 +1,7 @@
 ﻿// ============================================
 // COMPOSANT SYNTHÈSE AFFECTATIONS
 // ============================================
-const SyntheseTab = ({ 
+let SyntheseTab = ({
     masterSauveteursList, activeSauveteurIds, planning, totalDays, startHour
 }) => {
     const totalSlots = getTotalSlots(totalDays);
@@ -380,11 +380,12 @@ const SyntheseTab = ({
         </div>
     );
 };
+SyntheseTab = React.memo(SyntheseTab);
 
 // ============================================
 // ONGLET DASHBOARD - TABLEAU DE BORD
 // ============================================
-const DashboardTab = ({ 
+let DashboardTab = ({
     masterSauveteursList, 
     activeSauveteurIds, 
     planning, 
@@ -1638,12 +1639,12 @@ const DashboardTab = ({
         </div>
     );
 };
-
+DashboardTab = React.memo(DashboardTab);
 
 // ============================================================
 // COMPOSANT PROGRESSION DES ÉQUIPES (graphique temporel)
 // ============================================================
-const ProgressionTab = ({ events, pointsPhone, teams, masterSauveteursList }) => {
+let ProgressionTab = ({ events, pointsPhone, teams, masterSauveteursList }) => {
 
     const getTeamMembers = (teamName) => {
 				const teamObj = teams.find(t => t.name === teamName);
@@ -2038,3 +2039,4 @@ className="bg-gray-900 text-xs rounded-lg px-3 py-2 shadow-xl max-w-xs"
         </div>
     );
 };
+ProgressionTab = React.memo(ProgressionTab);

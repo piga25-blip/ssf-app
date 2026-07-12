@@ -1,6 +1,6 @@
 // COMPOSANT PLANNING
 // ============================================
-const PlanningTab = ({ 
+let PlanningTab = ({
     masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, planning, setPlanning,
     teams, startHour, setStartHour, totalDays, setTotalDays,
     selectedActivityId, setSelectedActivityId, selectedCells, setSelectedCells,
@@ -828,11 +828,12 @@ const PlanningTab = ({
         </div>
     );
 };
+PlanningTab = React.memo(PlanningTab);
 
 // ============================================
 // COMPOSANT PALETTE
 // ============================================
-const PaletteActivites = ({ 
+const PaletteActivites = ({
     selectedActivityId, 
     setSelectedActivityId,
     selectedCells,

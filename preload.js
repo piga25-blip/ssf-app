@@ -10,4 +10,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, percent) => cb(percent)),
   onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', () => cb()),
   installUpdate: () => ipcRenderer.send('install-update'),
+  refocusWindow: () => ipcRenderer.send('refocus-window'),
+  unstickWindow: () => ipcRenderer.send('unstick-window'),
 });

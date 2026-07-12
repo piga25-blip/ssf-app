@@ -1,7 +1,7 @@
 ﻿// ============================================
 // MODAL - SECRÉTAIRES
 // ============================================
-const GestionSecretairesModal = ({ secretaires, setSecretaires, onClose }) => {
+let GestionSecretairesModal = ({ secretaires, setSecretaires, onClose }) => {
     const [nouveauSecretaire, setNouveauSecretaire] = useState('');
     useCloseOnEscape(onClose);
 
@@ -73,6 +73,7 @@ const GestionSecretairesModal = ({ secretaires, setSecretaires, onClose }) => {
         </div>
     );
 };
+GestionSecretairesModal = React.memo(GestionSecretairesModal);
 // ============================================
 // MODAL - ENREGISTREMENT DES SAUVETEURS
 // ============================================
@@ -437,7 +438,7 @@ try {
     );
 };
 // Modal de changement de secrétaire
-const SecretaireModal = ({ currentSecretaire, setCurrentSecretaire, onClose }) => {
+let SecretaireModal = ({ currentSecretaire, setCurrentSecretaire, onClose }) => {
     const [newName, setNewName] = React.useState(currentSecretaire || '');
     useCloseOnEscape(onClose);
 
@@ -516,6 +517,7 @@ try {
 </div>
     );
 };
+SecretaireModal = React.memo(SecretaireModal);
 // ============================================
 // MODAL - INFORMATIONS DE MISSION (démarrage)
 // ============================================

@@ -395,7 +395,7 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
 // ============================================
 // COMPOSANT MAIN COURANTE
 // ============================================
-const MainCouranteTab = ({ 
+let MainCouranteTab = ({
     events, setEvents, nextEventNumber, setNextEventNumber,
     secretaires, sauveteursSurSiteNoms, teams, sauveteursSurSite,
     showSearchModal, setShowSearchModal, mcMode, mcIdentifiant,
@@ -2840,3 +2840,4 @@ const MainCouranteTab = ({
         </div>
     );
 };
+MainCouranteTab = React.memo(MainCouranteTab);
