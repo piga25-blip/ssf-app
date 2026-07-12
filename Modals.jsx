@@ -577,6 +577,14 @@ if (!dossierSelectionne) { alert('⚠️ Veuillez sélectionner un dossier'); re
 onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupation: 6, rouvrir: true, rescueId: dossierSelectionne.rescueId, localStorageKey: dossierSelectionne.key, rawData: dossierSelectionne.raw });
     };
 
+    const handleSupprimerDossier = (e, d) => {
+        e.stopPropagation();
+        if (!window.confirm(`⚠️ Supprimer définitivement le dossier "${d.rescueId}" ?\n\nCette action est irréversible.`)) return;
+        storageRemove(d.key);
+        setDossiersExistants(prev => prev.filter(x => x.key !== d.key));
+        if (dossierSelectionne && dossierSelectionne.key === d.key) setDossierSelectionne(null);
+    };
+
     const isExercice = typeSecours === 'exercice';
 
     return (
@@ -676,7 +684,8 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
                                 onChange={(e) => setDelaiAlerteOccupation(parseInt(e.target.value))}
                                 className="w-32 px-3 py-3 border-2 border-blue-300 rounded-lg text-xl font-bold text-center focus:border-blue-600 focus:outline-none bg-white cursor-pointer"
                             >
-                                {Array.from({length: 17}, (_, i) => i + 4).map(h => (
+                                <option value="0" disabled hidden>—</option>
+                                {Array.from({length: 20}, (_, i) => i + 1).map(h => (
                                     <option key={h} value={h}>{h}h</option>
                                 ))}
                             </select>
@@ -721,9 +730,18 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
                                                     <span>👥 {d.nbSauveteurs} sauveteur{d.nbSauveteurs > 1 ? 's' : ''}</span>
                                                 </div>
                                             </div>
-                                            {dossierSelectionne && dossierSelectionne.key === d.key && (
-                                                <div className="text-2xl text-green-600 flex-shrink-0">✅</div>
-                                            )}
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                {dossierSelectionne && dossierSelectionne.key === d.key && (
+                                                    <div className="text-2xl text-green-600">✅</div>
+                                                )}
+                                                <button
+                                                    onClick={(e) => handleSupprimerDossier(e, d)}
+                                                    title="Supprimer ce dossier"
+                                                    className="text-xs font-semibold text-red-600 border border-red-300 rounded-lg px-2 py-1 hover:bg-red-50 hover:border-red-500 transition-all"
+                                                >
+                                                    🗑️ Supprimer
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
