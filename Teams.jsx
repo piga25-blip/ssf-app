@@ -6,7 +6,7 @@ let GestionEquipesModal = ({
     events, setEvents, nextEventNumber, setNextEventNumber, onClose, mcMode, mcIdentifiant,
     startHour, totalDays, planning, setPlanning, verifierEtPropagerAvantAction, pointsPhone, sauveursAyantQuitte
 }) => {
-    const [nouvelleEquipe, setNouvelleEquipe] = useState({ numero: '', mission: '' });
+    const [nouvelleEquipe, setNouvelleEquipe] = useState({ numero: '', mission: '', ordreMission: '' });
     const [selectedMembres, setSelectedMembres] = useState([]);
     const [mouvements, setMouvements] = useState({});
     const [expandedTeams, setExpandedTeams] = useState(new Set());
@@ -121,7 +121,7 @@ let GestionEquipesModal = ({
         setNumeroError('');
         
         if (!nouvelleEquipe.numero || !nouvelleEquipe.mission) {
-            alert('Veuillez renseigner le numéro et la mission');
+            alert('Veuillez renseigner le numéro et le titre de l\'équipe');
             return;
         }
         if (!typeMission || typeMission === '') {
@@ -164,6 +164,7 @@ let GestionEquipesModal = ({
             id: teamId,
             name: `Équipe ${nouvelleEquipe.numero}`,
             mission: nouvelleEquipe.mission,
+            ordreMission: nouvelleEquipe.ordreMission || '',
             typeMission: typeMission,
             lieu: equipeLieu,
             members: selectedMembres,
@@ -285,7 +286,7 @@ let GestionEquipesModal = ({
         }
         
         setNextEventNumber(nextEventNumber + eventNumberIncrement);
-        setNouvelleEquipe({ numero: '', mission: '' });
+        setNouvelleEquipe({ numero: '', mission: '', ordreMission: '' });
         setSelectedMembres([]);
         setTypeMission('');
         setTypeMissionSuggested(false);
@@ -295,9 +296,10 @@ let GestionEquipesModal = ({
 
     const chargerEquipePourEdition = (team) => {
         setEditingTeam(team);
-        setNouvelleEquipe({ 
-            numero: team.name.replace('Équipe ', ''), 
-            mission: team.mission 
+        setNouvelleEquipe({
+            numero: team.name.replace('Équipe ', ''),
+            mission: team.mission,
+            ordreMission: team.ordreMission || ''
         });
         setTypeMission(team.typeMission || '');
         // Priorité : team.lieu > rétro-compat sousTerre > vide (pas de défaut 'surface')
@@ -308,7 +310,7 @@ let GestionEquipesModal = ({
 
     const annulerEdition = () => {
         setEditingTeam(null);
-        setNouvelleEquipe({ numero: '', mission: '' });
+        setNouvelleEquipe({ numero: '', mission: '', ordreMission: '' });
         setTypeMission('');
         setTypeMissionSuggested(false);
         setEquipeLieu('');
@@ -317,7 +319,7 @@ let GestionEquipesModal = ({
 
     const sauvegarderEditionEquipe = () => {
         if (!nouvelleEquipe.mission) {
-            alert('Veuillez renseigner la mission');
+            alert('Veuillez renseigner le titre de l\'équipe');
             return;
         }
         if (!typeMission || typeMission === '') {
@@ -334,6 +336,7 @@ let GestionEquipesModal = ({
                 return {
                     ...t,
                     mission: nouvelleEquipe.mission,
+                    ordreMission: nouvelleEquipe.ordreMission || '',
                     typeMission: typeMission,
                     lieu: equipeLieu,
                     history: [
@@ -370,7 +373,7 @@ let GestionEquipesModal = ({
         }
 
         annulerEdition();
-        alert('✅ Mission de l\'équipe modifiée !');
+        alert('✅ Équipe modifiée !');
     };
 
     const dissoudreEquipe = (teamId) => {
@@ -826,6 +829,7 @@ let GestionEquipesModal = ({
             '.info-row{margin:8px 0;line-height:1.6}' +
             '.label{font-weight:bold;color:#374151}' +
             '.info-initial{margin:20px 0;padding:15px;background:#e0f2fe;border-radius:8px;border-left:4px solid #0284c7}' +
+            '.ordre-mission{margin:20px 0;padding:15px;background:#fffbeb;border-radius:8px;border-left:4px solid #f59e0b;white-space:pre-wrap;line-height:1.6}' +
             'h2{color:#1e40af;border-bottom:2px solid #e5e7eb;padding-bottom:10px;margin:30px 0 15px 0;font-size:18px}' +
             '.membre{padding:10px 15px;border-bottom:1px solid #e5e7eb;background:white}' +
             '.membre:hover{background:#f9fafb}' +
@@ -860,6 +864,7 @@ let GestionEquipesModal = ({
             '<div class="info-row"><span class="label">Créée le:</span> ' + createdAt.toLocaleString('fr-FR') + '</div>' +
             (dissolvedAt ? '<div class="info-row" style="color:#dc2626"><span class="label">Dissoute le:</span> ' + dissolvedAt.toLocaleString('fr-FR') + '</div>' : '') +
             '</div>' +
+            (team.ordreMission ? '<h2>📜 Ordre de mission</h2><div class="ordre-mission">' + team.ordreMission + '</div>' : '') +
             (chefInitial ? '<div class="info-initial">' +
             '<div class="info-row"><span class="label">Chef initial:</span> ' + chefInitial + '</div>' +
             '<div class="info-row"><span class="label">Membres initiaux:</span> ' + membresInitiaux + '</div>' +
@@ -1233,16 +1238,28 @@ let GestionEquipesModal = ({
                                     )}
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">📝 Mission de l'équipe <span className="text-red-500">*</span></p>
-                                    <input 
-                                        type="text" 
+                                    <p className="text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">📝 Titre de l'équipe <span className="text-red-500">*</span></p>
+                                    <input
+                                        type="text"
                                         value={nouvelleEquipe.mission}
                                         onChange={(e) => {
                                             setNouvelleEquipe({...nouvelleEquipe, mission: e.target.value});
                                             detectTypeMission(e.target.value);
                                         }}
-                                        placeholder="Mission (ex: Reconnaissance Zone Nord)"
+                                        placeholder="Titre (ex: Reconnaissance Zone Nord)"
                                         className="w-full px-3 py-2 border rounded-lg"
+                                    />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">📜 Ordre de mission</p>
+                                    <textarea
+                                        value={nouvelleEquipe.ordreMission}
+                                        onChange={(e) => {
+                                            setNouvelleEquipe({...nouvelleEquipe, ordreMission: e.target.value});
+                                        }}
+                                        placeholder="Détaillez précisément ce que l'équipe doit faire..."
+                                        rows={4}
+                                        className="w-full px-3 py-2 border rounded-lg resize-y"
                                     />
                                 </div>
                                 <div>
@@ -1363,11 +1380,13 @@ let GestionEquipesModal = ({
                                                         <div
                                                             className="flex items-center gap-3 cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors flex-1"
                                                             onClick={() => chargerEquipePourEdition(team)}
-                                                            title="Cliquer pour modifier la mission"
+                                                            title="Cliquer pour modifier"
                                                         >
                                                             <div className="flex-1">
-                                                                <h4 className="text-lg font-bold text-blue-800">{team.name}</h4>
-                                                                <p className="text-sm text-gray-600">{team.mission}</p>
+                                                                <h4 className="text-lg font-bold text-blue-800">{team.name} — {team.mission}</h4>
+                                                                {team.ordreMission && (
+                                                                    <p className="text-sm text-gray-600 whitespace-pre-wrap mt-1">📜 {team.ordreMission}</p>
+                                                                )}
                                                             </div>
                                                             <span className="text-xs text-blue-600">✏️ Modifier</span>
                                                         </div>
@@ -1413,7 +1432,7 @@ let GestionEquipesModal = ({
                                                     {addingMembersToTeam === team.id && (
                                                         <div className="mb-4 p-3 bg-emerald-50 border-2 border-emerald-300 rounded-lg">
                                                             <h5 className="font-bold text-emerald-800 mb-1">➕ Ajouter des membres à {team.name}</h5>
-                                                            <p className="text-sm text-emerald-700 mb-2 italic">Mission : {team.mission}</p>
+                                                            <p className="text-sm text-emerald-700 mb-2 italic">Titre : {team.mission}</p>
                                                             {availableMembers.length === 0 ? (
                                                                 <p className="text-sm text-gray-500 text-center py-3">Aucun sauveteur disponible (tous sont déjà assignés)</p>
                                                             ) : (
@@ -1534,7 +1553,7 @@ let GestionEquipesModal = ({
                                                     <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded">DISSOUTE</span>
                                                     <span className="text-xs text-gray-400">{dissolvedAt}</span>
                                                 </div>
-                                                <p className="text-xs text-gray-600 truncate">Mission : {team.mission}</p>
+                                                <p className="text-xs text-gray-600 truncate">Titre : {team.mission}</p>
                                                 <p className="text-xs text-gray-500 truncate">Membres : {membresNoms}</p>
                                             </div>
                                             <button
@@ -1577,22 +1596,23 @@ let GestionEquipesModal = ({
                                             })
                                             .join(', ');
                                         const createdDate = new Date(team.createdAt).toLocaleString('fr-FR');
-                                        tableData.push([team.name, team.mission || '-', team.members.length, membersList, createdDate]);
+                                        tableData.push([team.name, team.mission || '-', team.ordreMission || '-', team.members.length, membersList, createdDate]);
                                     });
 
                                     doc.autoTable({
                                         startY: 35,
-                                        head: [['Équipe', 'Mission', 'Nb', 'Membres', 'Créée le']],
+                                        head: [['Équipe', 'Titre', 'Ordre de mission', 'Nb', 'Membres', 'Créée le']],
                                         body: tableData,
                                         theme: 'grid',
                                         headStyles: { fillColor: [0, 85, 164] },
                                         styles: { fontSize: 8 },
                                         columnStyles: {
-                                            0: { cellWidth: 25 },
-                                            1: { cellWidth: 35 },
-                                            2: { cellWidth: 15 },
-                                            3: { cellWidth: 75 },
-                                            4: { cellWidth: 35 }
+                                            0: { cellWidth: 22 },
+                                            1: { cellWidth: 28 },
+                                            2: { cellWidth: 45 },
+                                            3: { cellWidth: 12 },
+                                            4: { cellWidth: 55 },
+                                            5: { cellWidth: 30 }
                                         }
                                     });
 
@@ -1612,7 +1632,8 @@ let GestionEquipesModal = ({
                                     
                                     const data = teams.filter(t => t.status !== 'dissolved').map(team => ({
                                         'Équipe': team.name,
-                                        'Mission': team.mission || '-',
+                                        'Titre': team.mission || '-',
+                                        'Ordre de mission': team.ordreMission || '-',
                                         'Nombre Membres': team.members.length,
                                         'Chef': (() => {
                                             const chef = masterSauveteursList.find(s => s.id === team.members[0]);
@@ -1656,7 +1677,7 @@ let GestionEquipesModal = ({
                         if (!newNum.trim()) { alert('Saisissez un numéro'); return; }
                         const newName = 'Équipe ' + newNum.trim();
                         if (teams.find(t => t.name === newName)) { alert(`"${newName}" existe déjà`); return; }
-                        const newTeam = { id: 'T'+newNum.trim()+'_'+Date.now(), name: newName, mission: team.mission, typeMission: team.typeMission, lieu: team.lieu, sousTerre: team.sousTerre, members: membresSelec, status: 'active' };
+                        const newTeam = { id: 'T'+newNum.trim()+'_'+Date.now(), name: newName, mission: team.mission, ordreMission: team.ordreMission || '', typeMission: team.typeMission, lieu: team.lieu, sousTerre: team.sousTerre, members: membresSelec, status: 'active' };
                         const membresRestants = team.members.filter(id => !membresSelec.includes(id));
                         setTeams(prev => prev.map(t => t.id === team.id ? {...t, members: membresRestants} : t).concat([newTeam]));
                         const num = (mcMode==='secondaire'&&mcIdentifiant)?`${mcIdentifiant}-${nextEventNumber.toString().padStart(3,'0')}`:nextEventNumber.toString().padStart(3,'0');

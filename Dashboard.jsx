@@ -752,6 +752,23 @@ let DashboardTab = ({
                     yPos += 5;
                 }
 
+                if (team.ordreMission) {
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Ordre de mission:', 14, yPos);
+                    yPos += 5;
+                    doc.setFont(undefined, 'normal');
+                    const ordreLines = doc.splitTextToSize(team.ordreMission, 180);
+                    ordreLines.forEach(line => {
+                        if (yPos > 280) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        doc.text(line, 14, yPos);
+                        yPos += 5;
+                    });
+                    yPos += 2;
+                }
+
                 // Chef et membres initiaux
                 if (team.history && team.history.length > 0 && team.history[0].action === 'creation') {
                     doc.setFont(undefined, 'bold');
@@ -887,7 +904,7 @@ let DashboardTab = ({
         // Feuille 3: Équipes
         const teamsData = [
             ['ÉQUIPES CRÉÉES'],
-            ['Équipe', 'Chef', 'Nombre membres', 'Créée le', 'Mission'],
+            ['Équipe', 'Chef', 'Nombre membres', 'Créée le', 'Titre', 'Ordre de mission'],
             ...teams.filter(t => t.status !== 'dissolved').map(t => {
                 const chef = masterSauveteursList.find(s => s.id === t.members[0]);
                 return [
@@ -895,7 +912,8 @@ let DashboardTab = ({
                     chef?.name || '-',
                     t.members.length,
                     new Date(t.createdAt).toLocaleString('fr-FR'),
-                    t.mission || '-'
+                    t.mission || '-',
+                    t.ordreMission || '-'
                 ];
             })
         ];
@@ -1524,7 +1542,7 @@ let DashboardTab = ({
                                                                 [{status}]
                                                             </span>
                                                         </div>
-                                                        
+
                                                         {/* Informations de base */}
                                                         <div className="text-sm text-gray-700 mb-3">
                                                             <p><strong>Créée le:</strong> {createdAt.toLocaleString('fr-FR')}</p>
@@ -1534,6 +1552,12 @@ let DashboardTab = ({
                                                                 </p>
                                                             )}
                                                         </div>
+
+                                                        {team.ordreMission && (
+                                                            <div className="text-sm text-gray-700 mb-3 bg-amber-50 border-l-4 border-amber-400 p-2 whitespace-pre-wrap">
+                                                                <strong>📜 Ordre de mission :</strong> {team.ordreMission}
+                                                            </div>
+                                                        )}
 
                                                         {/* Chef et membres initiaux */}
                                                         {team.history && team.history.length > 0 && team.history[0].action === 'creation' && (
