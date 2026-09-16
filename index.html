@@ -57,7 +57,14 @@
         .modal-overlay {
             z-index: 1000 !important;
         }
-        
+
+        /* --- FIX: classes Tailwind utilisées dans le code mais absentes de la feuille
+           statique pré-compilée ci-dessus (pas de build/JIT dans cette app), ce qui
+           laissait ces éléments sans fond (texte blanc invisible sur fond blanc). --- */
+        .bg-blue-900 { background-color: rgb(30 58 138); }
+        .bg-gray-900 { background-color: rgb(17 24 39); }
+        .bg-orange-500 { background-color: rgb(249 115 22); }
+
         :root {
             --w-ssf: 55px; 
             --w-id: 40px;
