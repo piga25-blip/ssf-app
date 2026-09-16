@@ -1,0 +1,33 @@
+name: Package macOS bootstrapper
+
+on:
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier les permissions d'exécution
+        run: |
+          chmod +x bootstrapper-mac/SSF-Bootstrap.app/Contents/MacOS/SSF-Bootstrap
+          chmod +x bootstrapper-mac/SSF-Bootstrap.command
+
+      - name: Empaqueter SSF-Bootstrap.app (ditto préserve les métadonnées macOS)
+        run: |
+          cd bootstrapper-mac
+          ditto -c -k --keepParent SSF-Bootstrap.app SSF-Bootstrap-app-mac.zip
+
+      - name: Empaqueter la version .command de secours
+        run: |
+          cd bootstrapper-mac
+          zip -r SSF-Bootstrap-command-mac.zip SSF-Bootstrap.command pick_asset.js
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SSF-Bootstrap-mac
+          path: |
+            bootstrapper-mac/SSF-Bootstrap-app-mac.zip
+            bootstrapper-mac/SSF-Bootstrap-command-mac.zip
+          retention-days: 90

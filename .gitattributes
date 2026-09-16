@@ -1,0 +1,8 @@
+# macOS shell/JXA scripts must keep LF line endings — a CRLF shebang line
+# breaks execution on macOS ("bad interpreter" / garbled script).
+bootstrapper-mac/bootstrap.sh text eol=lf
+bootstrapper-mac/SSF-Bootstrap.command text eol=lf
+bootstrapper-mac/pick_asset.js text eol=lf
+bootstrapper-mac/SSF-Bootstrap.app/Contents/MacOS/SSF-Bootstrap text eol=lf
+bootstrapper-mac/SSF-Bootstrap.app/Contents/Resources/pick_asset.js text eol=lf
+bootstrapper-mac/SSF-Bootstrap.app/Contents/Info.plist text eol=lf
