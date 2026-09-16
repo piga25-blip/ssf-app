@@ -66,6 +66,24 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
         }
     };
 
+    const supprimerTousLesSauveteurs = () => {
+        const suppressibles = masterSauveteursList.filter(s => !activeSauveteurIds.includes(s.id));
+        const nbActifs = masterSauveteursList.length - suppressibles.length;
+
+        if (suppressibles.length === 0) {
+            alert('Aucun sauveteur à supprimer (tous sont actifs au planning).');
+            return;
+        }
+
+        const message = nbActifs > 0
+            ? `Voulez-vous vraiment supprimer ${suppressibles.length} sauveteur(s) ?\n${nbActifs} sauveteur(s) actif(s) au planning seront conservés.`
+            : `Voulez-vous vraiment supprimer les ${suppressibles.length} sauveteur(s) de la liste ?`;
+
+        if (window.confirm(message)) {
+            setMasterSauveteursList(masterSauveteursList.filter(s => activeSauveteurIds.includes(s.id)));
+        }
+    };
+
     const startEdit = (sauveteur) => {
         setEditingId(sauveteur.id);
         setEditData({
@@ -210,8 +228,17 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-bold">Liste complète ({masterSauveteursList.length})</h3>
-                            <input 
+                            <div className="flex items-center gap-3">
+                                <h3 className="font-bold">Liste complète ({masterSauveteursList.length})</h3>
+                                <button
+                                    onClick={supprimerTousLesSauveteurs}
+                                    className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 text-xs font-semibold"
+                                    title="Supprimer tous les sauveteurs de la liste"
+                                >
+                                    🗑️ Tout supprimer
+                                </button>
+                            </div>
+                            <input
                                 type="text" 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
