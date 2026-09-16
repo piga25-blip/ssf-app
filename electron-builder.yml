@@ -28,6 +28,21 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: Application SSF
 
+# Pas de certificat Apple Developer : build non signé, non notarié.
+# Les utilisateurs Mac devront faire clic droit > Ouvrir au premier lancement
+# (Gatekeeper refuse un double-clic normal sur une app non identifiée).
+mac:
+  category: public.app-category.utilities
+  target:
+    - target: dmg
+      arch:
+        - universal
+    - target: zip
+      arch:
+        - universal
+  hardenedRuntime: false
+  gatekeeperAssess: false
+
 publish:
   provider: github
   owner: piga25-blip
