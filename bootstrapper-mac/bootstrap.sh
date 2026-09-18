@@ -165,7 +165,11 @@ notify "Installation dans /Applications…"
 if [ -d "$INSTALLED_APP" ]; then
     rm -rf "$INSTALLED_APP"
 fi
-cp -R "$SRC_APP" "$INSTALLED_APP"
+if ! cp -R "$SRC_APP" "$INSTALLED_APP"; then
+    fatal "Impossible de copier l'application vers /Applications.
+
+Vérifiez que vous avez les droits d'écriture sur ce dossier."
+fi
 
 hdiutil detach "$MOUNT_POINT" -quiet -force >/dev/null 2>&1 || true
 MOUNT_POINT=""
@@ -180,4 +184,24 @@ osascript <<EOF >/dev/null 2>&1 || true
 display dialog "Application SSF (version ${TAG_NAME}) a été installée avec succès." with title "Installation réussie" buttons {"OK"} default button 1 with icon note
 EOF
 
-open "$INSTALLED_APP"
+# `open` peut échouer juste après le xattr -cr ci-dessus si macOS n'a pas
+# encore rafraîchi son cache Launch Services pour cette app tout juste
+# copiée/modifiée. On retente quelques fois avant d'abandonner — et si ça
+# échoue quand même, on prévient l'utilisateur au lieu de rester silencieux
+# (l'installation, elle, a bien réussi : ce n'est pas une erreur fatale).
+OPEN_OK=false
+for attempt in 1 2 3; do
+    if open "$INSTALLED_APP" 2>/dev/null; then
+        OPEN_OK=true
+        break
+    fi
+    sleep 1
+done
+
+if [ "$OPEN_OK" = false ]; then
+    osascript <<EOF >/dev/null 2>&1 || true
+display dialog "Application SSF a bien été installée dans /Applications, mais n'a pas pu être lancée automatiquement.
+
+Ouvrez-la manuellement depuis le Finder ou le Launchpad." with title "SSF Bootstrap" buttons {"OK"} default button 1 with icon caution
+EOF
+fi
