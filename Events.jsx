@@ -425,6 +425,7 @@ let MainCouranteTab = ({
         sensEntree: null
     });
     const [insertAfterEvent, setInsertAfterEvent] = useState(null);
+    const [insertMode, setInsertMode] = useState('after'); // 'after' (défaut) ou 'before' (insérer avant le tout premier événement)
     const [insertBornes, setInsertBornes] = useState({ min: null, max: null, defaut: null });
     const [membresSelectionnes, setMembresSelectionnes] = useState([]);
     const [modalSelectionMembres, setModalSelectionMembres] = useState(null);
@@ -1249,22 +1250,32 @@ let MainCouranteTab = ({
             messageComplet = prefix + (messageComplet ? '\n' + messageComplet : '');
         }
 
-        // Trouver l'index de l'événement après lequel on insère
+        // Trouver l'index de l'événement de référence (après lequel, ou avant lequel, on insère)
         const insertIndex = events.findIndex(e => e.id === insertAfterEvent.id);
-        
-        // Générer le nouveau numéro en ajoutant un suffixe (ex: 5a, 5b)
-        const baseNumero = insertAfterEvent.numero;
-        const existingSuffixes = events
-            .filter(e => e.numero && e.numero.startsWith(baseNumero) && e.numero !== baseNumero)
-            .map(e => e.numero.replace(baseNumero, ''))
-            .filter(s => s.match(/^[a-z]$/));
-        
-        let newSuffix = 'a';
-        if (existingSuffixes.length > 0) {
-            const lastSuffix = existingSuffixes.sort().pop();
-            newSuffix = String.fromCharCode(lastSuffix.charCodeAt(0) + 1);
+
+        let nouveauNumero;
+        if (insertMode === 'before') {
+            nouveauNumero = getNumeroInsertionAvant(insertAfterEvent.numero);
+            if (!nouveauNumero) {
+                alert('Limite atteinte : "0a" est le numéro le plus tôt possible avant le premier événement. Contactez le support si vous avez réellement besoin d\'insérer davantage d\'événements ici.');
+                return;
+            }
+        } else {
+            // Générer le nouveau numéro en ajoutant un suffixe (ex: 5a, 5b)
+            const baseNumero = insertAfterEvent.numero;
+            const existingSuffixes = events
+                .filter(e => e.numero && e.numero.startsWith(baseNumero) && e.numero !== baseNumero)
+                .map(e => e.numero.replace(baseNumero, ''))
+                .filter(s => s.match(/^[a-z]$/));
+
+            let newSuffix = 'a';
+            if (existingSuffixes.length > 0) {
+                const lastSuffix = existingSuffixes.sort().pop();
+                newSuffix = String.fromCharCode(lastSuffix.charCodeAt(0) + 1);
+            }
+            nouveauNumero = `${baseNumero}${newSuffix}`;
         }
-        
+
         let eventDateHeure = new Date().toLocaleString('fr-FR');
         let eventIsoTimestamp = new Date().toISOString();
         if (insertFormData.heureManuelle) {
@@ -1282,6 +1293,14 @@ let MainCouranteTab = ({
             if (!isNaN(parsed.getTime())) {
                 eventDateHeure = parsed.toLocaleString('fr-FR');
                 eventIsoTimestamp = parsed.toISOString();
+            }
+        } else if (insertMode === 'before') {
+            // Pas d'événement antérieur par définition : 1 minute avant l'événement de référence
+            const tsBefore = insertAfterEvent.isoTimestamp ? Date.parse(insertAfterEvent.isoTimestamp) : null;
+            if (tsBefore) {
+                const midDate = new Date(tsBefore - 60000);
+                eventDateHeure = midDate.toLocaleString('fr-FR');
+                eventIsoTimestamp = midDate.toISOString();
             }
         } else {
             // Calculer automatiquement le timestamp = milieu entre l'événement précédent et le suivant
@@ -1310,24 +1329,38 @@ let MainCouranteTab = ({
         // ── GARDE-FOU : vérifier que l'heure saisie manuellement est cohérente ──
         if (insertFormData.heureManuelle) {
             const tsNew = Date.parse(eventIsoTimestamp);
-            const tsAfterCheck = insertAfterEvent.isoTimestamp ? Date.parse(insertAfterEvent.isoTimestamp) : null;
-            const nextEventCheck = insertIndex + 1 < events.length ? events[insertIndex + 1] : null;
-            const tsBeforeCheck = nextEventCheck && nextEventCheck.isoTimestamp ? Date.parse(nextEventCheck.isoTimestamp) : null;
             const fmtTs = (ts) => new Date(ts).toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-            if (tsAfterCheck && tsNew < tsAfterCheck) {
-                const confirm = window.confirm(
-                    `⚠️ ATTENTION — Heure incohérente !\n\n` +
-                    `L'heure saisie (${fmtTs(tsNew)}) est ANTÉRIEURE à l'événement précédent (${fmtTs(tsAfterCheck)}).\n\n` +
-                    `Voulez-vous quand même insérer cet événement ?`
-                );
-                if (!confirm) return;
-            } else if (tsBeforeCheck && tsNew > tsBeforeCheck) {
-                const confirm = window.confirm(
-                    `⚠️ ATTENTION — Heure incohérente !\n\n` +
-                    `L'heure saisie (${fmtTs(tsNew)}) est POSTÉRIEURE à l'événement suivant (${fmtTs(tsBeforeCheck)}).\n\n` +
-                    `Voulez-vous quand même insérer cet événement ?`
-                );
-                if (!confirm) return;
+            if (insertMode === 'before') {
+                // Pas de borne "antérieure" (par définition, on insère avant tout) : on vérifie
+                // seulement que la nouvelle heure reste bien avant l'événement de référence.
+                const tsBeforeCheck = insertAfterEvent.isoTimestamp ? Date.parse(insertAfterEvent.isoTimestamp) : null;
+                if (tsBeforeCheck && tsNew > tsBeforeCheck) {
+                    const confirm = window.confirm(
+                        `⚠️ ATTENTION — Heure incohérente !\n\n` +
+                        `L'heure saisie (${fmtTs(tsNew)}) est POSTÉRIEURE à l'événement N°${insertAfterEvent.numero} (${fmtTs(tsBeforeCheck)}), alors que vous insérez AVANT celui-ci.\n\n` +
+                        `Voulez-vous quand même insérer cet événement ?`
+                    );
+                    if (!confirm) return;
+                }
+            } else {
+                const tsAfterCheck = insertAfterEvent.isoTimestamp ? Date.parse(insertAfterEvent.isoTimestamp) : null;
+                const nextEventCheck = insertIndex + 1 < events.length ? events[insertIndex + 1] : null;
+                const tsBeforeCheck = nextEventCheck && nextEventCheck.isoTimestamp ? Date.parse(nextEventCheck.isoTimestamp) : null;
+                if (tsAfterCheck && tsNew < tsAfterCheck) {
+                    const confirm = window.confirm(
+                        `⚠️ ATTENTION — Heure incohérente !\n\n` +
+                        `L'heure saisie (${fmtTs(tsNew)}) est ANTÉRIEURE à l'événement précédent (${fmtTs(tsAfterCheck)}).\n\n` +
+                        `Voulez-vous quand même insérer cet événement ?`
+                    );
+                    if (!confirm) return;
+                } else if (tsBeforeCheck && tsNew > tsBeforeCheck) {
+                    const confirm = window.confirm(
+                        `⚠️ ATTENTION — Heure incohérente !\n\n` +
+                        `L'heure saisie (${fmtTs(tsNew)}) est POSTÉRIEURE à l'événement suivant (${fmtTs(tsBeforeCheck)}).\n\n` +
+                        `Voulez-vous quand même insérer cet événement ?`
+                    );
+                    if (!confirm) return;
+                }
             }
         }
 
@@ -1345,15 +1378,15 @@ let MainCouranteTab = ({
             pointPhone: insertFormData.pointPhone,
             personneConcernee: insertFormData.personneConcernee,
             equipe: insertFormData.equipe,
-            numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                            `${mcIdentifiant}-${baseNumero}${newSuffix}` : 
-                            `${baseNumero}${newSuffix}`,
+            numero: (mcMode === 'secondaire' && mcIdentifiant) ?
+                            `${mcIdentifiant}-${nouveauNumero}` :
+                            `${nouveauNumero}`,
             fait: false
         };
 
-        // Insérer l'événement après l'événement sélectionné
+        // Insérer l'événement après l'événement sélectionné (ou juste avant, en mode 'before')
         const newEvents = [...events];
-        newEvents.splice(insertIndex + 1, 0, newEvent);
+        newEvents.splice(insertMode === 'before' ? insertIndex : insertIndex + 1, 0, newEvent);
         setEvents(newEvents);
         
         // Réinitialiser le formulaire et fermer la modal
@@ -1372,9 +1405,10 @@ let MainCouranteTab = ({
             heureManuelle: ''
         });
         setInsertAfterEvent(null);
+        setInsertMode('after');
     };
 
-    const openInsertModal = (event) => {
+    const openInsertModal = (event, mode = 'after') => {
         // Pré-remplir le formulaire d'insertion avec le secrétaire actuel
         setInsertFormData({
             secretaire: formData.secretaire || insertFormData.secretaire,
@@ -1388,7 +1422,26 @@ let MainCouranteTab = ({
             personneConcernee: '',
             equipe: ''
         });
+        setInsertMode(mode);
         setInsertAfterEvent(event);
+    };
+
+    // Calcule le numéro à attribuer à un événement inséré AVANT le tout premier
+    // événement (anchor). Réutilise le même principe de suffixe lettré que
+    // l'insertion "après", mais en sens inverse et ancré sur "0" : la première
+    // donnée ajoutée avant N°1 devient "0z", la suivante encore plus tôt "0y",
+    // puis "0x"... ce qui reste trié alphabétiquement avant "1" sans jamais
+    // renuméroter les entrées déjà créées (numéros potentiellement déjà
+    // communiqués par radio/écrit).
+    const getNumeroInsertionAvant = (anchorNumero) => {
+        const match = (anchorNumero || '').match(/^0([a-z])$/);
+        if (match) {
+            const currentLetter = match[1];
+            if (currentLetter === 'a') return null; // Limite atteinte (0a = le plus tôt possible)
+            const prevLetter = String.fromCharCode(currentLetter.charCodeAt(0) - 1);
+            return `0${prevLetter}`;
+        }
+        return '0z';
     };
 
     return (
@@ -1400,7 +1453,7 @@ let MainCouranteTab = ({
                     <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-auto">
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-2xl font-bold">➕ Insérer un événement après N°{insertAfterEvent.numero}</h2>
+                                <h2 className="text-2xl font-bold">➕ Insérer un événement {insertMode === 'before' ? 'avant' : 'après'} N°{insertAfterEvent.numero}</h2>
                                 <button onClick={() => setInsertAfterEvent(null)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                             </div>
 
@@ -1408,7 +1461,20 @@ let MainCouranteTab = ({
                                 <p className="text-sm text-gray-700">
                                     <strong>Événement N°{insertAfterEvent.numero}:</strong> {insertAfterEvent.evenement.substring(0, 100)}...
                                 </p>
-                                {(() => {
+                                {insertMode === 'before' ? (() => {
+                                    const tsBefore = insertAfterEvent.isoTimestamp ? Date.parse(insertAfterEvent.isoTimestamp) : null;
+                                    if (!insertFormData.heureManuelle && tsBefore) {
+                                        const tsMid = tsBefore - 60000;
+                                        return (
+                                            <p className="text-xs text-blue-700 mt-2 font-semibold">
+                                                🕐 Heure attribuée automatiquement : <strong>{new Date(tsMid).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</strong>
+                                                {' (1 min avant l\'événement N°' + insertAfterEvent.numero + ')'}
+                                                <span className="ml-2 text-blue-500 italic">— ou saisissez une heure manuelle ci-dessous</span>
+                                            </p>
+                                        );
+                                    }
+                                    return null;
+                                })() : (() => {
                                     const insertIdx = events.findIndex(e => e.id === insertAfterEvent.id);
                                     const tsAfter = insertAfterEvent.isoTimestamp ? Date.parse(insertAfterEvent.isoTimestamp) : null;
                                     const nextEv = insertIdx + 1 < events.length ? events[insertIdx + 1] : null;
@@ -1617,9 +1683,17 @@ let MainCouranteTab = ({
                                     {/* Indicateur visuel en temps réel */}
                                     {insertFormData.heureManuelle && (() => {
                                         const insertIdx2 = events.findIndex(e => e.id === insertAfterEvent.id);
-                                        const tsAfterV = insertAfterEvent.isoTimestamp ? Date.parse(insertAfterEvent.isoTimestamp) : null;
-                                        const nextEvV = insertIdx2 + 1 < events.length ? events[insertIdx2 + 1] : null;
-                                        const tsBeforeV = nextEvV && nextEvV.isoTimestamp ? Date.parse(nextEvV.isoTimestamp) : null;
+                                        // En mode 'before' : pas de borne "antérieure" (par définition, rien avant) ;
+                                        // la borne "postérieure" devient l'événement de référence lui-même.
+                                        const tsAfterV = insertMode === 'before'
+                                            ? null
+                                            : (insertAfterEvent.isoTimestamp ? Date.parse(insertAfterEvent.isoTimestamp) : null);
+                                        const nextEvV = insertMode === 'before'
+                                            ? null
+                                            : (insertIdx2 + 1 < events.length ? events[insertIdx2 + 1] : null);
+                                        const tsBeforeV = insertMode === 'before'
+                                            ? (insertAfterEvent.isoTimestamp ? Date.parse(insertAfterEvent.isoTimestamp) : null)
+                                            : (nextEvV && nextEvV.isoTimestamp ? Date.parse(nextEvV.isoTimestamp) : null);
                                         // Reconstruire le timestamp depuis les champs du formulaire
                                         const now2 = new Date();
                                         let j2 = String(now2.getDate()).padStart(2,'0'), m2 = String(now2.getMonth()+1).padStart(2,'0'), a2 = now2.getFullYear();
@@ -1639,7 +1713,7 @@ let MainCouranteTab = ({
                                         );
                                         if (tsBeforeV && tsV > tsBeforeV) return (
                                             <div style={{marginTop:'6px',padding:'5px 8px',borderRadius:'4px',background:'#fee2e2',border:'1px solid #f87171',fontSize:'11px',fontWeight:'700',color:'#b91c1c'}}>
-                                                ⛔ Heure trop récente — postérieure à l'événement suivant ({fmt2(tsBeforeV)})
+                                                ⛔ Heure trop récente — postérieure à l'événement {insertMode === 'before' ? `N°${insertAfterEvent.numero} (avant lequel vous insérez)` : 'suivant'} ({fmt2(tsBeforeV)})
                                             </div>
                                         );
                                         return (
@@ -2698,6 +2772,15 @@ let MainCouranteTab = ({
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-blue-700">{event.numero}</span>
+                                                {events.length > 0 && event.id === events[0].id && (
+                                                    <button
+                                                        onClick={() => openInsertModal(event, 'before')}
+                                                        className="text-teal-600 hover:text-teal-800 hover:bg-teal-100 rounded p-1"
+                                                        title="Insérer un événement avant celui-ci (le tout premier événement)"
+                                                    >
+                                                        ⬆️➕
+                                                    </button>
+                                                )}
                                                 {canInsert && (
                                                     <button
                                                         onClick={() => openInsertModal(event)}

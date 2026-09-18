@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-mac-test/
 .claude/
 
 # Fichiers de backup
