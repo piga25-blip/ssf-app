@@ -1152,6 +1152,11 @@
                         setActiveSauveteurIds(data.activeSauveteurIds || []);
                         setTeams(data.teams || []);
                         setSecretaires(data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
+                        const loadedPP = data.pointsPhone || [];
+                        if (!loadedPP.find(pp => (typeof pp === 'object' ? pp.lettre : pp) === 'PC')) {
+                            loadedPP.unshift({ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 });
+                        }
+                        setPointsPhone(loadedPP);
                         if (data.missionInfo) setMissionInfo(data.missionInfo);
                         if (data.clotureInfo) setClotureInfo(data.clotureInfo);
                         setEvents(data.events || []);
