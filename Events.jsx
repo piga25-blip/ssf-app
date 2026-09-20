@@ -447,6 +447,28 @@ let MainCouranteTab = ({
     });
     const [currentTime, setCurrentTime] = useState(new Date());
     const [rechercheRapide, setRechercheRapide] = useState('');
+    const [suggestionPPIgnoree, setSuggestionPPIgnoree] = useState(false);
+    useEffect(() => { setSuggestionPPIgnoree(false); }, [formData.evenement]);
+
+    // Détecte si le texte de "Événement" mentionne un point phone (lettre en mot entier,
+    // ou nom complet) alors que le champ 📍 Point Phone n'est pas renseigné — beaucoup
+    // d'utilisateurs tapent le lieu directement ici au lieu de le sélectionner à côté.
+    const suggestionPointPhone = React.useMemo(() => {
+        if (formData.pointPhone || !formData.evenement || !formData.evenement.trim()) return null;
+        const texte = formData.evenement;
+        const echapper = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        for (const pp of pointsPhone) {
+            const lettre = typeof pp === 'object' ? pp.lettre : pp;
+            if (!lettre) continue;
+            const regexLettre = new RegExp('\\b' + echapper(lettre) + '\\b', 'i');
+            if (regexLettre.test(texte)) return pp;
+        }
+        for (const pp of pointsPhone) {
+            const nom = typeof pp === 'object' ? pp.nom : '';
+            if (nom && nom.length >= 3 && texte.toLowerCase().includes(nom.toLowerCase())) return pp;
+        }
+        return null;
+    }, [formData.evenement, formData.pointPhone, pointsPhone]);
     const [showCategorieAlert, setShowCategorieAlert] = useState(false);
     const [sortColumn, setSortColumn] = useState('numero'); // numero, secretaire, timestamp, categorie
     const [sortDirection, setSortDirection] = useState('desc');
@@ -1883,9 +1905,9 @@ let MainCouranteTab = ({
                     </div>
                     <div className="col-span-2">
                         <label className="block text-xs font-semibold mb-1">Message venant de :</label>
-                        <input 
+                        <input
                             list="expediteurs-list"
-                            value={formData.expediteur} 
+                            value={formData.expediteur}
                              onChange={(e) => {
                                 const nom = e.target.value;
                                 // Auto-remplir l'équipe si pas déjà renseignée
@@ -1925,7 +1947,9 @@ let MainCouranteTab = ({
                             })()}
                         </datalist>
                     </div>
-                    <div className="col-span-2 flex items-end pb-1">
+                    <div className="col-span-2">
+                        <label className="block text-xs font-semibold mb-1">S'agissant d'une progression choisir un point phone</label>
+                        <div className="flex items-center pb-1">
                         <label style={{cursor:"pointer",padding:"4px 8px",borderRadius:"4px",fontSize:"12px",fontWeight:"600",border:"1px solid",backgroundColor:formData.departDuPC?"#16a34a":"#fff",color:formData.departDuPC?"#fff":"#4b5563",borderColor:formData.departDuPC?"#16a34a":"#d1d5db",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"4px"}}><input type="checkbox" checked={formData.departDuPC} onChange={(e) => {
                                 const checked = e.target.checked;
                                 const pcPP = pointsPhone.find(function(pp){ return (typeof pp === 'object' ? pp.lettre : pp) === 'PC'; });
@@ -1953,6 +1977,7 @@ let MainCouranteTab = ({
                                 })}
                             </div>
                         )}
+                        </div>
                     </div>
                     <div className="col-span-4">
                         <div className="flex items-center justify-between mb-1">
@@ -2184,14 +2209,27 @@ let MainCouranteTab = ({
                                 <span className="ml-1 text-xs text-green-600 font-normal">✨ Auto</span>
                             )}
                         </label>
-                        <select 
-                            value={formData.categorie} 
+                        <select
+                            value={formData.categorie}
                             onChange={(e) => {
-                                setFormData({...formData, categorie: e.target.value});
-                                if (e.target.value !== 'autre') {
+                                const nouvelleCategorie = e.target.value;
+                                setFormData({...formData, categorie: nouvelleCategorie});
+                                if (nouvelleCategorie !== 'autre') {
                                     setShowCategorieAlert(false);
                                 }
-                            }} 
+                                // Progression → ouvrir directement la liste des points phone,
+                                // sauf si "Départ PC" est déjà coché (le point PC est alors déjà choisi).
+                                if (nouvelleCategorie === 'progression' && !formData.departDuPC) {
+                                    setTimeout(() => {
+                                        const el = refPointPhone.current;
+                                        if (!el) return;
+                                        el.focus();
+                                        if (typeof el.showPicker === 'function') {
+                                            try { el.showPicker(); } catch (err) {}
+                                        }
+                                    }, 50);
+                                }
+                            }}
                             className={`w-full px-3 py-2 border rounded-lg bg-green-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-400 ${formData.categorie !== 'autre' ? 'border-green-500' : 'border-gray-300'}`}
                         >
                             {categories.map((cat, i) => <option key={i} value={cat.id}>{cat.nom}</option>)}
@@ -2214,6 +2252,31 @@ let MainCouranteTab = ({
                             rows="4"
                             placeholder="Description..."
                         />
+                        {suggestionPointPhone && !suggestionPPIgnoree && (() => {
+                            const label = typeof suggestionPointPhone === 'object'
+                                ? `${suggestionPointPhone.lettre} - ${suggestionPointPhone.nom}`
+                                : suggestionPointPhone;
+                            return (
+                                <div className="mt-2 flex items-center gap-2 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 text-xs">
+                                    <span className="flex-1">💡 Vous semblez mentionner le point phone <strong>{label}</strong> — le sélectionner dans 📍 Point Phone au lieu de le taper ici ?</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({...formData, pointPhone: label})}
+                                        className="bg-amber-500 text-white px-2 py-1 rounded hover:bg-amber-600 font-semibold whitespace-nowrap"
+                                    >
+                                        Sélectionner
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSuggestionPPIgnoree(true)}
+                                        className="text-gray-500 hover:text-gray-700 px-1"
+                                        title="Ignorer cette suggestion"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
