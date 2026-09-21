@@ -1185,3 +1185,67 @@ return <span className="bg-amber-500 text-white px-2 py-1 rounded text-xs font-b
 </div>
     );
 };
+
+// ============================================
+// MODAL - CLÔTURE DU SECOURS
+// ============================================
+// Remplace window.prompt() (non supporté par Electron : ne s'affiche jamais
+// et renvoie null, ce qui bloquait silencieusement toute clôture dès qu'un
+// événement existait déjà dans la main courante).
+let ClotureModal = ({ dernierEvenement, onConfirm, onCancel }) => {
+    useCloseOnEscape(onCancel);
+    const now = new Date();
+    const dernierTs = dernierEvenement ? new Date(dernierEvenement.isoTimestamp) : null;
+    const diffMin = dernierTs ? Math.round((now - dernierTs) / 60000) : null;
+    const fmt = (d) => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    return (
+        <div className="fixed inset-0 flex items-center justify-center z-[200] p-4 modal-overlay" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full overflow-hidden" style={{ maxWidth: '480px' }}>
+                <div className="p-5 text-center" style={{ backgroundColor: '#7f1d1d' }}>
+                    <div className="text-4xl mb-1">🔒</div>
+                    <h1 className="text-xl font-black text-white tracking-wide">Clôturer le secours</h1>
+                </div>
+                <div className="p-5 space-y-3">
+                    {dernierTs && (
+                        <p className="text-sm text-gray-600">
+                            Dernier événement : <strong>{fmt(dernierTs)}</strong> (N°{dernierEvenement.numero})<br/>
+                            Heure actuelle : <strong>{fmt(now)}</strong> (écart : {diffMin} min)
+                        </p>
+                    )}
+                    <p className="text-sm font-semibold text-gray-700">Choisissez la date/heure de clôture :</p>
+                    <div className="space-y-2">
+                        {dernierTs && (
+                            <button
+                                onClick={() => onConfirm(new Date(dernierTs.getTime() + 60000))}
+                                className="w-full text-left px-4 py-2 border border-red-300 rounded-lg hover:bg-red-50 font-medium text-sm"
+                            >
+                                Dernier événement + 1 min — {fmt(new Date(dernierTs.getTime() + 60000))}
+                            </button>
+                        )}
+                        {dernierTs && (
+                            <button
+                                onClick={() => onConfirm(new Date(dernierTs.getTime() + 300000))}
+                                className="w-full text-left px-4 py-2 border border-red-300 rounded-lg hover:bg-red-50 font-medium text-sm"
+                            >
+                                Dernier événement + 5 min — {fmt(new Date(dernierTs.getTime() + 300000))}
+                            </button>
+                        )}
+                        <button
+                            onClick={() => onConfirm(now)}
+                            className="w-full text-left px-4 py-2 border border-red-300 rounded-lg hover:bg-red-50 font-medium text-sm"
+                        >
+                            Heure actuelle — {fmt(now)}
+                        </button>
+                    </div>
+                    <button
+                        onClick={onCancel}
+                        className="w-full mt-2 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 border"
+                    >
+                        Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};

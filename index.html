@@ -642,6 +642,7 @@
                 delaiAlerteOccupation: 6 // en heures
             });
             const [clotureInfo, setClotureInfo] = useState(null); // {dateHeure, isoTimestamp} ou null
+            const [showClotureModal, setShowClotureModal] = useState(false);
 
             // ===== HOOK PLANNING =====
             const {
@@ -1513,49 +1514,29 @@
                                     </div>
                                 ) : (
                                     <button
-                                        onClick={() => {
-                                            // Trouver le dernier événement avec isoTimestamp
-                                            const dernier = [...events].filter(e => e.isoTimestamp).sort((a, b) => new Date(b.isoTimestamp) - new Date(a.isoTimestamp))[0];
-                                            const now = new Date();
-                                            let choix = '1'; // défaut = heure actuelle
-                                            if (dernier) {
-                                                const dernierTs = new Date(dernier.isoTimestamp);
-                                                const diffMin = Math.round((now - dernierTs) / 60000);
-                                                const dernierStr = dernierTs.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-                                                const nowStr = now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-                                                choix = window.prompt(
-                                                    `🔒 CLÔTURER LE SECOURS\n\n` +
-                                                    `Dernier événement : ${dernierStr} (N°${dernier.numero})\n` +
-                                                    `Heure actuelle : ${nowStr} (écart : ${diffMin} min)\n\n` +
-                                                    `Choisissez la date/heure de clôture :\n` +
-                                                    `  1 = Dernier événement + 1 min (${new Date(dernierTs.getTime() + 60000).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})})\n` +
-                                                    `  5 = Dernier événement + 5 min (${new Date(dernierTs.getTime() + 300000).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})})\n` +
-                                                    `  A = Heure actuelle (${nowStr})\n\n` +
-                                                    `Tapez 1, 5 ou A :`,
-                                                    '5'
-                                                );
-                                            } else {
-                                                if (!window.confirm('⚠️ Clôturer ce secours à l\'heure actuelle ?')) return;
-                                            }
-                                            if (choix === null) return; // annulé
-                                            let clotureDate;
-                                            if (dernier && (choix === '1' || choix === '5')) {
-                                                const base = new Date(dernier.isoTimestamp);
-                                                clotureDate = new Date(base.getTime() + (choix === '1' ? 60000 : 300000));
-                                            } else {
-                                                clotureDate = now;
-                                            }
-                                            const numCloture = (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3,'0')}` : nextEventNumber.toString().padStart(3,'0');
-                                            setClotureInfo({ dateHeure: clotureDate.toLocaleString('fr-FR'), isoTimestamp: clotureDate.toISOString() });
-                                            setEvents(prev => [...prev, { id: Date.now(), isoTimestamp: clotureDate.toISOString(), secretaire: 'Système', dateHeure: clotureDate.toLocaleString('fr-FR'), messageImportant: true, categorie: 'secours', evenement: `🔒 CLÔTURE DU SECOURS — ${missionInfo.nomCavite || currentRescueId}\nDate et heure de clôture : ${clotureDate.toLocaleString('fr-FR')}`, numero: numCloture, fait: false }]);
-                                            setNextEventNumber(n => n + 1);
-                                        }}
+                                        onClick={() => setShowClotureModal(true)}
                                         style={{backgroundColor:'#7f1d1d',color:'white',padding:'6px 14px',borderRadius:'8px',fontWeight:'700',fontSize:'13px',border:'none',cursor:'pointer'}}
                                         className="hover:opacity-90"
                                         title="Clôturer le secours"
                                     >
                                         🔒 Clôturer le secours
                                     </button>
+                                )}
+
+                                {showClotureModal && (
+                                    <ModalErrorBoundary onClose={() => setShowClotureModal(false)}>
+                                    <ClotureModal
+                                        dernierEvenement={[...events].filter(e => e.isoTimestamp).sort((a, b) => new Date(b.isoTimestamp) - new Date(a.isoTimestamp))[0] || null}
+                                        onCancel={() => setShowClotureModal(false)}
+                                        onConfirm={(clotureDate) => {
+                                            const numCloture = (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3,'0')}` : nextEventNumber.toString().padStart(3,'0');
+                                            setClotureInfo({ dateHeure: clotureDate.toLocaleString('fr-FR'), isoTimestamp: clotureDate.toISOString() });
+                                            setEvents(prev => [...prev, { id: Date.now(), isoTimestamp: clotureDate.toISOString(), secretaire: 'Système', dateHeure: clotureDate.toLocaleString('fr-FR'), messageImportant: true, categorie: 'secours', evenement: `🔒 CLÔTURE DU SECOURS — ${missionInfo.nomCavite || currentRescueId}\nDate et heure de clôture : ${clotureDate.toLocaleString('fr-FR')}`, numero: numCloture, fait: false }]);
+                                            setNextEventNumber(n => n + 1);
+                                            setShowClotureModal(false);
+                                        }}
+                                    />
+                                    </ModalErrorBoundary>
                                 )}
                             </div>
                         </div>
