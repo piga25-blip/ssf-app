@@ -644,6 +644,18 @@
             const [clotureInfo, setClotureInfo] = useState(null); // {dateHeure, isoTimestamp} ou null
             const [showClotureModal, setShowClotureModal] = useState(false);
 
+            // Encart discret (auto-masqué) affiché quand le planning est recopié
+            // automatiquement sans confirmation (voir planningAutoPropagate).
+            const [planningToast, setPlanningToast] = useState(null);
+            useEffect(() => {
+                if (!planningToast) return;
+                const t = setTimeout(() => setPlanningToast(null), 3000);
+                return () => clearTimeout(t);
+            }, [planningToast]);
+            const handleAutoPropagate = useCallback((info) => {
+                setPlanningToast(`🔄 Planning mis à jour automatiquement — ${info.count} sauveteur(s), ${info.duree} min max (${info.noms.join(', ')})`);
+            }, []);
+
             // ===== HOOK PLANNING =====
             const {
                 planning, setPlanning,
@@ -658,14 +670,16 @@
                 fillPreviewCells, setFillPreviewCells,
                 sauveursAyantQuitte,
                 verifierEtPropagerAvantAction,
-                handleAddSauveteurToPlanning
+                handleAddSauveteurToPlanning,
+                planningAutoPropagate, setPlanningAutoPropagate
             } = usePlanning({
                 activeSauveteurIds, setActiveSauveteurIds,
                 masterSauveteursList,
                 nextPermanentNumber, setNextPermanentNumber,
                 setSauveteurPermanentNumbers,
                 mcMode, mcIdentifiant,
-                events, nextEventNumber, setEvents, setNextEventNumber
+                events, nextEventNumber, setEvents, setNextEventNumber,
+                onAutoPropagate: handleAutoPropagate
             });
 
             // Modales
@@ -1541,6 +1555,19 @@
                             </div>
                         </div>
 
+                        {planningToast && (
+                            <div
+                                style={{
+                                    position: 'fixed', bottom: '16px', right: '16px', zIndex: 99999,
+                                    backgroundColor: '#0f766e', color: 'white', borderRadius: '8px',
+                                    padding: '10px 16px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                    fontSize: '13px', fontWeight: '600', maxWidth: '360px',
+                                }}
+                            >
+                                {planningToast}
+                            </div>
+                        )}
+
                         {/* Onglets et contenu */}
                         <div className="bg-white rounded-lg shadow-lg mb-6">
                             <div className="flex border-b">
@@ -1780,6 +1807,8 @@
                                         mcIdentifiant={mcIdentifiant}
                                         setActiveTab={setActiveTab}
                                         setModalRepos={setModalRepos}
+                                        planningAutoPropagate={planningAutoPropagate}
+                                        setPlanningAutoPropagate={setPlanningAutoPropagate}
                                     />
                                 ) : activeTab === 'synthese' ? (
                                     <SyntheseTab 

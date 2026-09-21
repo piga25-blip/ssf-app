@@ -8,7 +8,8 @@ let PlanningTab = ({
     isFilling, setIsFilling, fillStartCell, setFillStartCell,
     fillPreviewCells, setFillPreviewCells,
     events, setEvents, nextEventNumber, setNextEventNumber,
-    mcMode, mcIdentifiant, setActiveTab, setModalRepos
+    mcMode, mcIdentifiant, setActiveTab, setModalRepos,
+    planningAutoPropagate, setPlanningAutoPropagate
 }) => {
     const totalSlots = getTotalSlots(totalDays);
     const [sortKey, setSortKey] = useState('entryOrder');
@@ -746,6 +747,20 @@ let PlanningTab = ({
                     <button onClick={propagerPlanningManuellement} style={{background:"#f97316",color:"white",padding:"8px 14px",borderRadius:"6px",fontWeight:"600",fontSize:"13px",cursor:"pointer",border:"none"}} title="Remplir les creneaux vides avec la derniere activite connue">
                         Mettre a jour les activites
                     </button>
+                </div>
+                <div>
+                    <label
+                        className="flex items-center gap-2 cursor-pointer select-none"
+                        title="Quand coché : les créneaux vides sont recopiés automatiquement toutes les 15 min sans fenêtre de confirmation (un encart discret s'affiche brièvement à la place). Décoché : une fenêtre de confirmation s'affiche comme avant."
+                    >
+                        <input
+                            type="checkbox"
+                            checked={!!planningAutoPropagate}
+                            onChange={(e) => setPlanningAutoPropagate(e.target.checked)}
+                            className="w-4 h-4"
+                        />
+                        <span className="text-sm font-semibold text-gray-700">🔄 Mise à jour automatique du planning (sans confirmation)</span>
+                    </label>
                 </div>
                 {/* Message d'aide intégré à droite */}
                 <div className="flex-1 bg-blue-50 border-l-4 border-blue-500 p-2 text-xs">

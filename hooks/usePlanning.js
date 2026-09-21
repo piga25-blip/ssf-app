@@ -4,7 +4,8 @@ const usePlanning = ({
     nextPermanentNumber, setNextPermanentNumber,
     setSauveteurPermanentNumbers,
     mcMode, mcIdentifiant,
-    events, nextEventNumber, setEvents, setNextEventNumber
+    events, nextEventNumber, setEvents, setNextEventNumber,
+    onAutoPropagate
 }) => {
     const [planning, setPlanning] = useState({});
     const getDefaultStartHour = () => {
@@ -21,6 +22,17 @@ const usePlanning = ({
     const [fillStartCell, setFillStartCell] = useState(null);
     const [fillPreviewCells, setFillPreviewCells] = useState(new Set());
     const intervalRef = useRef(null);
+    // Réglage local (par poste) : recopie auto du planning toutes les 15 min
+    // sans fenêtre de confirmation bloquante. Décoché par défaut pour ne rien
+    // changer au comportement existant sans action explicite de l'utilisateur.
+    const [planningAutoPropagate, setPlanningAutoPropagate] = useState(
+        () => storageGet('ssf_planning_auto_propagate', 'false') === 'true'
+    );
+    useEffect(() => {
+        storageSet('ssf_planning_auto_propagate', planningAutoPropagate ? 'true' : 'false');
+    }, [planningAutoPropagate]);
+    const onAutoPropagateRef = useRef(onAutoPropagate);
+    useEffect(() => { onAutoPropagateRef.current = onAutoPropagate; }, [onAutoPropagate]);
 
     const verifierEtPropagerAvantAction = function() {
         const now = new Date();
@@ -165,8 +177,10 @@ const usePlanning = ({
             const noms = [...new Set(sauveteursPropager.map(function(s) { return s.activite; }))];
             const duree = Math.max.apply(null, sauveteursPropager.map(function(s) { return s.slotFin - s.slotDebut + 1; })) * 15;
             const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-            const msg = 'Mise a jour automatique - ' + heure + '\n\n' + sauveteursPropager.length + ' sauveteur(s), ' + duree + ' min max.\nActivi: ' + noms.join(', ') + '\n\nConfirmer ?';
-            if (!window.confirm(msg)) return;
+            if (!planningAutoPropagate) {
+                const msg = 'Mise a jour automatique - ' + heure + '\n\n' + sauveteursPropager.length + ' sauveteur(s), ' + duree + ' min max.\nActivi: ' + noms.join(', ') + '\n\nConfirmer ?';
+                if (!window.confirm(msg)) return;
+            }
             setPlanning(function(prev) {
                 const np = { ...prev };
                 sauveteursPropager.forEach(function(s) {
@@ -180,6 +194,9 @@ const usePlanning = ({
                 });
                 return np;
             });
+            if (planningAutoPropagate && onAutoPropagateRef.current) {
+                onAutoPropagateRef.current({ count: sauveteursPropager.length, duree, noms, heure });
+            }
         };
         const now = new Date();
         const msEcoules = (now.getMinutes() % 15) * 60000 + now.getSeconds() * 1000 + now.getMilliseconds();
@@ -189,7 +206,7 @@ const usePlanning = ({
             intervalRef.current = setInterval(propagerAuto, 15 * 60000);
         }, msJusquAuProchain);
         return () => { clearTimeout(t); if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [activeSauveteurIds, planning, startHour, totalDays]);
+    }, [activeSauveteurIds, planning, startHour, totalDays, planningAutoPropagate]);
 
     return {
         planning, setPlanning,
@@ -204,6 +221,7 @@ const usePlanning = ({
         fillPreviewCells, setFillPreviewCells,
         sauveursAyantQuitte,
         verifierEtPropagerAvantAction,
-        handleAddSauveteurToPlanning
+        handleAddSauveteurToPlanning,
+        planningAutoPropagate, setPlanningAutoPropagate
     };
 };
