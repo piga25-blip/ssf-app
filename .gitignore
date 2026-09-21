@@ -11,6 +11,7 @@ assets/SSF_old.ico
 # Binaires compilés du bootstrapper
 bootstrapper/SSF-Bootstrap.exe
 bootstrapper/SSF-Bootstrap2.exe
+bootstrapper/SSF-Bootstrap.7z
 
 # Documents Office
 *.docx
