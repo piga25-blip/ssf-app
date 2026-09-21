@@ -13,6 +13,8 @@ let GestionEquipesModal = ({
     const [modalScindre, setModalScindre] = useState(null);
     const [addingMembersToTeam, setAddingMembersToTeam] = useState(null); // ID de l'équipe en mode ajout
     const [selectedNewMembres, setSelectedNewMembres] = useState([]); // Nouveaux membres à ajouter
+    const [searchNewTeam, setSearchNewTeam] = useState(''); // Recherche dans la liste (création d'équipe)
+    const [searchAddMembers, setSearchAddMembers] = useState(''); // Recherche dans la liste (ajout de membres)
     const [numeroError, setNumeroError] = useState('');
     const [typeMission, setTypeMission] = useState('');
     const [typeMissionSuggested, setTypeMissionSuggested] = useState(false);
@@ -108,14 +110,33 @@ let GestionEquipesModal = ({
         setTypeMissionSuggested(false);
     };
 
-    const membersInTeams = new Set();
-    teams.filter(t => t.status !== 'dissolved').forEach(team => team.members.forEach(id => membersInTeams.add(id)));
+    // Enlève les accents et met en minuscules, pour une recherche insensible à la casse/accents
+    const normaliserTexte = (texte) => (texte || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+    const membersInTeams = new Map();
+    teams.filter(t => t.status !== 'dissolved').forEach(team => team.members.forEach(id => membersInTeams.set(id, team)));
 
     const availableMembers = activeSauveteurIds
         .filter(function(id) { return !(sauveursAyantQuitte || []).includes(id) && !membersInTeams.has(id); })
         .map(id => masterSauveteursList.find(s => s.id === id))
         .filter(Boolean)
         .sort((a, b) => (a.name || '').localeCompare((b.name || ''), 'fr', { sensitivity: 'base' }));
+
+    // Tous les sauveteurs actifs (disponibles OU déjà en équipe), pour la recherche —
+    // permet de retrouver et réaffecter quelqu'un sans devoir d'abord le retirer
+    // manuellement de son équipe actuelle.
+    const selectableMembers = activeSauveteurIds
+        .filter(function(id) { return !(sauveursAyantQuitte || []).includes(id); })
+        .map(id => masterSauveteursList.find(s => s.id === id))
+        .filter(Boolean)
+        .map(s => ({ ...s, currentTeam: membersInTeams.get(s.id) || null }))
+        .sort((a, b) => (a.name || '').localeCompare((b.name || ''), 'fr', { sensitivity: 'base' }));
+
+    const filtrerParRecherche = (liste, recherche) => {
+        if (!recherche || !recherche.trim()) return liste;
+        const q = normaliserTexte(recherche);
+        return liste.filter(s => normaliserTexte(s.name).includes(q));
+    };
 
     const creerEquipe = () => {
         setNumeroError('');
@@ -183,7 +204,11 @@ let GestionEquipesModal = ({
             ]
         };
 
-        setTeams(prevTeams => [...prevTeams, newTeam]);
+        setTeams(prevTeams => prevTeams
+            .map(t => t.members.some(id => selectedMembres.includes(id))
+                ? { ...t, members: t.members.filter(id => !selectedMembres.includes(id)) }
+                : t)
+            .concat([newTeam]));
         
         // Ajouter le numéro à l'historique
         setUsedTeamNumbers(prev => [...prev, { numero: teamId, mission: nouvelleEquipe.mission }]);
@@ -291,6 +316,7 @@ let GestionEquipesModal = ({
         setTypeMission('');
         setTypeMissionSuggested(false);
         setEquipeLieu('');
+        setSearchNewTeam('');
         alert('✅ Équipe créée !');
     };
 
@@ -483,6 +509,9 @@ let GestionEquipesModal = ({
                     ]
                 };
             }
+            if (team.members.some(id => selectedNewMembres.includes(id))) {
+                return { ...team, members: team.members.filter(id => !selectedNewMembres.includes(id)) };
+            }
             return team;
         });
 
@@ -546,6 +575,7 @@ let GestionEquipesModal = ({
         alert(`✅ ${selectedNewMembres.length} membre(s) ajouté(s) à l'équipe !`);
         setAddingMembersToTeam(null);
         setSelectedNewMembres([]);
+        setSearchAddMembers('');
     };
 
     const deplacerMembre = (memberId, equipeOrigineId) => {
@@ -1286,19 +1316,32 @@ let GestionEquipesModal = ({
                                     </select>
                                 </div>
                                 {!editingTeam && <p className="text-sm text-amber-700 font-semibold">⚠️ Le 1er sélectionné = Chef</p>}
+                                {!editingTeam && (
+                                    <input
+                                        type="text"
+                                        value={searchNewTeam}
+                                        onChange={(e) => setSearchNewTeam(e.target.value)}
+                                        placeholder="🔍 Rechercher un sauveteur par nom..."
+                                        className="w-full px-3 py-2 border rounded-lg text-sm mb-2"
+                                    />
+                                )}
                                 <div className="border rounded-lg p-3 max-h-60 overflow-y-auto bg-white">
                                     {editingTeam ? (
                                         <p className="text-center text-gray-500 py-4">Mode édition : la mission et le type peuvent être modifiés</p>
-                                    ) : availableMembers.length === 0 ? (
-                                        <p className="text-center text-gray-500 py-4">Tous en équipe</p>
+                                    ) : filtrerParRecherche(selectableMembers, searchNewTeam).length === 0 ? (
+                                        <p className="text-center text-gray-500 py-4">{searchNewTeam ? 'Aucun sauveteur ne correspond' : 'Aucun sauveteur actif'}</p>
                                     ) : (
-                                        availableMembers.map(s => (
+                                        filtrerParRecherche(selectableMembers, searchNewTeam).map(s => (
                                             <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-amber-50 rounded cursor-pointer border-b border-gray-100 last:border-0">
-                                                <input 
+                                                <input
                                                     type="checkbox"
                                                     checked={selectedMembres.includes(s.id)}
                                                     onChange={(e) => {
                                                         if (e.target.checked) {
+                                                            if (s.currentTeam) {
+                                                                const ok = window.confirm(`${s.name} est actuellement dans ${s.currentTeam.name}.\n\nLe retirer de ${s.currentTeam.name} pour l'affecter à cette nouvelle équipe ?`);
+                                                                if (!ok) return;
+                                                            }
                                                             setSelectedMembres([...selectedMembres, s.id]);
                                                         } else {
                                                             setSelectedMembres(selectedMembres.filter(id => id !== s.id));
@@ -1311,6 +1354,11 @@ let GestionEquipesModal = ({
                                                     <span className="text-gray-600">{s.role || '-'}</span>
                                                     <span className="text-gray-600">{s.SSF || '-'}</span>
                                                 </div>
+                                                {s.currentTeam && (
+                                                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap">
+                                                        déjà en {s.currentTeam.name}
+                                                    </span>
+                                                )}
                                                 {selectedMembres.includes(s.id) && (
                                                     <span className="ml-auto text-xs bg-blue-500 text-white px-2 py-1 rounded flex-shrink-0">
                                                         {selectedMembres.indexOf(s.id) + 1}
@@ -1320,7 +1368,7 @@ let GestionEquipesModal = ({
                                         ))
                                     )}
                                 </div>
-                                <button 
+                                <button
                                     onClick={editingTeam ? sauvegarderEditionEquipe : creerEquipe}
                                     className={`w-full ${editingTeam ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-600 hover:bg-amber-700'} text-white px-4 py-3 rounded-lg font-semibold`}
                                 >
@@ -1406,6 +1454,7 @@ let GestionEquipesModal = ({
                                                                     } else {
                                                                         setAddingMembersToTeam(team.id);
                                                                         setSelectedNewMembres([]);
+                                                                        setSearchAddMembers('');
                                                                     }
                                                                 }}
                                                                 className={`px-3 py-1 rounded text-sm font-semibold ${addingMembersToTeam === team.id ? 'bg-gray-500 text-white hover:bg-gray-600' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`}
@@ -1433,38 +1482,61 @@ let GestionEquipesModal = ({
                                                         <div className="mb-4 p-3 bg-emerald-50 border-2 border-emerald-300 rounded-lg">
                                                             <h5 className="font-bold text-emerald-800 mb-1">➕ Ajouter des membres à {team.name}</h5>
                                                             <p className="text-sm text-emerald-700 mb-2 italic">Titre : {team.mission}</p>
-                                                            {availableMembers.length === 0 ? (
-                                                                <p className="text-sm text-gray-500 text-center py-3">Aucun sauveteur disponible (tous sont déjà assignés)</p>
-                                                            ) : (
-                                                                <>
-                                                                    <div className="max-h-48 overflow-y-auto border border-emerald-300 rounded bg-white mb-2">
-                                                                        {availableMembers.map(s => (
-                                                                            <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-emerald-50 cursor-pointer border-b last:border-b-0">
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={selectedNewMembres.includes(s.id)}
-                                                                                    onChange={(e) => {
-                                                                                        if (e.target.checked) {
-                                                                                            setSelectedNewMembres([...selectedNewMembres, s.id]);
-                                                                                        } else {
-                                                                                            setSelectedNewMembres(selectedNewMembres.filter(id => id !== s.id));
-                                                                                        }
-                                                                                    }}
-                                                                                    className="w-4 h-4"
-                                                                                />
-                                                                                <span className="text-sm font-medium">{s.name}</span>
-                                                                            </label>
-                                                                        ))}
-                                                                    </div>
-                                                                    <button
-                                                                        onClick={() => ajouterMembresAEquipe(team.id)}
-                                                                        disabled={selectedNewMembres.length === 0}
-                                                                        className={`w-full py-2 rounded font-semibold text-sm ${selectedNewMembres.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                                                                    >
-                                                                        ✓ Ajouter ({selectedNewMembres.length}) membre{selectedNewMembres.length > 1 ? 's' : ''}
-                                                                    </button>
-                                                                </>
-                                                            )}
+                                                            {(() => {
+                                                                const candidats = selectableMembers.filter(s => !team.members.includes(s.id));
+                                                                const candidatsFiltres = filtrerParRecherche(candidats, searchAddMembers);
+                                                                if (candidats.length === 0) {
+                                                                    return <p className="text-sm text-gray-500 text-center py-3">Aucun sauveteur disponible</p>;
+                                                                }
+                                                                return (
+                                                                    <>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={searchAddMembers}
+                                                                            onChange={(e) => setSearchAddMembers(e.target.value)}
+                                                                            placeholder="🔍 Rechercher un sauveteur par nom..."
+                                                                            className="w-full px-3 py-2 border border-emerald-300 rounded text-sm mb-2"
+                                                                        />
+                                                                        <div className="max-h-48 overflow-y-auto border border-emerald-300 rounded bg-white mb-2">
+                                                                            {candidatsFiltres.length === 0 ? (
+                                                                                <p className="text-sm text-gray-500 text-center py-3">Aucun sauveteur ne correspond</p>
+                                                                            ) : candidatsFiltres.map(s => (
+                                                                                <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-emerald-50 cursor-pointer border-b last:border-b-0">
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={selectedNewMembres.includes(s.id)}
+                                                                                        onChange={(e) => {
+                                                                                            if (e.target.checked) {
+                                                                                                if (s.currentTeam) {
+                                                                                                    const ok = window.confirm(`${s.name} est actuellement dans ${s.currentTeam.name}.\n\nLe retirer de ${s.currentTeam.name} pour l'affecter à ${team.name} ?`);
+                                                                                                    if (!ok) return;
+                                                                                                }
+                                                                                                setSelectedNewMembres([...selectedNewMembres, s.id]);
+                                                                                            } else {
+                                                                                                setSelectedNewMembres(selectedNewMembres.filter(id => id !== s.id));
+                                                                                            }
+                                                                                        }}
+                                                                                        className="w-4 h-4"
+                                                                                    />
+                                                                                    <span className="text-sm font-medium">{s.name}</span>
+                                                                                    {s.currentTeam && (
+                                                                                        <span className="ml-auto text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap">
+                                                                                            déjà en {s.currentTeam.name}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </label>
+                                                                            ))}
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={() => ajouterMembresAEquipe(team.id)}
+                                                                            disabled={selectedNewMembres.length === 0}
+                                                                            className={`w-full py-2 rounded font-semibold text-sm ${selectedNewMembres.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                                                                        >
+                                                                            ✓ Ajouter ({selectedNewMembres.length}) membre{selectedNewMembres.length > 1 ? 's' : ''}
+                                                                        </button>
+                                                                    </>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     )}
 
