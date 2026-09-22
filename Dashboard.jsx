@@ -398,8 +398,16 @@ let DashboardTab = ({
 }) => {
     const [showReportModal, setShowReportModal] = useState(false);
     const [alertThreshold, setAlertThreshold] = useState(6); // Heures
-    
-    const getTotalSlots = (days) => days * 24 * 2;
+
+    // Formate une durée décimale (ex: 9.5) en "9h30" plutôt qu'en "9.5h",
+    // ambigu pour les utilisateurs (confondu avec 9h50).
+    const formatHeuresMinutes = (decimalHours) => {
+        const totalMinutes = Math.round((decimalHours || 0) * 60);
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        return `${h}h${String(m).padStart(2, '0')}`;
+    };
+
     const totalSlots = getTotalSlots(totalDays);
     
     // Calcul des statistiques temps réel
@@ -439,14 +447,14 @@ let DashboardTab = ({
                     const activities = planning[sauveteurId];
                     if (Array.isArray(activities)) {
                         activities.forEach((activityId, slot) => {
-                            if (activityId && activityId !== 'nondef') {
-                                totalHeures += 0.5;
-                                activiteTemps[activityId] = (activiteTemps[activityId] || 0) + 0.5;
-                                
+                            if (activityId && activityId !== 'nondef' && activityId !== 'effacer') {
+                                totalHeures += TIME_PER_SLOT;
+                                activiteTemps[activityId] = (activiteTemps[activityId] || 0) + TIME_PER_SLOT;
+
                                 if (!stats.activites[activityId]) {
                                     stats.activites[activityId] = { count: 0, heures: 0 };
                                 }
-                                stats.activites[activityId].heures += 0.5;
+                                stats.activites[activityId].heures += TIME_PER_SLOT;
                             }
                         });
                     }
@@ -455,15 +463,15 @@ let DashboardTab = ({
                     for (let slot = 0; slot < totalSlots; slot++) {
                         const key = `${sauveteurId}|${slot}`;
                         const activityId = planning[key];
-                        
-                        if (activityId && activityId !== 'nondef') {
-                            totalHeures += 0.5;
-                            activiteTemps[activityId] = (activiteTemps[activityId] || 0) + 0.5;
-                            
+
+                        if (activityId && activityId !== 'nondef' && activityId !== 'effacer') {
+                            totalHeures += TIME_PER_SLOT;
+                            activiteTemps[activityId] = (activiteTemps[activityId] || 0) + TIME_PER_SLOT;
+
                             if (!stats.activites[activityId]) {
                                 stats.activites[activityId] = { count: 0, heures: 0 };
                             }
-                            stats.activites[activityId].heures += 0.5;
+                            stats.activites[activityId].heures += TIME_PER_SLOT;
                         }
                     }
                 }
@@ -481,7 +489,7 @@ let DashboardTab = ({
                     if (sousTerreTotalHeures >= 10) {
                         stats.alertes.push({
                             type: sousTerreTotalHeures >= 12 ? 'danger' : 'warning',
-                            message: `${sauveteur.name} : ${sousTerreTotalHeures}h sous terre`,
+                            message: `${sauveteur.name} : ${formatHeuresMinutes(sousTerreTotalHeures)} sous terre`,
                             sauveteur: sauveteur.name,
                             heures: sousTerreTotalHeures
                         });
@@ -549,7 +557,7 @@ let DashboardTab = ({
             if (heures >= alertThreshold) {
                 stats.alertes.push({
                     type: heures >= alertThreshold * 1.5 ? 'danger' : 'warning',
-                    message: `${team.name} en mission depuis ${heures.toFixed(1)}h`,
+                    message: `${team.name} en mission depuis ${formatHeuresMinutes(heures)}`,
                     equipe: team.name,
                     heures: heures.toFixed(1)
                 });
@@ -1206,10 +1214,10 @@ let DashboardTab = ({
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-lg font-bold text-blue-600">
-                                                        {sauv.totalHeures.toFixed(1)}h
+                                                        {formatHeuresMinutes(sauv.totalHeures)}
                                                     </div>
                                                     <div className="text-xs text-gray-500">
-                                                        {(sauv.activites['souterre'] || 0).toFixed(1)}h sous terre
+                                                        {formatHeuresMinutes(sauv.activites['souterre'] || 0)} sous terre
                                                     </div>
                                                 </div>
                                             </div>
@@ -1453,19 +1461,19 @@ let DashboardTab = ({
                                                                 <tr key={idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                                                                     <td className="border border-gray-300 px-3 py-2">{s.nom}</td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center font-semibold">
-                                                                        {s.totalHeures.toFixed(1)}h
+                                                                        {formatHeuresMinutes(s.totalHeures)}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {(s.activites['souterre'] || 0).toFixed(1)}h
+                                                                        {formatHeuresMinutes(s.activites['souterre'] || 0)}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {(s.activites['repos'] || 0).toFixed(1)}h
+                                                                        {formatHeuresMinutes(s.activites['repos'] || 0)}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {(s.activites['surface'] || 0).toFixed(1)}h
+                                                                        {formatHeuresMinutes(s.activites['surface'] || 0)}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {(s.activites['gestion'] || 0).toFixed(1)}h
+                                                                        {formatHeuresMinutes(s.activites['gestion'] || 0)}
                                                                     </td>
                                                                 </tr>
                                                             ))}
