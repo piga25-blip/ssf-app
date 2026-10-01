@@ -15,6 +15,7 @@
   "confirm: Mise a jour automatique - 10:00\n\n6 sauveteur(s), 15 min max.\nActivi: souterre, disponible\n\nConfirmer ?",
   "alert: ✅ Événement modifié avec succès !",
   "alert: ✅ Sauveteurs retirés du planning !",
+  "alert: ✅ Point phone modifié !\n1 événement(s) mis à jour.",
   "confirm: Mise a jour automatique - 10:15\n\n4 sauveteur(s), 15 min max.\nActivi: souterre, disponible\n\nConfirmer ?"
  ],
  "etat": {
@@ -28,8 +29,8 @@
     "EXT-006"
    ],
    "clotureInfo": {
-    "dateHeure": "14/03/2026 10:13:06",
-    "isoTimestamp": "2026-03-14T09:13:06.300Z"
+    "dateHeure": "14/03/2026 10:14:09",
+    "isoTimestamp": "2026-03-14T09:14:09.800Z"
    },
    "events": [
     {
@@ -130,7 +131,7 @@
      "messageImportant": false,
      "numero": "007",
      "personneConcernee": "",
-     "pointPhone": "B",
+     "pointPhone": "B - Puits P40 (relais)",
      "secretaire": "Secrétaire TEST"
     },
     {
@@ -352,14 +353,25 @@
      "secretaire": "Système"
     },
     {
-     "categorie": "secours",
-     "dateHeure": "14/03/2026 10:13:06",
-     "evenement": "🔒 CLÔTURE DU SECOURS — Gouffre du Test\nDate et heure de clôture : 14/03/2026 10:13:06",
+     "categorie": "intendance",
+     "dateHeure": "14/03/2026 10:09:09",
+     "evenement": "🍽️ Activité \"Repas - Déjeuner\" affectée à : MARTIN Alice",
      "fait": false,
      "id": "ID_25",
-     "isoTimestamp": "2026-03-14T09:13:06.300Z",
-     "messageImportant": true,
+     "isoTimestamp": "2026-03-14T09:09:09.800Z",
+     "messageImportant": false,
      "numero": "025",
+     "secretaire": "Système"
+    },
+    {
+     "categorie": "secours",
+     "dateHeure": "14/03/2026 10:14:09",
+     "evenement": "🔒 CLÔTURE DU SECOURS — Gouffre du Test\nDate et heure de clôture : 14/03/2026 10:14:09",
+     "fait": false,
+     "id": "ID_26",
+     "isoTimestamp": "2026-03-14T09:14:09.800Z",
+     "messageImportant": true,
+     "numero": "026",
      "secretaire": "Système"
     }
    ],
@@ -410,14 +422,14 @@
     "nomCavite": "Gouffre du Test",
     "typeSecours": "exercice"
    },
-   "nextEventNumber": 26,
+   "nextEventNumber": 27,
    "nextPermanentNumber": 7,
    "planning": {
     "EXT-001": [
      "nondef",
-     "nondef",
-     "nondef",
-     "nondef",
+     "repas_dejeuner",
+     "repas_dejeuner",
+     "repas_dejeuner",
      "approche",
      "souterre",
      "souterre",
@@ -2173,7 +2185,7 @@
     {
      "estEntree": false,
      "lettre": "B",
-     "nom": "Puits P40",
+     "nom": "Puits P40 (relais)",
      "ordre": 2,
      "sousTerre": true,
      "typePP": "souterre"
@@ -2287,7 +2299,7 @@
      "typeMission": "Reconnaissance"
     }
    ],
-   "timestamp": "2026-03-14T09:28:09.900Z",
+   "timestamp": "2026-03-14T09:29:17.400Z",
    "totalDays": 3,
    "usedTeamNumbers": [
     {

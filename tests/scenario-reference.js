@@ -321,6 +321,44 @@ const ETAPES = [
         await clic('Départ');
         await clic(/^Fermer$/, { dernier: true });
     }],
+    ['22a-planning-grille', async () => {
+        // Sélection de 2 cases de la ligne de MARTIN (07 h 15 – 07 h 45, hors de la palette) puis activité
+        await attendre(60);
+        await clic('Planning Opérationnel');
+        const cases = page.locator('tr', { hasText: nomComplet(0) }).locator('td.time-slot-cell');
+        await cases.nth(1).hover();
+        await page.mouse.down();
+        await cases.nth(2).hover();
+        await page.mouse.up();
+        await attendre(0.5);
+        await clic('Repas - Déjeuner');
+    }],
+    ['22b-planning-poignee-recopie', async () => {
+        // Sélection des 2 cases « repas » puis poignée de recopie tirée sur la case suivante
+        const cases = page.locator('tr', { hasText: nomComplet(0) }).locator('td.time-slot-cell');
+        await cases.nth(1).hover();
+        await page.mouse.down();
+        await cases.nth(2).hover();
+        await page.mouse.up();
+        await attendre(0.5);
+        await page.locator('.fill-handle').hover();
+        await page.mouse.down();
+        await cases.nth(3).hover();
+        await page.mouse.up();
+        await attendre(0.5);
+    }],
+    ['22c-modification-point-phone', async () => {
+        // Renommer le point phone B : les lignes de main courante qui le citent suivent
+        await clic('📋 Main Courante');
+        await clic('Points Phone');
+        await page.locator('div:visible', { hasText: 'Puits P40' }).filter({ has: page.locator('button', { hasText: '✏️' }) }).last()
+            .locator('button', { hasText: '✏️' }).click();
+        await attendre(0.5);
+        await page.locator('input[placeholder="Nom du point phone..."]').fill('Puits P40 (relais)');
+        await page.locator('input[placeholder="Nom du point phone..."]').press('Enter');
+        await attendre(0.5);
+        await clic(/^Fermer$/, { dernier: true });
+    }],
     ['23-cloture', async () => {
         await attendre(20 * 60);
         await clic('Clôturer le secours');

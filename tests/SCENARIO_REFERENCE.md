@@ -35,10 +35,12 @@ Durée : environ 1 min 30. La fenêtre de l'application s'ouvre et se ferme tout
   (lot 0, A2) sans faire échouer la comparaison, mais un mauvais lien entre deux éléments
   est détecté.
 - **Erreurs JavaScript :** toute erreur dans la page fait échouer le scénario.
+- **Étapes 22a à 22c** (ajoutées le 01/10/2026) : leur référence a été produite avec le code
+  d'AVANT les actions nommées (B1), puis le nouveau code a donné un résultat identique.
 - **Sensibilité vérifiée le 01/10/2026 :** le changement volontaire d'un seul mot dans le texte
   d'un départ de sauveteur a bien été signalé (1 différence).
 
-## Déroulement (23 étapes)
+## Déroulement (26 étapes)
 
 | N° | Étape | Ce qui est vérifié |
 |---|---|---|
@@ -64,18 +66,20 @@ Durée : environ 1 min 30. La fenêtre de l'application s'ouvre et se ferme tout
 | 20 | Retour équipe 1 | Passage au point A, « sort — rentre au PC » |
 | 21 | Correction | Modification d'une ligne de main courante existante |
 | 22 | Départ sauveteur | DUBOIS quitte le secours (retiré des équipes, gardé au planning) |
+| 22a | Grille du planning | Sélection de 2 cases à la souris + activité « Repas » de la palette (+ ligne de main courante) |
+| 22b | Poignée de recopie | Les 2 cases recopiées sur la case suivante |
+| 22c | Modification d'un point phone | B renommé « Puits P40 (relais) » : la ligne de main courante qui le cite suit |
 | 23 | Clôture | Clôture à « dernier événement + 5 min » |
 
 Au passage, la **recopie automatique du planning** (toutes les 15 min) et la **vérification
 des rappels** (toutes les 30 s) se déclenchent plusieurs fois.
 
-Résultat de référence : 25 lignes de main courante, 3 équipes (dont une dissoute),
+Résultat de référence : 26 lignes de main courante, 3 équipes (dont une dissoute),
 4 points phones (PC compris), planning de 6 sauveteurs, 16 messages de fenêtres.
 
 ## Non couvert pour l'instant
 
 À ajouter si une étape du chantier touche ces fonctions :
-- affectations faites directement dans la grille du **planning** (glisser-déposer, palette) ;
 - **imports / exports** (JSON, Excel, PDF), impressions ;
 - **réouverture** d'un dossier existant, changement d'identifiant de secours ;
 - main courante **secondaire** (base arrière, planning déporté) et import dans la principale ;
