@@ -467,20 +467,19 @@ comportent différemment sur tablette (iPad notamment). À ajouter aux tests.
 
 ---
 
-## 7. Décisions à prendre
+## 7. Décisions prises (01/10/2026)
 
-1. Faut-il qu'un poste continue à saisir pendant une coupure (option avancée) ou qu'il soit
-   bloqué (option simple) ?
-2. Quels rôles veut-on, et qui a le droit de modifier le planning et les équipes ?
-3. Conflits sur le planning : la dernière saisie l'emporte avec notification, ou blocage de
-   la case pendant qu'elle est modifiée ?
-4. Faut-il prévoir des tablettes ou téléphones dès le départ (ce qui rend prioritaire la
-   transformation préalable du code) ?
-5. Commence-t-on par le lot 0 (préparation), puis le lot 1 en consultation seule ?
-6. Faut-il garder la main courante secondaire et le mode terrain / base arrière à côté du
-   réseau (B6) ?
-7. Comment éviter que les branches divergent : report hebdomadaire, gel de `main`, ou sortie
-   du lot 0 en mise à jour normale (B2) ?
-8. Qui voit et valide les alertes urgentes en réseau : tous les postes, l'administrateur
-   seul, ou un rôle désigné (A1) ?
-9. Quelles règles pour la main courante : corrections tracées, pas de suppression (B8) ?
+| N° | Sujet | Décision |
+|---|---|---|
+| 1 | Coupure réseau sur un poste | **Saisie bloquée** : le poste affiche 🔴 hors ligne et empêche la saisie jusqu'au retour du réseau. La saisie mise en attente pourra être ajoutée au lot 4. |
+| 2 | Rôles | **3 rôles** : Administrateur (poste principal : tout), Saisie (main courante, inscriptions, équipes, planning, points phones), Consultation (écran mural, chef d'opération). |
+| 3 | Conflit sur une case du planning | **La dernière saisie l'emporte**, l'autre poste est prévenu (« case modifiée par X »). |
+| 4 | Appareils | **PC d'abord** (Windows / Mac) ; tablettes au lot 3, avec la transformation préalable du code (chargement mesuré : ~4 s sur PC au 01/10/2026). Téléphones non prévus. |
+| 5 | Ordre de départ | **Lot 0 (préparation, rien de réseau) puis lot 1** (serveur + consultation seule). |
+| 6 | Modes existants (terrain / base arrière, main courante secondaire) | **Conservés pour les postes hors réseau** (PC avancé sans Wi-Fi, base arrière éloignée), avec import plus tard. En réseau, le serveur numérote (plus de préfixes `A-`, `B-`). |
+| 7 | Reprise des corrections de `main` | **À chaque correction** : après chaque mise à jour officielle, la correction est reprise dans `reseau-local` (`git merge main` depuis `C:\Projets\SSF-Reseau`). |
+| 8 | Alertes urgentes | **Tous les postes de saisie les voient, tous peuvent valider** : la première validation ferme l'alerte partout et est notée avec son auteur. La vérification des alertes est faite par le serveur (A1). |
+| 9 | Corrections de la main courante | **Historique des corrections** : la ligne affiche la valeur corrigée avec « corrigée par X à HH:MM », l'ancienne version reste consultable. Aucune suppression possible (comme aujourd'hui). |
+
+Constat du 01/10/2026 pour la décision 9 : aujourd'hui une ligne de main courante ne peut pas
+être supprimée, mais elle peut être modifiée sans trace (ni ancienne valeur, ni auteur).
