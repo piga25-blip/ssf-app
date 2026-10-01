@@ -7,7 +7,7 @@ let PlanningTab = ({
     lastSelectedCell, setLastSelectedCell, isDragging, setIsDragging,
     isFilling, setIsFilling, fillStartCell, setFillStartCell,
     fillPreviewCells, setFillPreviewCells,
-    events, setEvents, nextEventNumber, setNextEventNumber,
+    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC,
     mcMode, mcIdentifiant, setActiveTab, setModalRepos,
     planningAutoPropagate, setPlanningAutoPropagate
 }) => {
@@ -804,6 +804,7 @@ let PlanningTab = ({
                 setEvents={setEvents}
                 nextEventNumber={nextEventNumber}
                 setNextEventNumber={setNextEventNumber}
+                reserverNumerosMC={reserverNumerosMC}
                 mcMode={mcMode}
                 mcIdentifiant={mcIdentifiant}
                 masterSauveteursList={masterSauveteursList}
@@ -862,6 +863,7 @@ const PaletteActivites = ({
     setEvents,
     nextEventNumber,
     setNextEventNumber,
+    reserverNumerosMC,
     mcMode,
     mcIdentifiant,
     masterSauveteursList,
@@ -971,12 +973,11 @@ const PaletteActivites = ({
                             isoTimestamp: new Date().toISOString(),
                             messageImportant: false,
                             categorie,
-                            nextNum: nextEventNumber,
+                            nextNum: reserverNumerosMC(sauveursAvecNom.length + 1),
                             fait: false
                         }
                     });
                     setActiveTab('maincourante');
-                    setNextEventNumber(nextEventNumber + sauveursAvecNom.length + 1);
                     return; // Ne pas créer l'événement ici
                 }
                 // 🍽️ Repas
@@ -995,6 +996,7 @@ const PaletteActivites = ({
                     icone = '🚪';
                 }
                 
+                const nActivite = reserverNumerosMC();
                 const newEvent = {
                     id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
@@ -1004,8 +1006,8 @@ const PaletteActivites = ({
                     categorie: categorie,
                     evenement: `${icone} Activité "${activity.name}" affectée à : ${nomsSauveteurs}`,
                     numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                        `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : 
-                        nextEventNumber.toString().padStart(3, '0'),
+                        `${mcIdentifiant}-${nActivite.toString().padStart(3, '0')}` : 
+                        nActivite.toString().padStart(3, '0'),
                     fait: false
                 };
                 
@@ -1016,7 +1018,6 @@ const PaletteActivites = ({
                     console.log('>>> Adding event to events array, prev length:', prev.length);
                     return [...prev, newEvent];
                 });
-                setNextEventNumber(prev => prev + 1);
                 
                 console.log('>>> MC event created successfully');
             } else {

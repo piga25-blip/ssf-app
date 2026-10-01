@@ -622,7 +622,26 @@
             // Données Main Courante
             const [events, setEvents] = useState([]);
             const [nextEventNumber, setNextEventNumber] = useState(1);
-            
+
+            // Distributeur de numéros de main courante (lot 0, A3).
+            // Calculer le numéro depuis nextEventNumber connu au moment du clic pouvait donner
+            // deux fois le même numéro (deux créations avant le rendu suivant, ou une donnée
+            // arrivée entre-temps). Le distributeur réserve les numéros immédiatement :
+            //   const n = reserverNumerosMC(2); → n et n+1 sont à moi, le suivant sera n+2.
+            // Il suit nextEventNumber quand celui-ci est remplacé (chargement, import…).
+            const numeroMCRef = useRef(1);
+            useEffect(() => { numeroMCRef.current = nextEventNumber; }, [nextEventNumber]);
+            const reserverNumerosMC = useCallback((nombre = 1) => {
+                const premier = numeroMCRef.current;
+                numeroMCRef.current = premier + nombre;
+                setNextEventNumber(n => Math.max(n, premier + nombre));
+                return premier;
+            }, []);
+            // Point d'entrée réservé aux tests automatiques (tests/verif-copies-perimees.js) :
+            // simule une donnée arrivée d'ailleurs pendant une action. Inactif en utilisation
+            // normale (window.__SSF_TEST__ n'existe que si un test l'a créé).
+            if (window.__SSF_TEST__) Object.assign(window.__SSF_TEST__, { setEvents, setTeams, setPointsPhone, setMasterSauveteursList, reserverNumerosMC });
+
             // Configuration MC Secondaire
             const [mcMode, setMcMode] = useState('principale'); // 'principale' ou 'secondaire'
             const [mcIdentifiant, setMcIdentifiant] = useState(''); // Ex: A, B, CT1, CT2...
@@ -674,11 +693,8 @@
                 planningAutoPropagate, setPlanningAutoPropagate
             } = usePlanning({
                 activeSauveteurIds, setActiveSauveteurIds,
-                masterSauveteursList,
                 nextPermanentNumber, setNextPermanentNumber,
                 setSauveteurPermanentNumbers,
-                mcMode, mcIdentifiant,
-                events, nextEventNumber, setEvents, setNextEventNumber,
                 onAutoPropagate: handleAutoPropagate
             });
 
@@ -700,7 +716,7 @@
                 alertSnoozedUntil,
                 getAlertStatusGlobal,
                 handleValidateAlertGlobal
-            } = useAlerts({ events, setEvents, nextEventNumber, setNextEventNumber });
+            } = useAlerts({ events, setEvents, reserverNumerosMC });
 
             // ===== HOOK WEBSOCKET =====
             const {
@@ -1554,10 +1570,10 @@
                                         dernierEvenement={[...events].filter(e => e.isoTimestamp).sort((a, b) => new Date(b.isoTimestamp) - new Date(a.isoTimestamp))[0] || null}
                                         onCancel={() => setShowClotureModal(false)}
                                         onConfirm={(clotureDate) => {
-                                            const numCloture = (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3,'0')}` : nextEventNumber.toString().padStart(3,'0');
+                                            const nCloture = reserverNumerosMC();
+                                            const numCloture = (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nCloture.toString().padStart(3,'0')}` : nCloture.toString().padStart(3,'0');
                                             setClotureInfo({ dateHeure: clotureDate.toLocaleString('fr-FR'), isoTimestamp: clotureDate.toISOString() });
                                             setEvents(prev => [...prev, { id: nouvelId(), isoTimestamp: clotureDate.toISOString(), secretaire: 'Système', dateHeure: clotureDate.toLocaleString('fr-FR'), messageImportant: true, categorie: 'secours', evenement: `🔒 CLÔTURE DU SECOURS — ${missionInfo.nomCavite || currentRescueId}\nDate et heure de clôture : ${clotureDate.toLocaleString('fr-FR')}`, numero: numCloture, fait: false }]);
-                                            setNextEventNumber(n => n + 1);
                                             setShowClotureModal(false);
                                         }}
                                     />
@@ -1749,6 +1765,7 @@
                                         events={events}
                                         setEvents={setEvents}
                                         nextEventNumber={nextEventNumber}
+                                        reserverNumerosMC={reserverNumerosMC}
                                         setNextEventNumber={setNextEventNumber}
                                         secretaires={secretaires}
                                         sauveteursSurSiteNoms={sauveteursSurSiteNoms}
@@ -1813,6 +1830,7 @@
                                         events={events}
                                         setEvents={setEvents}
                                         nextEventNumber={nextEventNumber}
+                                        reserverNumerosMC={reserverNumerosMC}
                                         setNextEventNumber={setNextEventNumber}
                                         mcMode={mcMode}
                                         mcIdentifiant={mcIdentifiant}
@@ -1897,6 +1915,7 @@
                                     events={events}
                                     setEvents={setEvents}
                                     nextEventNumber={nextEventNumber}
+                                    reserverNumerosMC={reserverNumerosMC}
                                     setNextEventNumber={setNextEventNumber}
                                     planning={planning}
                                     setPlanning={setPlanning}
@@ -1922,6 +1941,7 @@
                                     events={events}
                                     setEvents={setEvents}
                                     nextEventNumber={nextEventNumber}
+                                    reserverNumerosMC={reserverNumerosMC}
                                     setNextEventNumber={setNextEventNumber}
                                     onClose={() => setShowGestionEquipes(false)}
                                     mcMode={mcMode}
@@ -2268,6 +2288,7 @@
                                     events={events}
                                     setEvents={setEvents}
                                     nextEventNumber={nextEventNumber}
+                                    reserverNumerosMC={reserverNumerosMC}
                                     setNextEventNumber={setNextEventNumber}
                                     onClose={() => setShowImportMcModal(false)}
                                 />

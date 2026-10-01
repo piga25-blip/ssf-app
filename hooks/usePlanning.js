@@ -1,10 +1,7 @@
 const usePlanning = ({
     activeSauveteurIds, setActiveSauveteurIds,
-    masterSauveteursList,
     nextPermanentNumber, setNextPermanentNumber,
     setSauveteurPermanentNumbers,
-    mcMode, mcIdentifiant,
-    events, nextEventNumber, setEvents, setNextEventNumber,
     onAutoPropagate
 }) => {
     const [planning, setPlanning] = useState({});
@@ -92,7 +89,6 @@ const usePlanning = ({
         if (minutesSinceStart < 0) minutesSinceStart += 24 * 60;
         const slotIndex = Math.floor(minutesSinceStart / 15);
         const totalSlots = getTotalSlots(totalDays);
-        const sauv = masterSauveteursList.find(s => s.id === sauveteurId);
 
         if (!activeSauveteurIds.includes(sauveteurId)) {
             setActiveSauveteurIds(prev => [...prev, sauveteurId]);
@@ -100,22 +96,13 @@ const usePlanning = ({
                 setSauveteurPermanentNumbers(prev => ({ ...prev, [sauveteurId]: prevNumber }));
                 return prevNumber + 1;
             });
+            // La ligne de main courante est créée par l'appelant (fenêtre d'arrivée : une
+            // seule ligne groupée « Arrivée de : A, B, C »), pas ici.
             const newPlanning = Array(totalSlots).fill('nondef');
-            let eventNumberIncrement = 0;
-            if (slotIndex >= 0 && slotIndex < totalSlots) {
-                newPlanning[slotIndex] = 'disponible';
-                if (sauv) {
-                    const arriveeEvent = { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `Arrivée de : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : nextEventNumber.toString().padStart(3, '0'), fait: false };
-                    const disponibleEvent = { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `🧑‍⚕️ Activité "Disponible" affectée à : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${(nextEventNumber + 1).toString().padStart(3, '0')}` : (nextEventNumber + 1).toString().padStart(3, '0'), fait: false };
-                    setEvents(prev => [...prev, arriveeEvent, disponibleEvent]);
-                    eventNumberIncrement = 2;
-                }
-            }
-            if (eventNumberIncrement > 0) setNextEventNumber(nextEventNumber + eventNumberIncrement);
+            if (slotIndex >= 0 && slotIndex < totalSlots) newPlanning[slotIndex] = 'disponible';
             setPlanning(prev => ({ ...prev, [sauveteurId]: newPlanning }));
 
         } else {
-            let eventNumberIncrement = 0;
             if (slotIndex >= 0 && slotIndex < totalSlots) {
                 setPlanning(prev => {
                     const existingRow = prev[sauveteurId] ? [...prev[sauveteurId]] : Array(totalSlots).fill('nondef');
@@ -123,16 +110,9 @@ const usePlanning = ({
                     existingRow[slotIndex] = 'disponible';
                     return { ...prev, [sauveteurId]: existingRow };
                 });
-                if (sauv) {
-                    const arriveeEvent = { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `Arrivée de : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : nextEventNumber.toString().padStart(3, '0'), fait: false };
-                    const disponibleEvent = { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `🧑‍⚕️ Retour sur site — Activité "Disponible" affectée à : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${(nextEventNumber + 1).toString().padStart(3, '0')}` : (nextEventNumber + 1).toString().padStart(3, '0'), fait: false };
-                    setEvents(prev => [...prev, arriveeEvent, disponibleEvent]);
-                    eventNumberIncrement = 2;
-                }
             }
-            if (eventNumberIncrement > 0) setNextEventNumber(nextEventNumber + eventNumberIncrement);
         }
-    }, [activeSauveteurIds, totalDays, startHour, masterSauveteursList, mcMode, mcIdentifiant, events, nextEventNumber, setEvents, setNextEventNumber]);
+    }, [activeSauveteurIds, planning, totalDays, startHour]);
 
     const sauveursAyantQuitte = useMemo(() => {
         return activeSauveteurIds.filter(function(id) {

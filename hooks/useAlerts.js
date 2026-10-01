@@ -1,4 +1,4 @@
-const useAlerts = ({ events, setEvents, nextEventNumber, setNextEventNumber }) => {
+const useAlerts = ({ events, setEvents, reserverNumerosMC }) => {
     const [showAlertsModal, setShowAlertsModal] = useState(false);
     const [alertModalPosition, setAlertModalPosition] = useState({ x: 0, y: 0 });
     const [isDraggingAlert, setIsDraggingAlert] = useState(false);
@@ -17,7 +17,6 @@ const useAlerts = ({ events, setEvents, nextEventNumber, setNextEventNumber }) =
     };
 
     const handleValidateAlertGlobal = (event) => {
-        const updatedEvents = events.map(e => e.id === event.id ? { ...e, fait: true } : e);
         const validationEvent = {
             id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
@@ -25,12 +24,11 @@ const useAlerts = ({ events, setEvents, nextEventNumber, setNextEventNumber }) =
             dateHeure: new Date().toLocaleString('fr-FR'),
             messageImportant: false,
             evenement: '✓ Rappel N°' + event.numero + ' traité : ' + event.evenement.substring(0, 50) + '...',
-            numero: nextEventNumber.toString().padStart(3, '0'),
+            numero: reserverNumerosMC().toString().padStart(3, '0'),
             fait: false,
             categorie: 'autre'
         };
-        setEvents([...updatedEvents, validationEvent]);
-        setNextEventNumber(prev => prev + 1);
+        setEvents(prev => [...prev.map(e => e.id === event.id ? { ...e, fait: true } : e), validationEvent]);
     };
 
     useEffect(() => {

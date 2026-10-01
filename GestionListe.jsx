@@ -52,7 +52,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
             SSF: nouveauSauveteur.ssf || '00'
         };
 
-        setMasterSauveteursList([...masterSauveteursList, newSauv]);
+        setMasterSauveteursList(prev => prev.some(s => s.id === newSauv.id) ? prev : [...prev, newSauv]);
         setNouveauSauveteur({ id: '', nom: '', prenom: '', role: '', ssf: '' });
     };
 
@@ -62,7 +62,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
             return;
         }
         if (window.confirm('Voulez-vous vraiment supprimer ce sauveteur ?')) {
-            setMasterSauveteursList(masterSauveteursList.filter(s => s.id !== id));
+            setMasterSauveteursList(prev => prev.filter(s => s.id !== id));
         }
     };
 
@@ -80,7 +80,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
             : `Voulez-vous vraiment supprimer les ${suppressibles.length} sauveteur(s) de la liste ?`;
 
         if (window.confirm(message)) {
-            setMasterSauveteursList(masterSauveteursList.filter(s => activeSauveteurIds.includes(s.id)));
+            setMasterSauveteursList(prev => prev.filter(s => activeSauveteurIds.includes(s.id)));
         }
     };
 
@@ -105,7 +105,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
             return;
         }
         
-        setMasterSauveteursList(masterSauveteursList.map(s => 
+        setMasterSauveteursList(prev => prev.map(s => 
             s.id === editingId ? { ...s, name: editData.name, role: editData.role, SSF: editData.SSF } : s
         ));
         setEditingId(null);
@@ -178,8 +178,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
                 }
 
                 if (nouveauxSauveteurs.length > 0) {
-                    const existing = masterSauveteursList.filter(s => !nouveauxSauveteurs.find(n => n.id === s.id));
-                    setMasterSauveteursList([...existing, ...nouveauxSauveteurs]);
+                    setMasterSauveteursList(prev => [...prev.filter(s => !nouveauxSauveteurs.find(n => n.id === s.id)), ...nouveauxSauveteurs]);
                     alert(`${nouveauxSauveteurs.length} sauveteur(s) importé(s) avec succès`);
                 }
             } catch (error) {

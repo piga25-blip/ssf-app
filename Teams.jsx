@@ -3,7 +3,7 @@
 // ============================================
 let GestionEquipesModal = ({
     teams, setTeams, usedTeamNumbers, setUsedTeamNumbers, masterSauveteursList, activeSauveteurIds,
-    events, setEvents, nextEventNumber, setNextEventNumber, onClose, mcMode, mcIdentifiant,
+    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, onClose, mcMode, mcIdentifiant,
     startHour, totalDays, planning, setPlanning, verifierEtPropagerAvantAction, pointsPhone, sauveursAyantQuitte
 }) => {
     const [nouvelleEquipe, setNouvelleEquipe] = useState({ numero: '', mission: '', ordreMission: '' });
@@ -229,8 +229,8 @@ let GestionEquipesModal = ({
             categorie: 'equipe',
             evenement: evenementMessage,
             numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : 
-                nextEventNumber.toString().padStart(3, '0'),
+                `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : 
+                reserverNumerosMC().toString().padStart(3, '0'),
             fait: false
         };
 
@@ -265,7 +265,6 @@ let GestionEquipesModal = ({
             isValidSlot: slotIndex >= 0 && slotIndex < totalSlots
         });
         
-        let eventNumberIncrement = 1; // Par défaut, on incrémente juste de 1
         
         // Vérifier que le slot est dans la plage du planning
         if (slotIndex >= 0 && slotIndex < totalSlots) {
@@ -300,18 +299,16 @@ let GestionEquipesModal = ({
                 categorie: 'equipe',
                 evenement: `👔 Activité "${isGestion ? 'Gestion' : 'Engage'}" affectée à : ${membresNomsString}`,
                 numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                    `${mcIdentifiant}-${(nextEventNumber + 1).toString().padStart(3, '0')}` : 
-                    (nextEventNumber + 1).toString().padStart(3, '0'),
+                    `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : 
+                    reserverNumerosMC().toString().padStart(3, '0'),
                 fait: false
             };
             
             setEvents(prevEvents => [...prevEvents, engageEvent]);
-            eventNumberIncrement = 2; // On a créé 2 événements
         } else {
             console.warn('⚠️ Slot invalide pour affecter "Engagé":', slotIndex, '/', totalSlots);
         }
         
-        setNextEventNumber(nextEventNumber + eventNumberIncrement);
         setNouvelleEquipe({ numero: '', mission: '', ordreMission: '' });
         setSelectedMembres([]);
         setTypeMission('');
@@ -358,7 +355,7 @@ let GestionEquipesModal = ({
             return;
         }
 
-        setTeams(teams.map(t => {
+        setTeams(prev => prev.map(t => {
             if (t.id === editingTeam.id) {
                 return {
                     ...t,
@@ -392,11 +389,10 @@ let GestionEquipesModal = ({
                 messageImportant: false,
                 categorie: 'equipe',
                 evenement: `✏️ Modification ${editingTeam.name}\nNouvelle mission: ${nouvelleEquipe.mission}`,
-                numero: nextEventNumber.toString().padStart(3, '0'),
+                numero: reserverNumerosMC().toString().padStart(3, '0'),
                 fait: false
             };
             setEvents(prevEvents => [...prevEvents, newEvent]);
-            setNextEventNumber(prevNum => prevNum + 1);
         }
 
         annulerEdition();
@@ -417,7 +413,7 @@ let GestionEquipesModal = ({
                 .join(', ');
             
             // Marquer l'équipe comme dissoute au lieu de la supprimer
-            setTeams(teams.map(t => {
+            setTeams(prev => prev.map(t => {
                 if (t.id === teamId) {
                     return {
                         ...t,
@@ -472,12 +468,11 @@ let GestionEquipesModal = ({
                     evenement: `🔚 Dissolution ${team.name}\nMembres: ${membresNoms}`,
                     pointPhone: (function() { try { var pp = (pointsPhone||[]).find(function(pp){return (typeof pp==='object'?pp.lettre:pp)==='PC';}); return pp ? 'PC - '+(pp.nom||'Poste de Commandement') : 'PC - Poste de Commandement'; } catch(e){ return 'PC - Poste de Commandement'; } })(),
                     equipe: team.name,
-                    numero: nextEventNumber.toString().padStart(3, '0'),
+                    numero: reserverNumerosMC().toString().padStart(3, '0'),
                     fait: false
                 };
 
-                setEvents([...events, newEvent]);
-                setNextEventNumber(nextEventNumber + 1);
+                setEvents(prev => [...prev, newEvent]);
             }
         }
     };
@@ -493,7 +488,7 @@ let GestionEquipesModal = ({
             .map(id => masterSauveteursList.find(s => s.id === id)?.name)
             .filter(Boolean);
 
-        const updatedTeams = teams.map(team => {
+        const updatedTeams = (prev) => prev.map(team => {
             if (team.id === teamId) {
                 return {
                     ...team,
@@ -565,13 +560,12 @@ let GestionEquipesModal = ({
             categorie: 'equipe',
             evenement: evenementMessage,
             numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : 
-                nextEventNumber.toString().padStart(3, '0'),
+                `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : 
+                reserverNumerosMC().toString().padStart(3, '0'),
             fait: false
         };
 
         setEvents(prevEvents => [...prevEvents, newEvent]);
-        setNextEventNumber(prevNum => prevNum + 1);
 
         alert(`✅ ${selectedNewMembres.length} membre(s) ajouté(s) à l'équipe !`);
         setAddingMembersToTeam(null);
@@ -598,7 +592,7 @@ let GestionEquipesModal = ({
             const now = new Date().toISOString();
             const membreNom = membre.name;
             
-            const newTeams = teams.map(team => {
+            const newTeams = (prev) => prev.map(team => {
                 if (team.id === equipeOrigineId) {
                     return {
                         ...team,
@@ -654,12 +648,11 @@ let GestionEquipesModal = ({
                     categorie: 'equipe',
                     evenement: `↩️ ${membre.name} libéré de ${equipeOrigine.name} vers PC`,
                     pointPhone: (function(){ try { var pp=(pointsPhone||[]).find(function(p){return (typeof p==='object'?p.lettre:p)==='PC';}); return pp?'PC - '+(pp.nom||'Poste de Commandement'):'PC - Poste de Commandement'; }catch(e){return 'PC - Poste de Commandement';} })(),
-                    numero: nextEventNumber.toString().padStart(3, '0'),
+                    numero: reserverNumerosMC().toString().padStart(3, '0'),
                     fait: false
                 };
 
-                setEvents([...events, newEvent]);
-                setNextEventNumber(nextEventNumber + 1);
+                setEvents(prev => [...prev, newEvent]);
             }
             setMouvements({...mouvements, [memberId]: ''});
             alert('✅ Membre libéré au PC');
@@ -677,7 +670,7 @@ let GestionEquipesModal = ({
             const now = new Date().toISOString();
             const membreNom = membre.name;
 
-            const newTeams = teams.map(team => {
+            const newTeams = (prev) => prev.map(team => {
                 if (team.id === equipeOrigineId) {
                     return {
                         ...team,
@@ -727,12 +720,11 @@ let GestionEquipesModal = ({
                     messageImportant: false,
                     categorie: 'equipe',
                     evenement: `🔄 ${membre.name} : ${equipeOrigine.name} → ${equipeDest.name}`,
-                    numero: nextEventNumber.toString().padStart(3, '0'),
+                    numero: reserverNumerosMC().toString().padStart(3, '0'),
                     fait: false
                 };
 
-                setEvents([...events, newEvent]);
-                setNextEventNumber(nextEventNumber + 1);
+                setEvents(prev => [...prev, newEvent]);
             }
             setMouvements({...mouvements, [memberId]: ''});
             alert('✅ Membre déplacé');
@@ -748,7 +740,7 @@ let GestionEquipesModal = ({
         const now = new Date().toISOString();
 
         // Remettre l'équipe en actif
-        setTeams(teams.map(t => {
+        setTeams(prev => prev.map(t => {
             if (t.id !== teamId) return t;
             return {
                 ...t,
@@ -788,11 +780,10 @@ let GestionEquipesModal = ({
             messageImportant: true,
             categorie: 'equipe',
             evenement: '↩️ REACTIVATION ' + team.name + ' - Mission : ' + team.mission + ' - Membres : ' + membresNoms,
-            numero: nextEventNumber.toString().padStart(3, '0'),
+            numero: reserverNumerosMC().toString().padStart(3, '0'),
             fait: false
         };
         setEvents(prev => [...prev, newEvent]);
-        setNextEventNumber(prev => prev + 1);
 
         alert('✅ ' + team.name + ' réactivée ! Un événement a été ajouté à la Main Courante.');
     };
@@ -945,7 +936,7 @@ let GestionEquipesModal = ({
         const isChiefChange = targetIndex === 0 && currentIndex !== 0;
 
         // Mettre à jour l'équipe
-        const newTeams = teams.map(t => {
+        const newTeams = (prev) => prev.map(t => {
             if (t.id === teamId) {
                 const updatedTeam = { ...t, members: newMembers };
                 
@@ -988,12 +979,11 @@ let GestionEquipesModal = ({
                     messageImportant: false,
                     categorie: 'equipe',
                     evenement: `👔 Changement de chef ${team.name}\nAncien chef: ${ancienChef.name}\nNouveau chef: ${nouveauChef.name}`,
-                    numero: nextEventNumber.toString().padStart(3, '0'),
+                    numero: reserverNumerosMC().toString().padStart(3, '0'),
                     fait: false
                 };
 
-                setEvents([...events, newEvent]);
-                setNextEventNumber(nextEventNumber + 1);
+                setEvents(prev => [...prev, newEvent]);
             }
         }
 
@@ -1753,15 +1743,15 @@ let GestionEquipesModal = ({
                         const newTeam = { id: 'T'+newNum.trim()+'_'+Date.now(), name: newName, mission: team.mission, ordreMission: team.ordreMission || '', typeMission: team.typeMission, lieu: team.lieu, sousTerre: team.sousTerre, members: membresSelec, status: 'active' };
                         const membresRestants = team.members.filter(id => !membresSelec.includes(id));
                         setTeams(prev => prev.map(t => t.id === team.id ? {...t, members: membresRestants} : t).concat([newTeam]));
-                        const num = (mcMode==='secondaire'&&mcIdentifiant)?`${mcIdentifiant}-${nextEventNumber.toString().padStart(3,'0')}`:nextEventNumber.toString().padStart(3,'0');
                         const nomsDetaches = membresSelec.map(id=>{const s=masterSauveteursList.find(sv=>sv.id===id);return s?s.name:id;}).join(', ');
                         // Trouver le dernier point phone connu de l'équipe source
                         const eventsEquipeSource = events
                             .filter(e => e.equipe === team.name && e.pointPhone)
                             .sort((a, b) => new Date(b.isoTimestamp||0) - new Date(a.isoTimestamp||0));
                         const dernierPP = eventsEquipeSource.length > 0 ? eventsEquipeSource[0].pointPhone : null;
-                        const numScission = (mcMode==='secondaire'&&mcIdentifiant)?`${mcIdentifiant}-${nextEventNumber.toString().padStart(3,'0')}`:nextEventNumber.toString().padStart(3,'0');
-                        const numLocalisation = (mcMode==='secondaire'&&mcIdentifiant)?`${mcIdentifiant}-${(nextEventNumber+1).toString().padStart(3,'0')}`:(nextEventNumber+1).toString().padStart(3,'0');
+                        const nScission = reserverNumerosMC(dernierPP ? 2 : 1);
+                        const numScission = (mcMode==='secondaire'&&mcIdentifiant)?`${mcIdentifiant}-${nScission.toString().padStart(3,'0')}`:nScission.toString().padStart(3,'0');
+                        const numLocalisation = (mcMode==='secondaire'&&mcIdentifiant)?`${mcIdentifiant}-${(nScission+1).toString().padStart(3,'0')}`:(nScission+1).toString().padStart(3,'0');
                         const now = new Date();
                         // Horodatage légèrement avant la scission pour que ce soit le "premier" point de la nouvelle équipe
                         const tsLocalisation = new Date(now.getTime() - 30000); // 30s avant
@@ -1792,7 +1782,6 @@ let GestionEquipesModal = ({
                             });
                         }
                         setEvents(prev=>[...prev, ...newEvents]);
-                        setNextEventNumber(n => n + (dernierPP ? 2 : 1));
                         setModalScindre(null);
                     };
                     return (

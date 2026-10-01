@@ -14,13 +14,14 @@ let GestionSecretairesModal = ({ secretaires, setSecretaires, onClose }) => {
             alert('Ce secrétaire existe déjà');
             return;
         }
-        setSecretaires([...secretaires, nouveauSecretaire.trim()].sort());
+        const nom = nouveauSecretaire.trim();
+        setSecretaires(prev => prev.includes(nom) ? prev : [...prev, nom].sort());
         setNouveauSecretaire('');
     };
 
     const supprimerSecretaire = (nom) => {
         if (window.confirm(`Voulez-vous vraiment supprimer ${nom} ?`)) {
-            setSecretaires(secretaires.filter(s => s !== nom));
+            setSecretaires(prev => prev.filter(s => s !== nom));
         }
     };
 
@@ -79,7 +80,7 @@ GestionSecretairesModal = React.memo(GestionSecretairesModal);
 // ============================================
 const GestionPlanningModal = ({ 
     masterSauveteursList, activeSauveteurIds, setActiveSauveteurIds,
-    teams, setTeams, events, setEvents, nextEventNumber, setNextEventNumber,
+    teams, setTeams, events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC,
     planning, setPlanning, totalDays, onClose, handleAddSauveteurToPlanning, mcMode, mcIdentifiant, startHour
 }) => {
     const [selectedSauveteurs, setSelectedSauveteurs] = useState([]);
@@ -118,6 +119,7 @@ const GestionPlanningModal = ({
             ? `Sauveteurs requis : ${nomsArrivants}`
             : `Arrivée de : ${nomsArrivants}`;
 
+        const nArrivee = reserverNumerosMC();
         const newEvent = {
             id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
@@ -127,13 +129,12 @@ const GestionPlanningModal = ({
             categorie: 'personnel',
             evenement: evenementMessage,
             numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : 
-                nextEventNumber.toString().padStart(3, '0'),
+                `${mcIdentifiant}-${nArrivee.toString().padStart(3, '0')}` : 
+                nArrivee.toString().padStart(3, '0'),
             fait: false
         };
 
-        setEvents([...events, newEvent]);
-        setNextEventNumber(nextEventNumber + 1);
+        setEvents(prev => [...prev, newEvent]);
         setSelectedSauveteurs([]);
         alert('✅ Sauveteurs ajoutés au planning !');
     };
@@ -149,11 +150,6 @@ const GestionPlanningModal = ({
             return s ? s.name : '';
         }).filter(Boolean);
         const nomsPartants = sauv.join(', ');
-
-        setTeams(teams.map(team => ({
-            ...team,
-            members: team.members.filter(id => !selectedSauveteurs.includes(id))
-        })).filter(team => team.members.length > 0));
 
         // Ne PAS supprimer du planning — juste marquer "Quitter le secours" sur le slot actuel
         const nowD = new Date();
@@ -185,10 +181,12 @@ const GestionPlanningModal = ({
         });
 
         // Retirer des équipes uniquement — garder dans activeSauveteurIds pour rester visible dans le planning
-        setTeams(teams.map(function(team) {
+        // (les équipes devenues vides sont conservées)
+        setTeams(prev => prev.map(function(team) {
             return {...team, members: team.members.filter(function(id){ return !selectedSauveteurs.includes(id); })};
         }));
         // NE PAS retirer de activeSauveteurIds : la personne reste visible dans le planning
+        const nDepart = reserverNumerosMC();
 
         const newEvent = {
             id: nouvelId(),
@@ -199,13 +197,12 @@ const GestionPlanningModal = ({
             categorie: 'personnel',
             evenement: 'Départ de : ' + nomsPartants,
             numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : 
-                nextEventNumber.toString().padStart(3, '0'),
+                `${mcIdentifiant}-${nDepart.toString().padStart(3, '0')}` : 
+                nDepart.toString().padStart(3, '0'),
             fait: false
         };
 
-        setEvents([...events, newEvent]);
-        setNextEventNumber(nextEventNumber + 1);
+        setEvents(prev => [...prev, newEvent]);
         setSelectedSauveteurs([]);
         alert('✅ Sauveteurs retirés du planning !');
     };
@@ -957,7 +954,7 @@ try {
     );
 };
 // Modal d'import/fusion des MC Secondaires
-const ImportMcModal = ({ events, setEvents, nextEventNumber, setNextEventNumber, onClose }) => {
+const ImportMcModal = ({ events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, onClose }) => {
     const [importedData, setImportedData] = React.useState(null);
     const [mergePreview, setMergePreview] = React.useState([]);
     const [showConfirm, setShowConfirm] = React.useState(false);
@@ -993,10 +990,11 @@ reader.onload = (event) => {
 reader.readAsText(file);
     };
 
-    const generateMergePreview = (data) => {
-// Fusionner et trier par date/heure
+    // Fusionne et trie par date/heure : pour l'aperçu, puis de nouveau à la confirmation sur
+    // l'état le plus récent (un événement ajouté pendant l'aperçu n'est pas perdu)
+    const fusionner = (base, data) => {
 const importedEvents = data.events || [];
-const allEvents = [...events, ...importedEvents];
+const allEvents = [...base, ...importedEvents];
 
 // Trier par timestamp (convertir dateHeure en timestamp pour comparaison)
 allEvents.sort((a, b) => {
@@ -1005,7 +1003,11 @@ allEvents.sort((a, b) => {
     return dateA - dateB;
 });
 
-setMergePreview(allEvents);
+return allEvents;
+    };
+
+    const generateMergePreview = (data) => {
+setMergePreview(fusionner(events, data));
     };
 
     const parseFrenchDate = (dateStr) => {
@@ -1027,18 +1029,18 @@ if (!importedData) return;
 
 try {
     // Mettre à jour les événements
-    setEvents(garantirIdsUniques(mergePreview));
+    setEvents(prev => garantirIdsUniques(fusionner(prev, importedData)));
 
     // Mettre à jour le prochain numéro si nécessaire
     const importedEvents = importedData.events || [];
     const maxNum = Math.max(
-        nextEventNumber,
+        0,
         ...importedEvents.map(e => {
             const match = e.numero && e.numero.match(/\d+/);
             return match ? parseInt(match[0], 10) + 1 : 0;
         })
     );
-    setNextEventNumber(maxNum);
+    setNextEventNumber(n => Math.max(n, maxNum));
 
     alert(`✓ ${importedEvents.length} événement(s) de la MC "${importedData.mcIdentifiant}" fusionné(s) avec succès !`);
 } catch (error) {

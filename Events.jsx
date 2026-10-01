@@ -396,7 +396,7 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
 // COMPOSANT MAIN COURANTE
 // ============================================
 let MainCouranteTab = ({
-    events, setEvents, nextEventNumber, setNextEventNumber,
+    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC,
     secretaires, sauveteursSurSiteNoms, teams, sauveteursSurSite,
     showSearchModal, setShowSearchModal, mcMode, mcIdentifiant,
     pointsPhone, setPointsPhone, masterSauveteursList, categories,
@@ -664,15 +664,8 @@ let MainCouranteTab = ({
 
     // Valider une alerte
     const handleValidateAlert = (event) => {
-        const updatedEvents = events.map(e => {
-            if (e.id === event.id) {
-                return { ...e, fait: true };
-            }
-            return e;
-        });
-        setEvents(updatedEvents);
-
         // Créer un événement de validation
+        const nMC = reserverNumerosMC();
         const validationEvent = {
             id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
@@ -681,13 +674,12 @@ let MainCouranteTab = ({
             messageImportant: false,
             evenement: `✓ Rappel N°${event.numero} réalisé : ${event.evenement.substring(0, 50)}...`,
             numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : 
-                nextEventNumber.toString().padStart(3, '0'),
+                `${mcIdentifiant}-${nMC.toString().padStart(3, '0')}` : 
+                nMC.toString().padStart(3, '0'),
             fait: false
         };
         
-        setEvents([...updatedEvents, validationEvent]);
-        setNextEventNumber(nextEventNumber + 1);
+        setEvents(prev => [...prev.map(e => e.id === event.id ? { ...e, fait: true } : e), validationEvent]);
     };
 
     // Fonction pour ouvrir l'édition d'un événement
@@ -725,8 +717,9 @@ let MainCouranteTab = ({
             return;
         }
 
-        const updatedEvents = events.map(e => {
-            if (e.id === editingEvent.id) {
+        const idModifie = editingEvent.id;
+        setEvents(prev => prev.map(e => {
+            if (e.id === idModifie) {
                 return {
                     ...e,
                     secretaire: editFormData.secretaire,
@@ -747,9 +740,7 @@ let MainCouranteTab = ({
                 };
             }
             return e;
-        });
-
-        setEvents(updatedEvents);
+        }));
         setEditingEvent(null);
         alert('✅ Événement modifié avec succès !');
     };
@@ -1074,6 +1065,7 @@ let MainCouranteTab = ({
             messageComplet = prefix + (messageComplet ? '\n' + messageComplet : '');
         }
 
+        const nMC = reserverNumerosMC();
         const newEvent = {
             id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
@@ -1089,13 +1081,12 @@ let MainCouranteTab = ({
             personneConcernee: formData.personneConcernee,
             equipe: formData.equipe,
             numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : 
-                nextEventNumber.toString().padStart(3, '0'),
+                `${mcIdentifiant}-${nMC.toString().padStart(3, '0')}` : 
+                nMC.toString().padStart(3, '0'),
             fait: false
         };
 
-        setEvents([...events, newEvent]);
-        setNextEventNumber(nextEventNumber + 1);
+        setEvents(prev => [...prev, newEvent]);
 
         // ============================================================
         // MISE À JOUR PLANNING DEPUIS MC
@@ -1407,9 +1398,13 @@ let MainCouranteTab = ({
         };
 
         // Insérer l'événement après l'événement sélectionné (ou juste avant, en mode 'before')
-        const newEvents = [...events];
-        newEvents.splice(insertMode === 'before' ? insertIndex : insertIndex + 1, 0, newEvent);
-        setEvents(newEvents);
+        const idReference = insertAfterEvent.id;
+        setEvents(prev => {
+            const newEvents = [...prev];
+            const idx = newEvents.findIndex(e => e.id === idReference);
+            newEvents.splice(insertMode === 'before' ? idx : idx + 1, 0, newEvent);
+            return newEvents;
+        });
         
         // Réinitialiser le formulaire et fermer la modal
         setInsertFormData({
@@ -2132,9 +2127,10 @@ let MainCouranteTab = ({
                             { id: 'plongee', name: 'Plongée' }
                         ];
                         var actLabel = (ACTIVITES_PLANNING.find(function(a){ return a.id === act; }) || {name: act}).name;
+                        var nPlanning = reserverNumerosMC();
                         var mcNum = (mcMode === 'secondaire' && mcIdentifiant)
-                            ? mcIdentifiant + '-' + nextEventNumber.toString().padStart(3,'0')
-                            : nextEventNumber.toString().padStart(3,'0');
+                            ? mcIdentifiant + '-' + nPlanning.toString().padStart(3,'0')
+                            : nPlanning.toString().padStart(3,'0');
                         var newMcEvent = {
                             id: nouvelId(),
                             isoTimestamp: new Date().toISOString(),
@@ -2148,7 +2144,6 @@ let MainCouranteTab = ({
                             fait: false
                         };
                         setEvents(function(prev){ return [...prev, newMcEvent]; });
-                        setNextEventNumber(function(n){ return n + 1; });
                         // Mettre à jour le planning
                         setPlanning(function(prev) {
                             var np = Object.assign({}, prev);

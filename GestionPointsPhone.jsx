@@ -1,6 +1,9 @@
 ﻿// ============================================
 // MODAL - GESTION POINTS PHONE
 // ============================================
+// Lettre d'un point phone (anciennes données : simple chaîne ; actuelles : objet)
+const lettrePP = (pp) => (typeof pp === 'object' ? pp.lettre : pp);
+
 let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents, onClose }) => {
     const [nouveauNom, setNouveauNom] = useState('');
     const [nouveauTypePP, setNouveauTypePP] = useState('');
@@ -45,7 +48,7 @@ let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents,
             return Math.max(max, isNaN(o) ? 0 : o);
         }, 0);
         const ordreVal = nouveauOrdre.trim() !== '' ? parseFloat(nouveauOrdre) : maxOrdre + 1;
-        setPointsPhone([...pointsPhone, { lettre: nouvelleLettre, nom: nomTrimmed, typePP: nouveauTypePP, sousTerre: nouveauTypePP === 'souterre', estEntree: nouveauTypePP === 'entree' || nouveauTypePP === 'sortie', ordre: isNaN(ordreVal) ? maxOrdre + 1 : ordreVal }]);
+        setPointsPhone(prev => [...prev, { lettre: nouvelleLettre, nom: nomTrimmed, typePP: nouveauTypePP, sousTerre: nouveauTypePP === 'souterre', estEntree: nouveauTypePP === 'entree' || nouveauTypePP === 'sortie', ordre: isNaN(ordreVal) ? maxOrdre + 1 : ordreVal }]);
         setNouveauTypePP('');
         setNouveauOrdre('');
         setNouveauNom('');
@@ -55,7 +58,7 @@ let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents,
     const supprimerPointPhone = (pp) => {
         const displayText = typeof pp === 'object' ? `${pp.lettre} - ${pp.nom}` : pp;
         if (window.confirm(`Voulez-vous vraiment supprimer "${displayText}" ?`)) {
-            setPointsPhone(pointsPhone.filter(p => p !== pp));
+            setPointsPhone(prev => prev.filter(p => lettrePP(p) !== lettrePP(pp)));
         }
     };
 
@@ -81,20 +84,13 @@ let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents,
         const nouveauPP = { lettre: editLettre, nom: nomTrimmed, typePP: editTypePP, sousTerre: editTypePP === 'souterre', estEntree: editTypePP === 'entree' || editTypePP === 'sortie', ordre: typeof ancienPP === 'object' && ancienPP.ordre !== undefined ? ancienPP.ordre : index };
         const nouveauDisplay = `${editLettre} - ${nomTrimmed}`;
 
-        const newPointsPhone = [...pointsPhone];
-        newPointsPhone[index] = nouveauPP;
-        setPointsPhone(newPointsPhone);
+        setPointsPhone(prev => prev.map(p => lettrePP(p) === lettrePP(ancienPP) ? nouveauPP : p));
 
         if (events && setEvents) {
-            const updatedEvents = events.map(event => {
-                if (event.pointPhone === ancienDisplay ||
-                    event.pointPhone === (typeof ancienPP === 'object' ? ancienPP.lettre : ancienPP)) {
-                    return { ...event, pointPhone: nouveauDisplay };
-                }
-                return event;
-            });
-            setEvents(updatedEvents);
-            const nbModifies = updatedEvents.filter((e, i) => e.pointPhone !== events[i].pointPhone).length;
+            const concerne = event => event.pointPhone === ancienDisplay ||
+                event.pointPhone === (typeof ancienPP === 'object' ? ancienPP.lettre : ancienPP);
+            setEvents(prev => prev.map(event => concerne(event) ? { ...event, pointPhone: nouveauDisplay } : event));
+            const nbModifies = events.filter(concerne).length;
             if (nbModifies > 0) alert(`✅ Point phone modifié !\n${nbModifies} événement(s) mis à jour.`);
             else alert('✅ Point phone modifié avec succès !');
         }
@@ -260,10 +256,9 @@ let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents,
                                                             type="text"
                                                             value={ordreVal}
                                                             onChange={(e) => {
-                                                                const newPPs = [...pointsPhone];
                                                                 const val = e.target.value;
-                                                                newPPs[realIdx] = typeof pp === 'object' ? {...pp, ordre: val === '' ? '' : (isNaN(parseFloat(val)) ? val : parseFloat(val))} : pp;
-                                                                setPointsPhone(newPPs);
+                                                                const ordre = val === '' ? '' : (isNaN(parseFloat(val)) ? val : parseFloat(val));
+                                                                setPointsPhone(prev => prev.map(p => (typeof p === 'object' && lettrePP(p) === lettrePP(pp)) ? {...p, ordre} : p));
                                                             }}
                                                             title="Position dans le diagramme — modifiez pour réordonner (ex: 3, 3.5, 4a)"
                                                             style={{width:'44px',textAlign:'center',padding:'2px 4px',border:'1px solid #93c5fd',borderRadius:'4px',fontSize:'13px',fontWeight:'700',color:'#1d4ed8',backgroundColor:'#eff6ff',cursor:'text'}}
