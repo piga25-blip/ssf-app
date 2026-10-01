@@ -722,7 +722,7 @@
                 alertSnoozedUntil,
                 getAlertStatusGlobal,
                 handleValidateAlertGlobal
-            } = useAlerts({ events, setEvents, reserverNumerosMC });
+            } = useAlerts({ events, actions, reserverNumerosMC });
 
             // ===== HOOK WEBSOCKET =====
             const {
@@ -1391,7 +1391,7 @@
                             return 0;
                         });
 
-                        setEvents(garantirIdsUniques(mergedEvents));
+                        actions.importerEvenements(importedEvents);
 
                         // Résumé du résultat
                         const plusAncien = mergedEvents[0]?.dateHeure || '?';
@@ -1533,7 +1533,7 @@
                                         <span className="font-bold text-sm">🔒 CLÔTURÉ</span>
                                         <span className="text-xs text-gray-300">{clotureInfo.dateHeure}</span>
                                         <button
-                                            onClick={() => { if (window.confirm('Rouvrir ce secours ? Les modifications seront de nouveau possibles.')) setClotureInfo(null); }}
+                                            onClick={() => { if (window.confirm('Rouvrir ce secours ? Les modifications seront de nouveau possibles.')) actions.rouvrirSecours(); }}
                                             className="ml-2 text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded text-white"
                                         >Réouvrir</button>
                                     </div>
@@ -1556,8 +1556,8 @@
                                         onConfirm={(clotureDate) => {
                                             const nCloture = reserverNumerosMC();
                                             const numCloture = (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nCloture.toString().padStart(3,'0')}` : nCloture.toString().padStart(3,'0');
-                                            setClotureInfo({ dateHeure: clotureDate.toLocaleString('fr-FR'), isoTimestamp: clotureDate.toISOString() });
-                                            setEvents(prev => [...prev, { id: nouvelId(), isoTimestamp: clotureDate.toISOString(), secretaire: 'Système', dateHeure: clotureDate.toLocaleString('fr-FR'), messageImportant: true, categorie: 'secours', evenement: `🔒 CLÔTURE DU SECOURS — ${missionInfo.nomCavite || currentRescueId}\nDate et heure de clôture : ${clotureDate.toLocaleString('fr-FR')}`, numero: numCloture, fait: false }]);
+                                            // Clôture : état « clôturé » + ligne de main courante
+                                            actions.cloturerSecours(clotureDate.toISOString(), { id: nouvelId(), isoTimestamp: clotureDate.toISOString(), secretaire: 'Système', dateHeure: clotureDate.toLocaleString('fr-FR'), messageImportant: true, categorie: 'secours', evenement: `🔒 CLÔTURE DU SECOURS — ${missionInfo.nomCavite || currentRescueId}\nDate et heure de clôture : ${clotureDate.toLocaleString('fr-FR')}`, numero: numCloture, fait: false });
                                             setShowClotureModal(false);
                                         }}
                                     />
@@ -1747,6 +1747,7 @@
                                 {activeTab === 'maincourante' ? (
                                     <MainCouranteTab 
                                         events={events}
+                                        actions={actions}
                                         setEvents={setEvents}
                                         nextEventNumber={nextEventNumber}
                                         reserverNumerosMC={reserverNumerosMC}
@@ -1978,13 +1979,13 @@
                                     if (nonSel.length > 0) {
                                         newEvents.push({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${nonSel.map(s=>s.name).join(', ')}`, numero: mkNumero(num++), fait: false });
                                     }
-                                    setEvents(prev => [...prev, ...newEvents]);
+                                    actions.ajouterLignesMC(newEvents);
                                     setActiveTab('maincourante');
                                     setModalRepos(null);
                                 };
 
                                 const handleSansDuree = () => {
-                                    setEvents(prev => [...prev, { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${modalRepos.sauveteurs}`, numero: mkNumero(modalRepos.eventBase.nextNum), fait: false }]);
+                                    actions.ajouterLigneMC({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${modalRepos.sauveteurs}`, numero: mkNumero(modalRepos.eventBase.nextNum), fait: false });
                                     setActiveTab('maincourante');
                                     setModalRepos(null);
                                 };
@@ -2226,7 +2227,7 @@
                                                                 now.setMinutes(now.getMinutes() + 5);
                                                                 const newDate = now.toISOString().split('T')[0];
                                                                 const newTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-                                                                setEvents(prev => prev.map(e => e.id !== event.id ? e : {...e, dateRappel: newDate, heureRappel: newTime}));
+                                                                actions.reporterRappel(event.id, newDate, newTime);
                                                                 alertSnoozedUntil.current = Date.now() + 5 * 60 * 1000;
                                                                 setShowAlertsModal(false);
                                                             }}
@@ -2270,6 +2271,7 @@
                             <ModalErrorBoundary onClose={() => setShowImportMcModal(false)}>
                                 <ImportMcModal
                                     events={events}
+                                    actions={actions}
                                     setEvents={setEvents}
                                     nextEventNumber={nextEventNumber}
                                     reserverNumerosMC={reserverNumerosMC}

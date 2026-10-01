@@ -870,7 +870,7 @@ try {
     );
 };
 // Modal d'import/fusion des MC Secondaires
-const ImportMcModal = ({ events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, onClose }) => {
+const ImportMcModal = ({ events, actions, onClose }) => {
     const [importedData, setImportedData] = React.useState(null);
     const [mergePreview, setMergePreview] = React.useState([]);
     const [showConfirm, setShowConfirm] = React.useState(false);
@@ -944,19 +944,9 @@ return new Date(0);
 if (!importedData) return;
 
 try {
-    // Mettre à jour les événements
-    setEvents(prev => garantirIdsUniques(fusionner(prev, importedData)));
-
-    // Mettre à jour le prochain numéro si nécessaire
+    // Fusion triée par date/heure et prochain numéro au-delà des numéros importés (action nommée)
     const importedEvents = importedData.events || [];
-    const maxNum = Math.max(
-        0,
-        ...importedEvents.map(e => {
-            const match = e.numero && e.numero.match(/\d+/);
-            return match ? parseInt(match[0], 10) + 1 : 0;
-        })
-    );
-    setNextEventNumber(n => Math.max(n, maxNum));
+    actions.importerMCSecondaire(importedEvents);
 
     alert(`✓ ${importedEvents.length} événement(s) de la MC "${importedData.mcIdentifiant}" fusionné(s) avec succès !`);
 } catch (error) {

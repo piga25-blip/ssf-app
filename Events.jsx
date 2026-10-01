@@ -396,7 +396,7 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
 // COMPOSANT MAIN COURANTE
 // ============================================
 let MainCouranteTab = ({
-    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC,
+    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, actions,
     secretaires, sauveteursSurSiteNoms, teams, sauveteursSurSite,
     showSearchModal, setShowSearchModal, mcMode, mcIdentifiant,
     pointsPhone, setPointsPhone, masterSauveteursList, categories,
@@ -679,7 +679,7 @@ let MainCouranteTab = ({
             fait: false
         };
         
-        setEvents(prev => [...prev.map(e => e.id === event.id ? { ...e, fait: true } : e), validationEvent]);
+        actions.validerRappel(event.id, validationEvent);
     };
 
     // Fonction pour ouvrir l'édition d'un événement
@@ -717,11 +717,7 @@ let MainCouranteTab = ({
             return;
         }
 
-        const idModifie = editingEvent.id;
-        setEvents(prev => prev.map(e => {
-            if (e.id === idModifie) {
-                return {
-                    ...e,
+        actions.modifierLigneMC(editingEvent.id, {
                     secretaire: editFormData.secretaire,
                     messageImportant: editFormData.messageImportant,
                     categorie: editFormData.categorie,
@@ -737,10 +733,7 @@ let MainCouranteTab = ({
                     departDuPC: editFormData.departDuPC,
                     lieuDepart: editFormData.lieuDepart,
                     sensEntree: editFormData.sensEntree
-                };
-            }
-            return e;
-        }));
+        });
         setEditingEvent(null);
         alert('✅ Événement modifié avec succès !');
     };
@@ -1086,7 +1079,7 @@ let MainCouranteTab = ({
             fait: false
         };
 
-        setEvents(prev => [...prev, newEvent]);
+        actions.ajouterLigneMC(newEvent);
 
         // ============================================================
         // MISE À JOUR PLANNING DEPUIS MC
@@ -1179,40 +1172,12 @@ let MainCouranteTab = ({
             var slotP = hP * 4 + Math.floor(nowP2.getMinutes() / 15);
             var totalSlotsP = getTotalSlots(totalDays);
             if (slotP < 0 || slotP >= totalSlotsP) return;
-            // Déterminer les IDs à mettre à jour
-            var idsAMettreAJour = [];
-             var idsAMettreAJour = [];
+             // Ouvrir le modal de sélection des membres ; la mise à jour du planning se fait à sa validation
              if (sauveteurCible || teamTrouve) {
-                 // Ouvrir le modal de sélection des membres
                  var initSelec = sauveteurCible ? [sauveteurCible.id] : (teamTrouve ? teamTrouve.members.slice() : []);
                  setMembresSelectionnes(initSelec);
                  setModalSelectionMembres({ team: teamTrouve, sauveteurCible: sauveteurCible, activite: activite2, slotP: slotP });
-                 return; // La suite se passe dans le modal
              }
-             if (!teamTrouve && !sauveteurCible) return;
-             if (idsAMettreAJour.length === 0) return;
-
-             var act2 = activite2;
-             setPlanning(function(prev) {
-                 var np2 = Object.assign({}, prev);
-                 idsAMettreAJour.forEach(function(memberId) {
-                     if (!np2[memberId]) return;
-                     var row2 = np2[memberId].slice();
-                     var lastAct = null;
-                     for (var s = slotP - 1; s >= 0; s--) {
-                         if (row2[s] && row2[s] !== 'nondef' && row2[s] !== 'effacer') { lastAct = row2[s]; break; }
-                     }
-                     if (lastAct) {
-                         for (var s2 = slotP - 1; s2 >= 0; s2--) {
-                             if (!row2[s2] || row2[s2] === 'nondef' || row2[s2] === 'effacer') row2[s2] = lastAct;
-                             else break;
-                         }
-                     }
-                     row2[slotP] = act2;
-                     np2[memberId] = row2;
-                 });
-                 return np2;
-             });
         })();
 
         setFormData({
@@ -1398,13 +1363,7 @@ let MainCouranteTab = ({
         };
 
         // Insérer l'événement après l'événement sélectionné (ou juste avant, en mode 'before')
-        const idReference = insertAfterEvent.id;
-        setEvents(prev => {
-            const newEvents = [...prev];
-            const idx = newEvents.findIndex(e => e.id === idReference);
-            newEvents.splice(insertMode === 'before' ? idx : idx + 1, 0, newEvent);
-            return newEvents;
-        });
+        actions.insererLigneMC(newEvent, insertAfterEvent.id, insertMode === 'before');
         
         // Réinitialiser le formulaire et fermer la modal
         setInsertFormData({
@@ -2104,14 +2063,8 @@ let MainCouranteTab = ({
 
                         // Cas point phone only : mettre à jour le libellé de l'événement MC existant
                         if (modal.pointPhoneOnly && modal.eventId) {
-                            setEvents(function(prev) {
-                                return prev.map(function(ev) {
-                                    if (ev.id !== modal.eventId) return ev;
-                                    // Ajouter la mention des membres présents au point phone
-                                    var suffix = '\nPrésents au point phone : ' + mentionEquipe;
-                                    return {...ev, evenement: ev.evenement + suffix};
-                                });
-                            });
+                            // Ajouter la mention des membres présents au point phone
+                            actions.ajouterPresentsPointPhone(modal.eventId, mentionEquipe);
                             setModalSelectionMembres(null);
                             setMembresSelectionnes([]);
                             return;
@@ -2143,28 +2096,8 @@ let MainCouranteTab = ({
                             equipe: modal.team ? modal.team.name : '',
                             fait: false
                         };
-                        setEvents(function(prev){ return [...prev, newMcEvent]; });
-                        // Mettre à jour le planning
-                        setPlanning(function(prev) {
-                            var np = Object.assign({}, prev);
-                            ids.forEach(function(memberId) {
-                                if (!np[memberId]) return;
-                                var row = np[memberId].slice();
-                                var lastAct = null;
-                                for (var s = slot - 1; s >= 0; s--) {
-                                    if (row[s] && row[s] !== 'nondef' && row[s] !== 'effacer') { lastAct = row[s]; break; }
-                                }
-                                if (lastAct) {
-                                    for (var s2 = slot - 1; s2 >= 0; s2--) {
-                                        if (!row[s2] || row[s2] === 'nondef' || row[s2] === 'effacer') row[s2] = lastAct;
-                                        else break;
-                                    }
-                                }
-                                row[slot] = act;
-                                np[memberId] = row;
-                            });
-                            return np;
-                        });
+                        // Ligne de main courante + planning des membres (créneaux vides précédents complétés)
+                        actions.affecterPlanningDepuisMC(newMcEvent, ids, act, slot);
                         setModalSelectionMembres(null);
                         setMembresSelectionnes([]);
                     }}

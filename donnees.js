@@ -78,6 +78,64 @@ const indexCreneau = (etat, iso) => {
     return Math.floor(minutes / 15);
 };
 
+// Case de planning vide
+const creneauVide = v => !v || v === 'nondef' || v === 'effacer';
+
+// Affecte une activité au créneau slot d'une ligne de planning ; les créneaux vides qui le
+// précèdent reprennent la dernière activité connue. Renvoie une nouvelle ligne.
+const affecterCreneau = (ligne, slot, activite) => {
+    const r = [...ligne];
+    let derniere = null;
+    for (let s = slot - 1; s >= 0; s--) { if (!creneauVide(r[s])) { derniere = r[s]; break; } }
+    if (derniere) {
+        for (let s = slot - 1; s >= 0; s--) { if (creneauVide(r[s])) r[s] = derniere; else break; }
+    }
+    r[slot] = activite;
+    return r;
+};
+
+// Instant (ms) d'une date/heure affichée « jj/mm/aaaa hh:mm(:ss) » ou « jj/mm/aaaa à hh:mm »,
+// à la minute (tri de l'import d'une main courante secondaire)
+const dateHeureAffichee = (texte) => {
+    try {
+        const parts = texte.replace(' à ', ' ').split(/[\/\s:]/);
+        if (parts.length >= 5) {
+            const [jour, mois, annee, heure, minute] = parts.map(p => parseInt(p, 10));
+            return new Date(annee, mois - 1, jour, heure, minute).getTime();
+        }
+    } catch (e) { /* format inattendu */ }
+    return 0;
+};
+
+// Instant (ms) d'une ligne de main courante : horodatage ISO, sinon ancien identifiant
+// numérique (Date.now(), anciennes versions), sinon date/heure affichée
+const horodatageEvenement = (ev) => {
+    if (ev.isoTimestamp) { const t = Date.parse(ev.isoTimestamp); if (!isNaN(t)) return t; }
+    if (typeof ev.id === 'number' && ev.id > 1000000000000) return ev.id;
+    if (ev.dateHeure) {
+        const m = ev.dateHeure.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+        if (m) { const [, j, mo, a, h, mi, s = '00'] = m; return new Date(a, mo - 1, j, h, mi, s).getTime(); }
+        const t = Date.parse(ev.dateHeure);
+        if (!isNaN(t)) return t;
+    }
+    return 0;
+};
+
+// Identifiants uniques, de façon déterministe (version pure de garantirIdsUniques) :
+// un doublon reçoit « identifiant~2 », « ~3 »…
+const idsUniques = (events) => {
+    const vus = new Set(events.map(e => e.id));
+    const deja = new Set();
+    return events.map(e => {
+        if (!deja.has(e.id)) { deja.add(e.id); return e; }
+        let n = 2;
+        while (vus.has(`${e.id}~${n}`)) n++;
+        const id = `${e.id}~${n}`;
+        vus.add(id); deja.add(id);
+        return { ...e, id };
+    });
+};
+
 // Lettre d'un point phone (anciennes données : simple chaîne ; actuelles : objet)
 const lettrePointPhone = (pp) => (typeof pp === 'object' ? pp.lettre : pp);
 
@@ -240,6 +298,93 @@ const ACTIONS_DONNEES = {
         return { ...etat, secretaires: etat.secretaires.filter(s => s !== nom) };
     },
 
+    // ===== Main courante =====
+
+    // Ligne saisie (ou créée par un écran) : construite entièrement par l'appelant
+    'MC/AJOUTER'(etat, { evenement }) {
+        return { ...etat, events: [...etat.events, evenement] };
+    },
+
+    // Plusieurs lignes d'un coup (ex. fenêtre de repos : une ligne par groupe de sauveteurs)
+    'MC/AJOUTER_PLUSIEURS'(etat, { evenements }) {
+        return { ...etat, events: [...etat.events, ...evenements] };
+    },
+
+    'MC/MODIFIER'(etat, { id, champs }) {
+        return { ...etat, events: etat.events.map(e => e.id === id ? { ...e, ...champs } : e) };
+    },
+
+    // Insertion juste après (ou avant) une ligne existante
+    'MC/INSERER'(etat, { evenement, idReference, avant }) {
+        const events = [...etat.events];
+        const i = events.findIndex(e => e.id === idReference);
+        events.splice(avant ? i : i + 1, 0, evenement);
+        return { ...etat, events };
+    },
+
+    // Rappel marqué comme réalisé + ligne de validation (construite par l'appelant)
+    'MC/VALIDER_RAPPEL'(etat, { id, evenementValidation }) {
+        return { ...etat, events: [...etat.events.map(e => e.id === id ? { ...e, fait: true } : e), evenementValidation] };
+    },
+
+    'MC/REPORTER_RAPPEL'(etat, { id, dateRappel, heureRappel }) {
+        return { ...etat, events: etat.events.map(e => e.id !== id ? e : { ...e, dateRappel, heureRappel }) };
+    },
+
+    // Passage d'une équipe à un point phone : membres présents ajoutés au texte de la ligne
+    'MC/AJOUTER_PRESENTS_POINT_PHONE'(etat, { id, mention }) {
+        return { ...etat, events: etat.events.map(e => e.id !== id ? e : { ...e, evenement: e.evenement + '\nPrésents au point phone : ' + mention }) };
+    },
+
+    // Import d'une main courante secondaire : fusion triée par date/heure affichée, puis
+    // prochain numéro au-delà des numéros importés
+    'MC/IMPORTER_SECONDAIRE'(etat, { evenements }) {
+        const fusion = [...etat.events, ...evenements]
+            .sort((a, b) => dateHeureAffichee(a.dateHeure) - dateHeureAffichee(b.dateHeure));
+        const maxNum = Math.max(0, ...evenements.map(e => {
+            const m = e.numero && e.numero.match(/\d+/);
+            return m ? parseInt(m[0], 10) + 1 : 0;
+        }));
+        return { ...etat, events: idsUniques(fusion), nextEventNumber: Math.max(etat.nextEventNumber, maxNum) };
+    },
+
+    // Import d'événements (« Importer Événements ») : fusion strictement chronologique ; à
+    // égalité, les lignes locales avant les importées
+    'MC/IMPORTER_EVENEMENTS'(etat, { evenements }) {
+        const fusion = [...etat.events, ...evenements].sort((a, b) => {
+            const ta = horodatageEvenement(a), tb = horodatageEvenement(b);
+            if (ta !== tb) return ta - tb;
+            if (a.importedFrom && !b.importedFrom) return 1;
+            if (!a.importedFrom && b.importedFrom) return -1;
+            return 0;
+        });
+        return { ...etat, events: idsUniques(fusion) };
+    },
+
+    // ===== Planning depuis la main courante =====
+
+    // Activité affectée aux membres d'une équipe (fenêtre « Mise à jour planning » après une
+    // ligne de progression) + ligne de main courante (construite par l'appelant)
+    'PLANNING/AFFECTER_DEPUIS_MC'(etat, { evenement, ids, activite, slot }) {
+        const planning = { ...etat.planning };
+        ids.forEach(id => { if (planning[id]) planning[id] = affecterCreneau(planning[id], slot, activite); });
+        return { ...etat, planning, events: [...etat.events, evenement] };
+    },
+
+    // ===== Secours =====
+
+    'SECOURS/CLOTURER'(etat, { horodatageCloture, evenement }) {
+        return {
+            ...etat,
+            clotureInfo: { dateHeure: dateHeureFr(horodatageCloture), isoTimestamp: horodatageCloture },
+            events: [...etat.events, evenement],
+        };
+    },
+
+    'SECOURS/ROUVRIR'(etat) {
+        return { ...etat, clotureInfo: null };
+    },
+
     // Attribue un n° permanent aux sauveteurs actifs qui n'en ont pas (anciens dossiers)
     'SAUVETEURS/NUMEROTER_MANQUANTS'(etat) {
         const sansNumero = etat.activeSauveteurIds.filter(id => !etat.sauveteurPermanentNumbers[id]);
@@ -290,6 +435,20 @@ const creerActionsDonnees = (dispatch, reserverNumerosMC) => {
         modifierPointPhone: (ancienneLettre, lettre, nom, typePP) => dispatch({ type: 'POINTS_PHONE/MODIFIER', ancienneLettre, lettre, nom, typePP }),
         changerOrdrePointPhone: (lettre, ordre) => dispatch({ type: 'POINTS_PHONE/CHANGER_ORDRE', lettre, ordre }),
         viderPointsPhone: () => dispatch({ type: 'POINTS_PHONE/VIDER' }),
+        // Main courante (lignes construites par les écrans : identifiant, numéro et heure compris)
+        ajouterLigneMC: (evenement) => dispatch({ type: 'MC/AJOUTER', evenement }),
+        ajouterLignesMC: (evenements) => dispatch({ type: 'MC/AJOUTER_PLUSIEURS', evenements }),
+        modifierLigneMC: (id, champs) => dispatch({ type: 'MC/MODIFIER', id, champs }),
+        insererLigneMC: (evenement, idReference, avant) => dispatch({ type: 'MC/INSERER', evenement, idReference, avant }),
+        validerRappel: (id, evenementValidation) => dispatch({ type: 'MC/VALIDER_RAPPEL', id, evenementValidation }),
+        reporterRappel: (id, dateRappel, heureRappel) => dispatch({ type: 'MC/REPORTER_RAPPEL', id, dateRappel, heureRappel }),
+        ajouterPresentsPointPhone: (id, mention) => dispatch({ type: 'MC/AJOUTER_PRESENTS_POINT_PHONE', id, mention }),
+        importerMCSecondaire: (evenements) => dispatch({ type: 'MC/IMPORTER_SECONDAIRE', evenements }),
+        importerEvenements: (evenements) => dispatch({ type: 'MC/IMPORTER_EVENEMENTS', evenements }),
+        affecterPlanningDepuisMC: (evenement, ids, activite, slot) => dispatch({ type: 'PLANNING/AFFECTER_DEPUIS_MC', evenement, ids, activite, slot }),
+        // Secours
+        cloturerSecours: (horodatageCloture, evenement) => dispatch({ type: 'SECOURS/CLOTURER', horodatageCloture, evenement }),
+        rouvrirSecours: () => dispatch({ type: 'SECOURS/ROUVRIR' }),
         // Secrétaires
         ajouterSecretaire: (nom) => dispatch({ type: 'SECRETAIRES/AJOUTER', nom }),
         supprimerSecretaire: (nom) => dispatch({ type: 'SECRETAIRES/SUPPRIMER', nom }),

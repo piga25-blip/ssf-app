@@ -1,4 +1,4 @@
-const useAlerts = ({ events, setEvents, reserverNumerosMC }) => {
+const useAlerts = ({ events, actions, reserverNumerosMC }) => {
     const [showAlertsModal, setShowAlertsModal] = useState(false);
     const [alertModalPosition, setAlertModalPosition] = useState({ x: 0, y: 0 });
     const [isDraggingAlert, setIsDraggingAlert] = useState(false);
@@ -28,7 +28,7 @@ const useAlerts = ({ events, setEvents, reserverNumerosMC }) => {
             fait: false,
             categorie: 'autre'
         };
-        setEvents(prev => [...prev.map(e => e.id === event.id ? { ...e, fait: true } : e), validationEvent]);
+        actions.validerRappel(event.id, validationEvent);
     };
 
     useEffect(() => {
