@@ -78,6 +78,9 @@ const indexCreneau = (etat, iso) => {
     return Math.floor(minutes / 15);
 };
 
+// Lettre d'un point phone (anciennes données : simple chaîne ; actuelles : objet)
+const lettrePointPhone = (pp) => (typeof pp === 'object' ? pp.lettre : pp);
+
 const nomsSauveteurs = (etat, ids) => ids
     .map(id => etat.masterSauveteursList.find(s => s.id === id))
     .filter(Boolean)
@@ -177,6 +180,66 @@ const ACTIONS_DONNEES = {
         return { ...etat, planning, teams, events: [...etat.events, evenement] };
     },
 
+    // ===== Points phones (repérés par leur lettre, unique) =====
+
+    // ordreSaisi : position saisie (texte) ; vide ou invalide → après le dernier
+    'POINTS_PHONE/AJOUTER'(etat, { lettre, nom, typePP, ordreSaisi }) {
+        if (etat.pointsPhone.some(pp => lettrePointPhone(pp) === lettre)) return etat;
+        const maxOrdre = etat.pointsPhone.reduce((max, pp) => {
+            const o = typeof pp === 'object' && pp.ordre !== undefined ? parseFloat(pp.ordre) : 0;
+            return Math.max(max, isNaN(o) ? 0 : o);
+        }, 0);
+        const ordreVal = (ordreSaisi || '').trim() !== '' ? parseFloat(ordreSaisi) : maxOrdre + 1;
+        const pointPhone = {
+            lettre, nom, typePP, sousTerre: typePP === 'souterre', estEntree: typePP === 'entree' || typePP === 'sortie',
+            ordre: isNaN(ordreVal) ? maxOrdre + 1 : ordreVal,
+        };
+        return { ...etat, pointsPhone: [...etat.pointsPhone, pointPhone] };
+    },
+
+    'POINTS_PHONE/SUPPRIMER'(etat, { lettre }) {
+        return { ...etat, pointsPhone: etat.pointsPhone.filter(pp => lettrePointPhone(pp) !== lettre) };
+    },
+
+    // Modifie un point phone ; les lignes de main courante qui le citaient sont mises à jour
+    'POINTS_PHONE/MODIFIER'(etat, { ancienneLettre, lettre, nom, typePP }) {
+        const position = etat.pointsPhone.findIndex(pp => lettrePointPhone(pp) === ancienneLettre);
+        if (position < 0) return etat;
+        const ancien = etat.pointsPhone[position];
+        const ancienAffichage = typeof ancien === 'object' ? `${ancien.lettre} - ${ancien.nom}` : ancien;
+        const nouveau = {
+            lettre, nom, typePP, sousTerre: typePP === 'souterre', estEntree: typePP === 'entree' || typePP === 'sortie',
+            ordre: typeof ancien === 'object' && ancien.ordre !== undefined ? ancien.ordre : position,
+        };
+        const nouvelAffichage = `${lettre} - ${nom}`;
+        return {
+            ...etat,
+            pointsPhone: etat.pointsPhone.map((pp, i) => i === position ? nouveau : pp),
+            events: etat.events.map(ev => (ev.pointPhone === ancienAffichage || ev.pointPhone === ancienneLettre)
+                ? { ...ev, pointPhone: nouvelAffichage } : ev),
+        };
+    },
+
+    'POINTS_PHONE/CHANGER_ORDRE'(etat, { lettre, ordre }) {
+        return { ...etat, pointsPhone: etat.pointsPhone.map(pp => (typeof pp === 'object' && pp.lettre === lettre) ? { ...pp, ordre } : pp) };
+    },
+
+    // Ne garde que le point phone du PC
+    'POINTS_PHONE/VIDER'(etat) {
+        return { ...etat, pointsPhone: [POINT_PHONE_PC] };
+    },
+
+    // ===== Secrétaires =====
+
+    'SECRETAIRES/AJOUTER'(etat, { nom }) {
+        if (etat.secretaires.includes(nom)) return etat;
+        return { ...etat, secretaires: [...etat.secretaires, nom].sort() };
+    },
+
+    'SECRETAIRES/SUPPRIMER'(etat, { nom }) {
+        return { ...etat, secretaires: etat.secretaires.filter(s => s !== nom) };
+    },
+
     // Attribue un n° permanent aux sauveteurs actifs qui n'en ont pas (anciens dossiers)
     'SAUVETEURS/NUMEROTER_MANQUANTS'(etat) {
         const sansNumero = etat.activeSauveteurIds.filter(id => !etat.sauveteurPermanentNumbers[id]);
@@ -221,5 +284,14 @@ const creerActionsDonnees = (dispatch, reserverNumerosMC) => {
         arriveeSauveteurs: (ids) => dispatch({ type: 'SAUVETEURS/ARRIVEE', ids, ...ligneMC() }),
         departSauveteurs: (ids) => dispatch({ type: 'SAUVETEURS/DEPART', ids, ...ligneMC() }),
         numeroterSauveteursManquants: () => dispatch({ type: 'SAUVETEURS/NUMEROTER_MANQUANTS' }),
+        // Points phones
+        ajouterPointPhone: (lettre, nom, typePP, ordreSaisi) => dispatch({ type: 'POINTS_PHONE/AJOUTER', lettre, nom, typePP, ordreSaisi }),
+        supprimerPointPhone: (lettre) => dispatch({ type: 'POINTS_PHONE/SUPPRIMER', lettre }),
+        modifierPointPhone: (ancienneLettre, lettre, nom, typePP) => dispatch({ type: 'POINTS_PHONE/MODIFIER', ancienneLettre, lettre, nom, typePP }),
+        changerOrdrePointPhone: (lettre, ordre) => dispatch({ type: 'POINTS_PHONE/CHANGER_ORDRE', lettre, ordre }),
+        viderPointsPhone: () => dispatch({ type: 'POINTS_PHONE/VIDER' }),
+        // Secrétaires
+        ajouterSecretaire: (nom) => dispatch({ type: 'SECRETAIRES/AJOUTER', nom }),
+        supprimerSecretaire: (nom) => dispatch({ type: 'SECRETAIRES/SUPPRIMER', nom }),
     };
 };

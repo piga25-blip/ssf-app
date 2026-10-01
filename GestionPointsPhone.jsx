@@ -4,7 +4,7 @@
 // Lettre d'un point phone (anciennes données : simple chaîne ; actuelles : objet)
 const lettrePP = (pp) => (typeof pp === 'object' ? pp.lettre : pp);
 
-let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents, onClose }) => {
+let GestionPointsPhoneModal = ({ pointsPhone, events, actions, onClose }) => {
     const [nouveauNom, setNouveauNom] = useState('');
     const [nouveauTypePP, setNouveauTypePP] = useState('');
     const [nouveauOrdre, setNouveauOrdre] = useState('');
@@ -42,13 +42,8 @@ let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents,
         if (!nouveauTypePP) { alert('⚠️ Veuillez sélectionner un type de lieu (Surface, Sous terre, etc.)'); return; }
         const existeDeja = pointsPhone.find(pp => typeof pp === 'object' ? pp.lettre === nouvelleLettre : pp === nouvelleLettre);
         if (existeDeja) { alert('Le point phone "' + nouvelleLettre + '" existe déjà'); return; }
-        // Calcul de l'ordre : prendre le max existant + 1, ou utiliser la valeur saisie
-        const maxOrdre = pointsPhone.reduce((max, pp) => {
-            const o = typeof pp === 'object' && pp.ordre !== undefined ? parseFloat(pp.ordre) : 0;
-            return Math.max(max, isNaN(o) ? 0 : o);
-        }, 0);
-        const ordreVal = nouveauOrdre.trim() !== '' ? parseFloat(nouveauOrdre) : maxOrdre + 1;
-        setPointsPhone(prev => [...prev, { lettre: nouvelleLettre, nom: nomTrimmed, typePP: nouveauTypePP, sousTerre: nouveauTypePP === 'souterre', estEntree: nouveauTypePP === 'entree' || nouveauTypePP === 'sortie', ordre: isNaN(ordreVal) ? maxOrdre + 1 : ordreVal }]);
+        // Position : celle saisie, sinon après le dernier (calculée par l'action)
+        actions.ajouterPointPhone(nouvelleLettre, nomTrimmed, nouveauTypePP, nouveauOrdre);
         setNouveauTypePP('');
         setNouveauOrdre('');
         setNouveauNom('');
@@ -58,7 +53,7 @@ let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents,
     const supprimerPointPhone = (pp) => {
         const displayText = typeof pp === 'object' ? `${pp.lettre} - ${pp.nom}` : pp;
         if (window.confirm(`Voulez-vous vraiment supprimer "${displayText}" ?`)) {
-            setPointsPhone(prev => prev.filter(p => lettrePP(p) !== lettrePP(pp)));
+            actions.supprimerPointPhone(lettrePP(pp));
         }
     };
 
@@ -81,25 +76,17 @@ let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents,
 
         const ancienPP = pointsPhone[index];
         const ancienDisplay = typeof ancienPP === 'object' ? `${ancienPP.lettre} - ${ancienPP.nom}` : ancienPP;
-        const nouveauPP = { lettre: editLettre, nom: nomTrimmed, typePP: editTypePP, sousTerre: editTypePP === 'souterre', estEntree: editTypePP === 'entree' || editTypePP === 'sortie', ordre: typeof ancienPP === 'object' && ancienPP.ordre !== undefined ? ancienPP.ordre : index };
-        const nouveauDisplay = `${editLettre} - ${nomTrimmed}`;
-
-        setPointsPhone(prev => prev.map(p => lettrePP(p) === lettrePP(ancienPP) ? nouveauPP : p));
-
-        if (events && setEvents) {
-            const concerne = event => event.pointPhone === ancienDisplay ||
-                event.pointPhone === (typeof ancienPP === 'object' ? ancienPP.lettre : ancienPP);
-            setEvents(prev => prev.map(event => concerne(event) ? { ...event, pointPhone: nouveauDisplay } : event));
-            const nbModifies = events.filter(concerne).length;
-            if (nbModifies > 0) alert(`✅ Point phone modifié !\n${nbModifies} événement(s) mis à jour.`);
-            else alert('✅ Point phone modifié avec succès !');
-        }
+        // Les lignes de main courante qui citaient ce point phone sont mises à jour par l'action
+        const nbModifies = (events || []).filter(event => event.pointPhone === ancienDisplay || event.pointPhone === lettrePP(ancienPP)).length;
+        actions.modifierPointPhone(lettrePP(ancienPP), editLettre, nomTrimmed, editTypePP);
+        if (nbModifies > 0) alert(`✅ Point phone modifié !\n${nbModifies} événement(s) mis à jour.`);
+        else alert('✅ Point phone modifié avec succès !');
         setEditingIndex(null); setEditLettre(''); setEditNom('');
     };
 
     const viderTout = () => {
         if (window.confirm('⚠️ Voulez-vous vraiment VIDER toute la liste des points phone ?')) {
-            setPointsPhone([{ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 }]);
+            actions.viderPointsPhone();
         }
     };
 
@@ -258,7 +245,7 @@ let GestionPointsPhoneModal = ({ pointsPhone, setPointsPhone, events, setEvents,
                                                             onChange={(e) => {
                                                                 const val = e.target.value;
                                                                 const ordre = val === '' ? '' : (isNaN(parseFloat(val)) ? val : parseFloat(val));
-                                                                setPointsPhone(prev => prev.map(p => (typeof p === 'object' && lettrePP(p) === lettrePP(pp)) ? {...p, ordre} : p));
+                                                                if (typeof pp === 'object') actions.changerOrdrePointPhone(pp.lettre, ordre);
                                                             }}
                                                             title="Position dans le diagramme — modifiez pour réordonner (ex: 3, 3.5, 4a)"
                                                             style={{width:'44px',textAlign:'center',padding:'2px 4px',border:'1px solid #93c5fd',borderRadius:'4px',fontSize:'13px',fontWeight:'700',color:'#1d4ed8',backgroundColor:'#eff6ff',cursor:'text'}}

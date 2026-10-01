@@ -1859,7 +1859,7 @@
                             <ModalErrorBoundary onClose={() => setShowGestionSecretaires(false)}>
                                 <GestionSecretairesModal
                                     secretaires={secretaires}
-                                    setSecretaires={setSecretaires}
+                                    actions={actions}
                                     onClose={() => setShowGestionSecretaires(false)}
                                 />
                             </ModalErrorBoundary>
@@ -1869,9 +1869,8 @@
                             <ModalErrorBoundary onClose={() => setShowGestionPointsPhone(false)}>
                                 <GestionPointsPhoneModal
                                     pointsPhone={pointsPhone}
-                                    setPointsPhone={setPointsPhone}
                                     events={events}
-                                    setEvents={setEvents}
+                                    actions={actions}
                                     onClose={() => setShowGestionPointsPhone(false)}
                                 />
                             </ModalErrorBoundary>

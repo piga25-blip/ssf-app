@@ -1,7 +1,7 @@
 ﻿// ============================================
 // MODAL - SECRÉTAIRES
 // ============================================
-let GestionSecretairesModal = ({ secretaires, setSecretaires, onClose }) => {
+let GestionSecretairesModal = ({ secretaires, actions, onClose }) => {
     const [nouveauSecretaire, setNouveauSecretaire] = useState('');
     useCloseOnEscape(onClose);
 
@@ -14,14 +14,13 @@ let GestionSecretairesModal = ({ secretaires, setSecretaires, onClose }) => {
             alert('Ce secrétaire existe déjà');
             return;
         }
-        const nom = nouveauSecretaire.trim();
-        setSecretaires(prev => prev.includes(nom) ? prev : [...prev, nom].sort());
+        actions.ajouterSecretaire(nouveauSecretaire.trim());
         setNouveauSecretaire('');
     };
 
     const supprimerSecretaire = (nom) => {
         if (window.confirm(`Voulez-vous vraiment supprimer ${nom} ?`)) {
-            setSecretaires(prev => prev.filter(s => s !== nom));
+            actions.supprimerSecretaire(nom);
         }
     };
 
