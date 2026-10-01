@@ -909,7 +909,10 @@
                     mcIdentifiant: mcIdentifiant,
                     masterSauveteursList,
                     activeSauveteurIds,
+                    sauveteurPermanentNumbers,
+                    nextPermanentNumber,
                     teams,
+                    usedTeamNumbers,
                     secretaires,
                     pointsPhone,
                     missionInfo,
@@ -1169,7 +1172,11 @@
                         
                         setMasterSauveteursList(data.masterSauveteursList || []);
                         setActiveSauveteurIds(data.activeSauveteurIds || []);
+                        // Anciens exports sans ces champs : numéros recalculés comme avant
+                        setSauveteurPermanentNumbers(data.sauveteurPermanentNumbers || {});
+                        setNextPermanentNumber(data.nextPermanentNumber || 1);
                         setTeams(data.teams || []);
+                        setUsedTeamNumbers(data.usedTeamNumbers || []);
                         setSecretaires(data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
                         const loadedPP = data.pointsPhone || [];
                         if (!loadedPP.find(pp => (typeof pp === 'object' ? pp.lettre : pp) === 'PC')) {
