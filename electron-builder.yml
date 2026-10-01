@@ -15,6 +15,7 @@ files:
   - "!.claude/**"
   - "!App_SSF_*"
   - "!docs/**"
+  - "!tests/**"
 
 win:
   icon: assets/SSF.ico

@@ -459,7 +459,7 @@ comportent différemment sur tablette (iPad notamment). À ajouter aux tests.
 
 | Lot | Contenu |
 |---|---|
-| **0 – Préparation** (rien de réseau) | scénario de référence (A4), identifiants uniques (A2), copies périmées corrigées (A3), **modifications regroupées en actions nommées (B1)** |
+| **0 – Préparation** (rien de réseau) | ✅ scénario de référence (A4, fait le 01/10/2026 : `tests/SCENARIO_REFERENCE.md`), identifiants uniques (A2), copies périmées corrigées (A3), **modifications regroupées en actions nommées (B1)** |
 | **1** | stockage en fichiers découpés + journal + serveur, postes **en consultation seule** ; modifications automatiques faites par le serveur (A1) ; blocage des mises à jour pendant le mode réseau (B3) |
 | **2** | saisie de la **main courante** et des **passages aux points phones** sur plusieurs postes (numéros et heure donnés par le serveur) |
 | **3** | inscription des sauveteurs, missions, équipes, planning sur plusieurs postes (étape A puis B) ; avertissement de modification simultanée dans les fenêtres |

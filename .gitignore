@@ -18,3 +18,6 @@ bootstrapper/SSF-Bootstrap.7z
 
 # Fichiers HTML de l'ancienne version standalone
 App_SSF_*.html
+
+# Résultats du scénario de référence (régénérés à chaque exécution)
+tests/sortie/

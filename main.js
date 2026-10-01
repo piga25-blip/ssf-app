@@ -2,6 +2,12 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 
+// Tests automatiques (tests/scenario-reference.js) : dossier de données jetable,
+// pour ne jamais toucher aux données de l'application.
+if (process.env.SSF_TEST_USER_DATA) {
+  app.setPath('userData', process.env.SSF_TEST_USER_DATA);
+}
+
 let mainWindow;
 
 function createWindow() {
