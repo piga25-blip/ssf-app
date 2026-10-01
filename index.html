@@ -627,6 +627,8 @@
             const [mcMode, setMcMode] = useState('principale'); // 'principale' ou 'secondaire'
             const [mcIdentifiant, setMcIdentifiant] = useState(''); // Ex: A, B, CT1, CT2...
             const [mcConfigured, setMcConfigured] = useState(false);
+            // PC Base Arrière en recopie d'une main courante papier : { auteur, commenceLe } ou null
+            const [mcRecopie, setMcRecopie] = useState(null);
             const [showMcConfigModal, setShowMcConfigModal] = useState(false); // Désactivé par défaut pour STANDALONE
             const [showModeSelectionModal, setShowModeSelectionModal] = useState(false); // Modal de choix de mode au démarrage (après saisie mission)
             const [standaloneMode, setStandaloneMode] = useState(''); // 'terrain' ou 'base'
@@ -791,6 +793,7 @@
                         setMcMode(data.mcMode || 'principale');
                         setMcIdentifiant(data.mcIdentifiant || '');
                         setMcConfigured(data.mcConfigured || false);
+                        setMcRecopie(data.mcRecopie || null);
                     } catch (error) {
                         console.error('Erreur chargement:', error);
                     }
@@ -826,7 +829,8 @@
                         totalDays,
                         mcMode,
                         mcIdentifiant,
-                        mcConfigured
+                        mcConfigured,
+                        mcRecopie
                     };
                     const key = getLocalStorageKey(currentRescueId);
                     storageSetJSON(key, dataToSave);
@@ -843,7 +847,7 @@
                 }, 600);
 
                 return () => clearTimeout(saveTimeoutRef.current);
-            }, [masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber, teams, usedTeamNumbers, secretaires, pointsPhone, missionInfo, clotureInfo, events, nextEventNumber, planning, startHour, totalDays, mcMode, mcIdentifiant, mcConfigured, currentRescueId]);
+            }, [masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber, teams, usedTeamNumbers, secretaires, pointsPhone, missionInfo, clotureInfo, events, nextEventNumber, planning, startHour, totalDays, mcMode, mcIdentifiant, mcConfigured, mcRecopie, currentRescueId]);
 
             // Initialiser les numéros permanents pour les sauveteurs déjà dans le planning
             useEffect(() => {
@@ -924,7 +928,8 @@
                     totalDays,
                     mcMode,
                     mcIdentifiant,
-                    mcConfigured
+                    mcConfigured,
+                    mcRecopie
                 };
 
                 const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -969,8 +974,9 @@
                 planning,
                 startHour,
                 totalDays,
-                mcConfigured
-            }), [currentRescueId, mcMode, mcIdentifiant, masterSauveteursList, activeSauveteurIds,
+                mcConfigured,
+                mcRecopie
+            }), [currentRescueId, mcMode, mcIdentifiant, mcRecopie, masterSauveteursList, activeSauveteurIds,
                  teams, secretaires, pointsPhone, missionInfo, clotureInfo, events, nextEventNumber, planning, startHour, totalDays, mcConfigured]);
 
             // Sauvegarder en localStorage (max 5 entrées)
@@ -1193,6 +1199,7 @@
                         setMcMode(data.mcMode || 'principale');
                         setMcIdentifiant(data.mcIdentifiant || '');
                         setMcConfigured(data.mcConfigured || false);
+                        setMcRecopie(data.mcRecopie || null);
 
                         alert(`✅ Données importées avec succès !\nVersion: ${data.version || 'Inconnue'}`);
                     } catch (error) {
@@ -1273,6 +1280,7 @@
                 setPlanning({});
                 setStartHour(0);
                 setTotalDays(DEFAULT_TOTAL_DAYS);
+                setMcRecopie(null);
                 
                 alert('✅ Toutes les données ont été effacées (Remise à Blanc).');
             };
@@ -1295,6 +1303,7 @@
                     timestamp: new Date().toISOString(),
                     mcIdentifiant: mcIdentifiant,
                     mcMode: mcMode,
+                    mcRecopie: mcRecopie,
                     events: events,
                     nextEventNumber: nextEventNumber
                 };
@@ -1339,7 +1348,9 @@
                             return;
                         }
 
+                        const nbRecopiees = data.events.filter(ev => ev.recopie).length;
                         const confirmMessage = `📥 Importer ${data.events.length} événement(s) de ${data.mcIdentifiant || 'MC Secondaire'} ?\n\n` +
+                            (nbRecopiees ? `📝 Dont ${nbRecopiees} recopié(s) d'une main courante papier${data.mcRecopie && data.mcRecopie.auteur ? ' rédigée par ' + data.mcRecopie.auteur : ''} (date et heure écrites sur le papier).\n\n` : '') +
                             `Les événements seront insérés chronologiquement dans la main courante principale.\n` +
                             `Date d'export: ${new Date(data.timestamp).toLocaleString('fr-FR')}`;
 
@@ -1452,6 +1463,16 @@
                                             Mode: {standaloneMode === 'terrain' ? '🎯 PC de Terrain 🏛️' : standaloneMode === 'base' ? '🚗 PC Base Arrière 📡' : 'Non configuré'}
                                             {mcMode === 'secondaire' && mcIdentifiant && ` - Identifiant: ${mcIdentifiant}`}
                                         </p>
+                                        {mcMode === 'secondaire' && mcRecopie && (
+                                            <div className="mt-3 bg-amber-100 border-l-4 border-amber-600 p-3 rounded">
+                                                <p className="text-sm font-semibold text-amber-900">
+                                                    📝 Recopie de la main courante papier rédigée par {mcRecopie.auteur}
+                                                </p>
+                                                <p className="text-xs text-amber-800 mt-1">
+                                                    Saisissez la date et l'heure écrites sur le papier pour chaque ligne. Une fois terminé : « 📤 Exporter Événements », puis importez le fichier sur le PC de terrain.
+                                                </p>
+                                            </div>
+                                        )}
                                         {mcMode === 'secondaire' && mcIdentifiant === 'PLANNING' && (
                                             <div className="mt-3 bg-green-100 border-l-4 border-green-600 p-3 rounded">
                                                 <p className="text-sm font-semibold text-green-800">
@@ -1758,6 +1779,7 @@
                                         setShowSearchModal={setShowSearchModal}
                                         mcMode={mcMode}
                                         mcIdentifiant={mcIdentifiant}
+                                        mcRecopie={mcMode === 'secondaire' ? mcRecopie : null}
                                         pointsPhone={pointsPhone}
                                         setPointsPhone={setPointsPhone}
                                         masterSauveteursList={masterSauveteursList}
@@ -2103,6 +2125,7 @@
                                                     setMcMode(data.mcMode || 'principale');
                                                     setMcIdentifiant(data.mcIdentifiant || '');
                                                     setMcConfigured(data.mcConfigured || false);
+                        setMcRecopie(data.mcRecopie || null);
                                                 } catch(e) {
                                                     console.error('Erreur chargement dossier:', e);
                                                 }
@@ -2135,10 +2158,11 @@
                         {showModeSelectionModal && (
                             <ModalErrorBoundary>
                             <ModeSelectionModal
-                                onConfirm={(mode, id) => {
+                                onConfirm={(mode, id, recopie) => {
                                     try {
                                         setMcMode(mode);
                                         setMcIdentifiant(id);
+                                        setMcRecopie(recopie || null);
                                         setMcConfigured(true);
                                         setStandaloneMode(mode === 'principale' ? 'terrain' : 'base');
 
