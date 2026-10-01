@@ -27,6 +27,10 @@
     "EXT-005",
     "EXT-006"
    ],
+   "clotureInfo": {
+    "dateHeure": "14/03/2026 10:13:06",
+    "isoTimestamp": "2026-03-14T09:13:06.300Z"
+   },
    "events": [
     {
      "categorie": "personnel",
@@ -398,6 +402,12 @@
    "mcConfigured": true,
    "mcIdentifiant": "",
    "mcMode": "principale",
+   "missionInfo": {
+    "commune": "Testville",
+    "delaiAlerteOccupation": 360,
+    "nomCavite": "Gouffre du Test",
+    "typeSecours": "exercice"
+   },
    "nextEventNumber": 26,
    "nextPermanentNumber": 7,
    "planning": {
@@ -2290,11 +2300,18 @@
   },
   "SSF_UNIFIED_STATE_secours-courant_V13": {
    "activeSauveteurIds": [],
+   "clotureInfo": null,
    "events": [],
    "masterSauveteursList": [],
    "mcConfigured": false,
    "mcIdentifiant": "",
    "mcMode": "principale",
+   "missionInfo": {
+    "commune": "",
+    "delaiAlerteOccupation": 6,
+    "nomCavite": "",
+    "typeSecours": "secours"
+   },
    "nextEventNumber": 1,
    "nextPermanentNumber": 1,
    "planning": {},

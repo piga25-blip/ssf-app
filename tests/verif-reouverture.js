@@ -70,7 +70,26 @@ const RACINE = path.join(__dirname, '..');
         const clotureOk = apres.includes('CLÔTURÉ');
         const caviteOk = apres.includes('Gouffre de Vérification') && apres.includes('Contrôleville');
         console.log('Après réouverture  : clôturé =', clotureOk, '| cavité et commune affichées =', caviteOk);
-        ok = clotureOk && caviteOk;
+        // 4. Ancien dossier (enregistré avant la correction, sans ces infos) : la réouverture
+        //    ne doit pas enregistrer de champs techniques (rawData = copie du dossier)
+        await page.evaluate(() => {
+            const k = Object.keys(localStorage).find(c => c.includes('gouffre-de-v'));
+            const d = JSON.parse(localStorage.getItem(k));
+            delete d.missionInfo; delete d.clotureInfo;
+            localStorage.setItem(k, JSON.stringify(d));
+        });
+        await charger();
+        await bouton('Rouvrir un dossier').click();
+        await page.getByText('Gouffre de Vérification', { exact: false }).first().click();
+        await bouton('Rouvrir').last().click();
+        await page.waitForTimeout(1500);
+        const ancien = await page.evaluate(() => {
+            const k = Object.keys(localStorage).find(c => c.includes('gouffre-de-v'));
+            return JSON.parse(localStorage.getItem(k)).missionInfo;
+        });
+        const ancienOk = !!ancien && !('rawData' in ancien) && !('rouvrir' in ancien);
+        console.log('Ancien dossier     : missionInfo enregistré =', JSON.stringify(ancien), '→', ancienOk ? 'sans champ technique' : 'CHAMPS TECHNIQUES PRÉSENTS');
+        ok = clotureOk && caviteOk && ancienOk;
     } finally {
         await app.close();
         fs.rmSync(dossierDonnees, { recursive: true, force: true });
