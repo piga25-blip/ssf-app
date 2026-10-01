@@ -80,10 +80,20 @@ Résultat de référence : 25 lignes de main courante, 3 équipes (dont une diss
 - main courante **secondaire** (base arrière, planning déporté) et import dans la principale ;
 - recherche avancée, tableau de bord, synthèse (affichage seul, sans modification des données).
 
+## Vérifications complémentaires
+
+Tests ciblés, ajoutés lors de la correction de défauts de la version officielle (13.41.11) :
+
+| Commande | Ce qui est vérifié |
+|---|---|
+| `node tests/verif-reouverture.js` | Un dossier clôturé, rouvert après redémarrage, reste clôturé avec sa cavité et sa commune ; un ancien dossier rouvert n'enregistre pas de champs techniques |
+| `node tests/verif-export-import.js` | « Exporter Tout » contient infos du secours, clôture, n° permanents et n° d'équipe ; « Importer Tout » les reprend du fichier |
+
 ## Fichiers
 
 | Fichier | Rôle |
 |---|---|
 | `tests/scenario-reference.js` | Le scénario et l'outil de comparaison |
+| `tests/verif-reouverture.js`, `tests/verif-export-import.js` | Vérifications complémentaires |
 | `tests/reference/etat-final.json` | La référence (versionnée dans git) |
 | `tests/sortie/` | Résultats de la dernière exécution : état obtenu, captures (non versionné) |
