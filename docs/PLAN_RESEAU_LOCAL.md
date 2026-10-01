@@ -304,18 +304,144 @@ Les échanges se font dans cet ordre :
 
 ---
 
-## 5. Découpage en livraisons successives
+## 5. Bilan complet avant codage (check-up du 01/10/2026)
 
-| Lot | Contenu | Intérêt |
-|---|---|---|
-| **1** | Phases 1 et 2, plus l'écran réseau. Les autres postes sont **en consultation seule** | Peu risqué, utile tout de suite (écran mural, chef d'opération), valide l'architecture |
-| **2** | Saisie de la **main courante** et des **passages aux points phones** sur plusieurs postes (numéros et heure donnés par le serveur) | Les tâches les plus fréquentes pendant les missions |
-| **3** | Inscription des sauveteurs, missions, équipes, planning sur plusieurs postes (étape A puis B) | Répartit la charge du début de secours ; partie la plus délicate |
-| **4** | Code de session, rôles, reprise après panne, saisie hors connexion | Fiabilité sur le terrain |
+Relecture du code (version 13.41.10) pour repérer ce que le plan ne couvrait pas encore.
+
+### A. Points bloquants (à traiter avant tout code réseau)
+
+#### A1. Des modifications automatiques tourneraient en double sur chaque poste
+Certaines modifications se font sans action d'un secrétaire. En réseau, **chaque poste
+ouvert les ferait en même temps** :
+- **Recopie automatique du planning toutes les 15 minutes** (`hooks/usePlanning.js:151`) :
+  avec 4 postes, elle serait faite 4 fois, en conflit.
+- **Attribution automatique des n° permanents** aux sauveteurs du planning qui n'en ont pas
+  (`index.html:847`) : deux postes pourraient donner deux numéros différents au même sauveteur.
+- **Vérification des alertes toutes les 30 s** (`hooks/useAlerts.js:53`) : la fenêtre
+  « URGENT » s'afficherait sur tous les postes. Il faut décider qui la voit et qui la valide.
+
+➡️ **Règle :** toute modification automatique est faite **par le serveur uniquement**,
+jamais par les postes.
+
+#### A2. Identifiants créés à partir de l'heure
+De nombreux éléments reçoivent un identifiant `id: Date.now()` (l'heure à la milliseconde) :
+38 endroits, dont 12 dans `Teams.jsx`. Deux postes qui créent un élément à la même
+milliseconde, ou un poste qui en crée deux d'affilée, obtiennent **le même identifiant**.
+Dégâts silencieux : mauvaise ligne modifiée ou supprimée.
+
+➡️ Identifiants garantis uniques (`crypto.randomUUID()`) ou attribués par le serveur.
+
+#### A3. Modifications à partir d'une copie périmée des données
+À une quinzaine d'endroits (`Teams.jsx`, `Events.jsx`, `Modals.jsx`, `useAlerts.js`,
+`GestionListe.jsx`, `GestionPointsPhone.jsx`), le code reconstruit la liste entière à partir
+de la copie qu'il avait au moment du clic : `setEvents([...events, nouvelEvent])` puis
+`setNextEventNumber(nextEventNumber + 1)`. Si une ligne venue d'un autre poste arrive
+entre-temps, **elle est effacée**. Cela peut déjà arriver aujourd'hui sur un seul poste lors
+d'actions rapides enchaînées.
+
+➡️ Le problème disparaît avec les actions envoyées au serveur. Si on passe d'abord par
+l'étape A (par parties), corriger ces endroits avant.
+
+#### A4. Aucun test automatique
+Le chantier touche **environ 200 endroits** qui modifient les données partagées, dans
+13 000 lignes, sans aucun test.
+
+➡️ Avant de commencer :
+- écrire un **scénario de secours de référence** (inscriptions, équipes, départs, points
+  phones, planning, clôture) à rejouer manuellement ou automatiquement ;
+- comparer le résultat avant et après chaque étape.
+
+### B. Points importants
+
+**B1. Regrouper d'abord toutes les modifications en un seul endroit.** Remplacer les ~200
+modifications directes depuis les écrans par des **actions nommées** (« inscrire un
+sauveteur », « faire partir une équipe »…), toutes traitées au même endroit. Rien de réseau :
+l'application reste sur un seul poste. Ensuite, passer en réseau revient à envoyer ces
+actions au serveur. C'est l'étape qui réduit le plus le risque.
+
+**B2. La branche `reseau-local` va s'éloigner de `main`.** Plus les corrections continuent sur
+`main`, plus le report sera difficile. Trois possibilités :
+- reporter `main` dans `reseau-local` **chaque semaine** ;
+- geler les évolutions de `main` pendant le chantier (corrections urgentes seulement) ;
+- **ou** sortir l'étape B1 dans une mise à jour normale (rien de réseau), si c'est jugé
+  compatible avec la consigne « rien du réseau dans les mises à jour ».
+
+**B3. Mise à jour automatique en plein secours.** Une installation sur le poste principal le
+redémarre et coupe tous les postes ; les postes ouverts garderaient l'ancienne interface.
+
+➡️ Aucune installation tant que le mode réseau est actif ; contrôle de version à la
+connexion, avec message « rechargez la page » si les versions diffèrent.
+
+**B4. Plusieurs secours et changement de secours** (`setCurrentRescueId`, `index.html:1482`,
+2063, 2103). Le serveur ne propose qu'**un secours actif à la fois**, choisi sur le poste
+principal ; les autres postes basculent automatiquement ou sont déconnectés.
+
+**B5. Imports et restaurations** (six imports de fichiers : main courante, liste de
+sauveteurs, restauration, import d'une main courante secondaire). En réseau, ils remplacent
+les données de tout le monde.
+
+➡️ Réservés à l'administrateur, avec confirmation, faits par le serveur et notés dans le journal.
+
+**B6. Lien avec les modes actuels.** Trois façons de travailler à plusieurs coexisteraient :
+PC de terrain / PC base arrière, main courante principale / secondaire avec import, réseau local.
+Suggestion :
+- la main courante secondaire reste utile pour un poste **hors du réseau** (PC avancé sans
+  Wi-Fi), avec import plus tard ;
+- en réseau, la numérotation par le serveur remplace les préfixes `A-`, `B-`.
+
+**B7. Données personnelles (RGPD).** Les fiches sauveteurs circulent sur le Wi-Fi et restent
+sur les appareils connectés.
+
+➡️ Wi-Fi protégé (WPA2/3) ; code de session ; aucune copie complète gardée sur les
+tablettes ; purge ou archivage en fin de secours.
+
+**B8. Valeur juridique de la main courante.** En réseau, garantir : aucune suppression
+définitive, seulement des corrections tracées ; un auteur et un poste par ligne ; l'heure
+du serveur. ➡️ À valider avec les règles internes du SSF.
+
+**B9. Réglages à classer entre partagés et propres à chaque poste.**
+
+| Réglage | Proposition |
+|---|---|
+| `ssf_planning_auto_propagate` (recopie automatique) | **partagé**, recopie faite par le serveur (voir A1) |
+| `ssf_autosave_interval` | réglage du serveur |
+| `ssf_mission_keywords` | partagé |
+| `ssf_current_secretaire`, défilement, onglet | propres au poste |
+| `ssf_standalone_mode` / `_id` | à revoir avec B6 |
+
+**B10. Impressions et exports.** Les exports PDF et Excel (jsPDF, XLSX, une dizaine
+d'endroits) fonctionnent dans un navigateur, mais le téléchargement et l'impression se
+comportent différemment sur tablette (iPad notamment). À ajouter aux tests.
+
+### C. Points de détail
+
+| Sujet | Remarque |
+|---|---|
+| Fonctionnement sans internet | ✅ Vérifié : React, Babel, Tailwind, jsPDF et XLSX sont fournis avec l'application |
+| Saisie simultanée dans les fenêtres | Si deux secrétaires ouvrent la même fiche ou équipe, prévenir « modifié entre-temps par X » |
+| Taille d'écran | Interface prévue pour 1024 px minimum : téléphones en consultation seule, ou interface simplifiée pour les points phones |
+| Alimentation électrique | Poste principal sur secteur ou batterie externe, mise en veille désactivée |
+| Recherche de l'adresse | Une carte réseau virtuelle (VPN, Hyper-V) peut afficher une mauvaise adresse IP : proposer de choisir la carte |
+| Performances | Après plusieurs jours, envoyer seulement les changements, pas l'état complet |
+| Ancien code réseau | Supprimer ou réécrire `hooks/useWebSocket.js` et l'affichage des connectés dans l'en-tête |
+| Fichiers anciens | `App_SSF_ V13-35…html` et ses `.bak` : le serveur ne doit fournir qu'une liste précise de fichiers |
+| Journal | Prévoir sa rotation et sa taille maximale |
 
 ---
 
-## 6. Décisions à prendre
+## 6. Découpage en livraisons successives (mis à jour après le bilan)
+
+| Lot | Contenu |
+|---|---|
+| **0 – Préparation** (rien de réseau) | scénario de référence (A4), identifiants uniques (A2), copies périmées corrigées (A3), **modifications regroupées en actions nommées (B1)** |
+| **1** | stockage en fichiers découpés + journal + serveur, postes **en consultation seule** ; modifications automatiques faites par le serveur (A1) ; blocage des mises à jour pendant le mode réseau (B3) |
+| **2** | saisie de la **main courante** et des **passages aux points phones** sur plusieurs postes (numéros et heure donnés par le serveur) |
+| **3** | inscription des sauveteurs, missions, équipes, planning sur plusieurs postes (étape A puis B) ; avertissement de modification simultanée dans les fenêtres |
+| **4** | code de session, rôles, imports réservés à l'administrateur (B5), reprise après panne, saisie hors connexion |
+
+---
+
+## 7. Décisions à prendre
 
 1. Faut-il qu'un poste continue à saisir pendant une coupure (option avancée) ou qu'il soit
    bloqué (option simple) ?
@@ -324,4 +450,11 @@ Les échanges se font dans cet ordre :
    la case pendant qu'elle est modifiée ?
 4. Faut-il prévoir des tablettes ou téléphones dès le départ (ce qui rend prioritaire la
    transformation préalable du code) ?
-5. Commence-t-on par le lot 1 en consultation seule ?
+5. Commence-t-on par le lot 0 (préparation), puis le lot 1 en consultation seule ?
+6. Faut-il garder la main courante secondaire et le mode terrain / base arrière à côté du
+   réseau (B6) ?
+7. Comment éviter que les branches divergent : report hebdomadaire, gel de `main`, ou sortie
+   du lot 0 en mise à jour normale (B2) ?
+8. Qui voit et valide les alertes urgentes en réseau : tous les postes, l'administrateur
+   seul, ou un rôle désigné (A1) ?
+9. Quelles règles pour la main courante : corrections tracées, pas de suppression (B8) ?
