@@ -381,6 +381,55 @@ const ACTIONS_DONNEES = {
         return { ...etat, planning, events: [...etat.events, evenement] };
     },
 
+    // ===== Planning (grille) =====
+
+    // Activité posée sur des cases de la grille (une ligne est créée si besoin) ; ligne de
+    // main courante facultative (construite par l'appelant)
+    'PLANNING/AFFECTER'(etat, { cellules, activite, evenement }) {
+        const totalSlots = getTotalSlots(etat.totalDays);
+        const planning = { ...etat.planning };
+        cellules.forEach(({ id, slot }) => {
+            const r = planning[id] ? [...planning[id]] : Array(totalSlots).fill('nondef');
+            r[slot] = activite;
+            planning[id] = r;
+        });
+        return { ...etat, planning, events: evenement ? [...etat.events, evenement] : etat.events };
+    },
+
+    // Poignée de recopie : chaque case reçoit le contenu (avant recopie) de sa case source
+    'PLANNING/RECOPIER'(etat, { copies }) {
+        const planning = { ...etat.planning };
+        copies.forEach(({ id, slot, idSource, slotSource }) => {
+            const source = etat.planning[idSource];
+            if (!source || !planning[id]) return;
+            const r = [...planning[id]];
+            r[slot] = source[slotSource] || 'nondef';
+            planning[id] = r;
+        });
+        return { ...etat, planning };
+    },
+
+    // Comble des créneaux vides avec une activité (recopie manuelle ou automatique du planning) ;
+    // une case remplie entre-temps n'est pas écrasée
+    'PLANNING/COMBLER_CRENEAUX'(etat, { remplissages }) {
+        const planning = { ...etat.planning };
+        remplissages.forEach(({ id, activite, slotDebut, slotFin }) => {
+            if (!planning[id]) return;
+            const r = [...planning[id]];
+            for (let s = slotDebut; s <= slotFin; s++) { if (creneauVide(r[s])) r[s] = activite; }
+            planning[id] = r;
+        });
+        return { ...etat, planning };
+    },
+
+    'PLANNING/REGLER_DEBUT'(etat, { startHour }) {
+        return { ...etat, startHour };
+    },
+
+    'PLANNING/REGLER_DUREE'(etat, { totalDays }) {
+        return { ...etat, totalDays };
+    },
+
     // ===== Équipes =====
     // Les lignes de main courante (evenement / evenements) sont construites par l'appelant ;
     // null = pas de ligne (ex. certaines opérations en main courante secondaire).
@@ -595,6 +644,12 @@ const creerActionsDonnees = (dispatch, reserverNumerosMC) => {
         importerMCSecondaire: (evenements) => dispatch({ type: 'MC/IMPORTER_SECONDAIRE', evenements }),
         importerEvenements: (evenements) => dispatch({ type: 'MC/IMPORTER_EVENEMENTS', evenements }),
         affecterPlanningDepuisMC: (evenement, ids, activite, slot) => dispatch({ type: 'PLANNING/AFFECTER_DEPUIS_MC', evenement, ids, activite, slot }),
+        // Planning
+        affecterPlanning: (cellules, activite, evenement) => dispatch({ type: 'PLANNING/AFFECTER', cellules, activite, evenement }),
+        recopierPlanning: (copies) => dispatch({ type: 'PLANNING/RECOPIER', copies }),
+        comblerCreneaux: (remplissages) => dispatch({ type: 'PLANNING/COMBLER_CRENEAUX', remplissages }),
+        reglerDebutPlanning: (startHour) => dispatch({ type: 'PLANNING/REGLER_DEBUT', startHour }),
+        reglerDureePlanning: (totalDays) => dispatch({ type: 'PLANNING/REGLER_DUREE', totalDays }),
         // Équipes (lignes de main courante construites par l'écran des équipes)
         creerEquipe: (equipe, horodatage, evenements) => dispatch({ type: 'EQUIPES/CREER', equipe, horodatage, evenements }),
         modifierEquipe: (id, champs, ancienneMission, evenement) => dispatch({ type: 'EQUIPES/MODIFIER', id, champs, ancienneMission, horodatage: new Date().toISOString(), evenement }),

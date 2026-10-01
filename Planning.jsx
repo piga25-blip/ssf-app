@@ -7,7 +7,7 @@ let PlanningTab = ({
     lastSelectedCell, setLastSelectedCell, isDragging, setIsDragging,
     isFilling, setIsFilling, fillStartCell, setFillStartCell,
     fillPreviewCells, setFillPreviewCells,
-    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC,
+    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, actions,
     mcMode, mcIdentifiant, setActiveTab, setModalRepos,
     planningAutoPropagate, setPlanningAutoPropagate
 }) => {
@@ -271,8 +271,8 @@ let PlanningTab = ({
             console.log('>>> MODE POIGNÉE DE RECOPIE <<<');
             if (fillPreviewCells.size > 0 && selectedCells.size > 0) {
                 // Recopier le contenu des cellules sélectionnées (INDÉPENDANT DE LA PALETTE)
-                setPlanning(prevPlanning => {
-                    const newPlanning = { ...prevPlanning };
+                {
+                    const copies = [];
                     
                     // Extraire les coordonnées min/max de la sélection originale
                     let minRow = Infinity, maxRow = -Infinity;
@@ -297,21 +297,6 @@ let PlanningTab = ({
                     const selectionHeight = maxRow - minRow + 1;
                     const selectionWidth = maxCol - minCol + 1;
                     
-                    // Créer un tableau du contenu de la sélection
-                    const selectionContent = [];
-                    for (let r = 0; r < selectionHeight; r++) {
-                        selectionContent[r] = [];
-                        const sourceRowId = activeSauveteursDetails[minRow + r]?.id;
-                        if (sourceRowId && prevPlanning[sourceRowId]) {
-                            for (let c = 0; c < selectionWidth; c++) {
-                                const sourceCol = minCol + c;
-                                selectionContent[r][c] = prevPlanning[sourceRowId][sourceCol] || 'nondef';
-                            }
-                        }
-                    }
-                    
-                    console.log('Selection content:', selectionContent);
-                    
                     // Appliquer le contenu aux cellules d'aperçu
                     fillPreviewCells.forEach(cellKey => {
                         const [rowId, colIndexStr] = cellKey.split('|');
@@ -328,20 +313,13 @@ let PlanningTab = ({
                         const patternRow = relativeRow >= 0 ? relativeRow : selectionHeight + relativeRow;
                         const patternCol = relativeCol >= 0 ? relativeCol : selectionWidth + relativeCol;
                         
-                        if (selectionContent[patternRow] && selectionContent[patternRow][patternCol]) {
-                            const activityToCopy = selectionContent[patternRow][patternCol];
-                            console.log(`Copying activity "${activityToCopy}" to ${rowId}|${colIndex}`);
-                            
-                            if (newPlanning[rowId]) {
-                                const newRow = [...newPlanning[rowId]];
-                                newRow[colIndex] = activityToCopy;
-                                newPlanning[rowId] = newRow;
-                            }
-                        }
+                        // Case source correspondante dans le motif sélectionné
+                        const idSource = activeSauveteursDetails[minRow + patternRow]?.id;
+                        if (idSource) copies.push({ id: rowId, slot: colIndex, idSource, slotSource: minCol + patternCol });
                     });
                     
-                    return newPlanning;
-                });
+                    actions.recopierPlanning(copies);
+                }
             }
             // Nettoyer les états du mode poignée
             setFillPreviewCells(new Set());
@@ -676,19 +654,7 @@ let PlanningTab = ({
         const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const msg = 'Mise a jour - ' + heure + '\n\n' + sauveteursPropager.length + ' sauveteur(s), ' + duree + ' min max.\nActivites: ' + noms.join(', ') + '\n\nVoulez-vous remplir les creneaux vides ?';
         if (!window.confirm(msg)) return;
-        setPlanning(function(prev) {
-            const np = { ...prev };
-            sauveteursPropager.forEach(function(s) {
-                if (np[s.id]) {
-                    const r = [...np[s.id]];
-                    for (let slot = s.slotDebut; slot <= s.slotFin; slot++) {
-                        if (!r[slot] || r[slot] === 'nondef' || r[slot] === 'effacer') r[slot] = s.activite;
-                    }
-                    np[s.id] = r;
-                }
-            });
-            return np;
-        });
+        actions.comblerCreneaux(sauveteursPropager); // cases encore vides seulement
     };
 
     return (
@@ -704,7 +670,7 @@ let PlanningTab = ({
                                 alert('⚠️ Impossible de modifier l\'heure de début car des personnes sont déjà inscrites au planning.\n\nPour changer l\'heure de début, vous devez d\'abord :\n1. Réinitialiser (Mode Maintenance > RESET APPLI)\n2. Ou retirer toutes les personnes du planning');
                                 return;
                             }
-                            setStartHour(parseInt(e.target.value, 10));
+                            actions.reglerDebutPlanning(parseInt(e.target.value, 10));
                         }}
                         className="px-3 py-2 border rounded"
                         title={activeSauveteurIds.length > 0 ? 
@@ -723,7 +689,7 @@ let PlanningTab = ({
                     <input 
                         type="number" 
                         value={totalDays}
-                        onChange={(e) => setTotalDays(Math.max(1, Math.min(14, parseInt(e.target.value, 10))))}
+                        onChange={(e) => actions.reglerDureePlanning(Math.max(1, Math.min(14, parseInt(e.target.value, 10))))}
                         min="1" max="14"
                         className="px-3 py-2 border rounded w-20"
                     />
@@ -805,6 +771,7 @@ let PlanningTab = ({
                 nextEventNumber={nextEventNumber}
                 setNextEventNumber={setNextEventNumber}
                 reserverNumerosMC={reserverNumerosMC}
+                actions={actions}
                 mcMode={mcMode}
                 mcIdentifiant={mcIdentifiant}
                 masterSauveteursList={masterSauveteursList}
@@ -864,6 +831,7 @@ const PaletteActivites = ({
     nextEventNumber,
     setNextEventNumber,
     reserverNumerosMC,
+    actions,
     mcMode,
     mcIdentifiant,
     masterSauveteursList,
@@ -900,32 +868,17 @@ const PaletteActivites = ({
                 }
             }
             
-            // Appliquer au planning
-            setPlanning(prevPlanning => {
-                const newPlanning = { ...prevPlanning };
-                for (const cellKey of selectedCells) {
-                    const [rowId, colIndexStr] = cellKey.split('|');
-                    const colIndex = parseInt(colIndexStr, 10);
-                    
-                    const isTeamActivity = activity && activity.teamRequired;
-                    const isInTeam = sauveteurToTeamMap[rowId];
-
-                    if (colIndex >= totalSlots) continue;
-                    if (isTeamActivity && !isInTeam) continue;
-
-                    if (newPlanning[rowId]) {
-                        const newRow = [...newPlanning[rowId]];
-                        newRow[colIndex] = activityId;
-                        newPlanning[rowId] = newRow;
-                    } else {
-                        // Créer une nouvelle ligne pour ce sauveteur
-                        const newRow = Array(totalSlots).fill('nondef');
-                        newRow[colIndex] = activityId;
-                        newPlanning[rowId] = newRow;
-                    }
-                }
-                return newPlanning;
-            });
+            // Cases concernées (dans le planning ; activité d'équipe : membres d'une équipe seulement)
+            const cellules = [];
+            for (const cellKey of selectedCells) {
+                const [rowId, colIndexStr] = cellKey.split('|');
+                const colIndex = parseInt(colIndexStr, 10);
+                if (colIndex >= totalSlots) continue;
+                if (activity && activity.teamRequired && !sauveteurToTeamMap[rowId]) continue;
+                cellules.push({ id: rowId, slot: colIndex });
+            }
+            // Planning modifié tout de suite ; la ligne de main courante éventuelle est ajoutée plus bas
+            actions.affecterPlanning(cellules, activityId, null);
             
             // Créer un événement dans la Main Courante (sauf pour "effacer" et "nondef")
             if (activity && activity.id !== 'effacer' && activity.id !== 'nondef' && sauveteursConcernes.length > 0) {
@@ -1014,10 +967,7 @@ const PaletteActivites = ({
                 console.log('>>> New event created:', newEvent);
                 console.log('>>> Current events count:', events.length);
                 
-                setEvents(prev => {
-                    console.log('>>> Adding event to events array, prev length:', prev.length);
-                    return [...prev, newEvent];
-                });
+                actions.ajouterLigneMC(newEvent);
                 
                 console.log('>>> MC event created successfully');
             } else {

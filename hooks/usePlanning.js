@@ -2,7 +2,7 @@ const usePlanning = ({
     activeSauveteurIds, setActiveSauveteurIds,
     nextPermanentNumber, setNextPermanentNumber,
     setSauveteurPermanentNumbers,
-    planning, setPlanning, startHour, totalDays,
+    planning, actions, startHour, totalDays,
     onAutoPropagate
 }) => {
     const [selectedActivityId, setSelectedActivityId] = useState('nondef');
@@ -58,19 +58,7 @@ const usePlanning = ({
         );
         if (!confirmer) return;
 
-        setPlanning(function(prev) {
-            const np = { ...prev };
-            aCombler.forEach(function(s) {
-                if (np[s.id]) {
-                    const r = [...np[s.id]];
-                    for (let slot = s.slotDebut; slot <= s.slotFin; slot++) {
-                        if (!r[slot] || r[slot] === 'nondef' || r[slot] === 'effacer') r[slot] = s.activite;
-                    }
-                    np[s.id] = r;
-                }
-            });
-            return np;
-        });
+        actions.comblerCreneaux(aCombler); // cases encore vides seulement
     };
 
 
@@ -121,19 +109,7 @@ const usePlanning = ({
                 const msg = 'Mise a jour automatique - ' + heure + '\n\n' + sauveteursPropager.length + ' sauveteur(s), ' + duree + ' min max.\nActivi: ' + noms.join(', ') + '\n\nConfirmer ?';
                 if (!window.confirm(msg)) return;
             }
-            setPlanning(function(prev) {
-                const np = { ...prev };
-                sauveteursPropager.forEach(function(s) {
-                    if (np[s.id]) {
-                        const r = [...np[s.id]];
-                        for (let slot = s.slotDebut; slot <= s.slotFin; slot++) {
-                            if (!r[slot] || r[slot] === 'nondef' || r[slot] === 'effacer') r[slot] = s.activite;
-                        }
-                        np[s.id] = r;
-                    }
-                });
-                return np;
-            });
+            actions.comblerCreneaux(sauveteursPropager); // cases encore vides seulement
             if (planningAutoPropagate && onAutoPropagateRef.current) {
                 onAutoPropagateRef.current({ count: sauveteursPropager.length, duree, noms, heure });
             }
