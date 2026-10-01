@@ -120,6 +120,74 @@ mémoire de navigateur. On évite ainsi deux comportements différents à mainte
   Au premier lancement de la nouvelle version, il faut copier toutes les clés
   `SSF_UNIFIED_STATE_*` vers le nouveau stockage.
 
+#### Découpage des sauvegardes par partie
+
+Au lieu d'un seul bloc, un dossier par secours avec un fichier par partie :
+
+```
+%APPDATA%/Application SSF/secours/<id-du-secours>/
+   ├─ mission.json        infos mission, clôture, secrétaires, réglages
+   ├─ inscription.json    sauveteurs inscrits, sauveteurs actifs, n° permanents
+   ├─ main-courante.json  événements, n° du prochain événement, mode principal/secondaire
+   ├─ planning.json       grille, heure de début, nombre de jours
+   ├─ equipes.json        équipes, n° d'équipe déjà utilisés
+   ├─ points-phone.json   liste des points phones
+   ├─ journal.log         historique de chaque modification (qui, quoi, quand)
+   └─ sauvegardes/        copies horodatées
+```
+
+Correspondance avec l'état actuel (`SSF_UNIFIED_STATE_<id>`) :
+
+| Fichier | Champs actuels |
+|---|---|
+| `mission.json` | `missionInfo`, `clotureInfo`, `secretaires`, `version` |
+| `inscription.json` | `masterSauveteursList`, `activeSauveteurIds`, `sauveteurPermanentNumbers`, `nextPermanentNumber` |
+| `main-courante.json` | `events`, `nextEventNumber`, `mcMode`, `mcIdentifiant`, `mcConfigured` |
+| `planning.json` | `planning`, `startHour`, `totalDays` |
+| `equipes.json` | `teams`, `usedTeamNumbers` |
+| `points-phone.json` | `pointsPhone` |
+
+**Ce qu'on y gagne :**
+- en réseau, seule la partie modifiée est enregistrée et envoyée aux autres postes ;
+- un fichier abîmé n'affecte pas les autres parties ;
+- restauration ciblée (ex. seulement le planning) ;
+- export d'une partie seule (ex. la main courante pour archivage) ;
+- fin de la limite de taille de la mémoire du navigateur (environ 5 à 10 Mo).
+
+**Point de vigilance : les parties dépendent les unes des autres.** Vérifié dans le code :
+la main courante est alimentée automatiquement par presque tous les modules.
+
+| Module | Action | Parties modifiées |
+|---|---|---|
+| Enregistrement des sauveteurs (`Modals.jsx`, `hooks/usePlanning.js`) | Arrivée | inscription **+ main courante** (lignes « arrivée » et « disponible ») **+ planning** |
+| | Départ | inscription **+ planning + main courante** |
+| Équipes (`Teams.jsx`) | création, départ, retour, scission… | équipes **+ main courante + planning** |
+| Points phones (`GestionPointsPhone.jsx`) | passages, gestion | points phones **+ main courante** |
+| Planning (`Planning.jsx`) | affectations, repos | planning **+ main courante** |
+| Main courante (`Events.jsx`) | certaines saisies | main courante **+ planning + points phones** |
+| Liste de référence (`GestionListe.jsx`) | annuaire des sauveteurs | inscription seulement |
+
+Il existe aussi des **liens entre fichiers** : les équipes et le planning désignent les
+sauveteurs par leur identifiant, qui se trouve dans `inscription.json`.
+
+**Conséquences et règles :**
+1. **Une action = un bloc unique.** Une modification qui touche plusieurs parties est d'abord
+   notée dans `journal.log`, puis les fichiers concernés sont écrits. Si l'application
+   s'arrête au milieu, elle relit le journal au redémarrage et termine l'écriture.
+   Exemple : une inscription écrit en une seule fois l'inscription, la main courante et le
+   planning. Sinon, on pourrait avoir un sauveteur inscrit sans ligne d'arrivée.
+2. **`main-courante.json` est le fichier le plus sollicité** : presque toutes les actions de
+   tous les postes y ajoutent une ligne.
+3. **La sauvegarde complète réunit toutes les parties au même instant.** Pour une restauration
+   partielle, l'application vérifie d'abord les liens (ex. un planning restauré ne doit pas
+   désigner des sauveteurs qui n'existent plus) et prévient en cas de problème.
+4. **Un numéro de version commun** figure dans chaque fichier pour détecter un mélange de versions.
+5. **L'export d'un secours complet en un seul fichier** reste possible (échange, archivage).
+6. **Lien main courante ↔ journal.** La main courante est déjà, en pratique, un journal de
+   l'opération lisible par les secrétaires. Le journal technique reste nécessaire (détail
+   exact de chaque modification), mais chaque ligne de main courante générée automatiquement
+   garde la référence de l'action qui l'a créée (ex. quelle ligne correspond à quelle inscription).
+
 ### Phase 2 – Serveur web intégré
 - Il fournit les fichiers de l'interface (`index.html`, `*.jsx`, `hooks/`, `libs/`, `assets/`)
   et un canal WebSocket pour les échanges en direct.
@@ -157,7 +225,9 @@ Les échanges se font dans cet ordre :
 
 - **Numérotation** : `nextEventNumber`, `nextPermanentNumber` et `usedTeamNumbers` sont
   aujourd'hui calculés par chaque poste, donc deux postes donneraient le même numéro.
-  Seul le serveur doit les attribuer.
+  Seul le serveur doit les attribuer. **C'est la priorité absolue pour la main courante** :
+  tous les postes y créent des lignes en même temps (un poste inscrit, un autre fait partir
+  une équipe, un troisième enregistre un passage au point phone).
 - **Heure** : l'heure de la main courante doit être celle du serveur, car les horloges des
   postes peuvent être décalées.
 - **Passer en deux étapes :**
@@ -218,6 +288,13 @@ Les échanges se font dans cet ordre :
 7. 10 postes connectés, dont une tablette : temps de chargement et réactivité.
 8. Récupération des données existantes lors de la mise à jour depuis la version 13.41.
 9. Mode réseau désactivé : comportement strictement identique à aujourd'hui.
+10. Arrêt brutal de l'application pendant une inscription (ou un départ d'équipe) : au
+    redémarrage, l'inscription, la ligne de main courante et le planning sont tous présents
+    (ou tous absents), jamais partiellement.
+11. Restauration du seul planning à partir d'une sauvegarde : l'application signale les
+    sauveteurs absents de l'inscription.
+12. Inscription, départ d'équipe et passage au point phone lancés en même temps depuis trois
+    postes : trois lignes de main courante aux numéros distincts et consécutifs.
 
 ### Phase 9 – Déploiement
 - Version majeure (14.0), puisque le stockage change.
