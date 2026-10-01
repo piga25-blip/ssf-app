@@ -12,6 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { _electron: electron } = require('playwright-core');
+const { attendreEcriture, lireSecours } = require('./outils-fichiers');
 
 const RACINE = path.join(__dirname, '..');
 
@@ -37,10 +38,12 @@ const RACINE = path.join(__dirname, '..');
         await page.waitForTimeout(1000);
         const bouton = (texte) => page.locator('button:visible', { hasText: texte });
         const pause = (ms = 400) => page.waitForTimeout(ms);
-        const etat = () => page.evaluate(() => {
-            const k = Object.keys(localStorage).find(c => c.includes('gouffre-a3'));
-            return JSON.parse(localStorage.getItem(k));
-        });
+        // État enregistré par le serveur (fichiers)
+        const etat = async () => {
+            await attendreEcriture();
+            const tous = lireSecours(dossierDonnees);
+            return tous[Object.keys(tous).find(c => c.includes('Gouffre A3'))];
+        };
 
         // Préparation : dossier, 4 sauveteurs (3 arrivés), une équipe, 2 points phones
         await page.getByText('EXERCICE', { exact: true }).click();

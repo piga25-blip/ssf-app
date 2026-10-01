@@ -32,6 +32,8 @@ const useAlerts = ({ events, actions, reserverNumerosMC }) => {
     };
 
     useEffect(() => {
+        // Les alertes s'affichent sur le poste principal (un poste en consultation ne peut pas les valider)
+        if (!EST_POSTE_PRINCIPAL) return;
         const checkAlerts = () => {
             const urgentAlerts = events.filter(e => {
                 if (!e.dateRappel || e.fait) return false;

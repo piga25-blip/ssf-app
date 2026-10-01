@@ -3,9 +3,9 @@
 // ============================================
 // 1. nouvelId() : 20 000 identifiants sans doublon, au format UUID, y compris avec la
 //    version de secours (poste en http://192.168.x.x, sans crypto.randomUUID).
-// 2. Un ancien dossier contenant des identifiants en double est réparé à la réouverture
-//    (le premier garde son identifiant), et la validation d'un rappel ne touche plus
-//    que l'événement concerné.
+// 2. Un ancien dossier contenant des identifiants en double est réparé à la réouverture par
+//    le serveur (le premier garde son identifiant, le suivant devient « identifiant~2 »), et la
+//    validation d'un rappel ne touche plus que l'événement concerné.
 // 3. Un événement saisi reçoit un identifiant au format UUID.
 //
 // Utilisation (depuis C:\Projets\SSF-Reseau) : node tests/verif-identifiants.js
@@ -14,6 +14,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { _electron: electron } = require('playwright-core');
+const { attendreEcriture, lireSecours, ecrireSecours } = require('./outils-fichiers');
 
 const RACINE = path.join(__dirname, '..');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -51,7 +52,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
         controler(`nouvelId (version de secours, sans randomUUID) : ${r.secours.distincts}/10000 distincts, format UUID (ex. ${r.secours.exemple})`, r.secours.distincts === 10000 && r.secours.formatOk);
 
         // 2. Ancien dossier avec identifiants en double (comme Date.now() dans la même milliseconde)
-        await page.evaluate(() => {
+        {
             const ev = (id, numero, texte, rappel) => ({
                 id, numero, evenement: texte, categorie: 'communication', secretaire: 'Ancien',
                 isoTimestamp: '2026-03-14T07:00:00.000Z', dateHeure: '14/03/2026 08:00:00', fait: false,
@@ -70,21 +71,21 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
                 ],
                 nextEventNumber: 4,
             };
-            localStorage.setItem('SSF_UNIFIED_STATE_ancien---doublons---14-03-2026_V13', JSON.stringify(dossier));
-            localStorage.setItem('ssf_current_secretaire', 'Vérificateur');
-        });
+            // Dossier écrit sur disque comme par une version précédente (sans réparation)
+            const { version, rescueId, timestamp, ...donnees } = dossier;
+            ecrireSecours(dossierDonnees, rescueId, donnees);
+        }
+        await page.evaluate(() => localStorage.setItem('ssf_current_secretaire', 'Vérificateur'));
         await charger();
         await bouton('Rouvrir un dossier').click();
         await page.getByText('Doublons', { exact: false }).first().click();
         await bouton('Rouvrir').last().click();
         await page.waitForTimeout(1500);
-        const lireEvenements = () => page.evaluate(() => {
-            const d = JSON.parse(localStorage.getItem('SSF_UNIFIED_STATE_ancien---doublons---14-03-2026_V13'));
-            return d.events.map(e => ({ id: e.id, numero: e.numero, fait: e.fait }));
-        });
+        const lireDossier = async () => { await attendreEcriture(); return lireSecours(dossierDonnees)['ANCIEN - Doublons - 14-03-2026']; };
+        const lireEvenements = async () => (await lireDossier()).events.map(e => ({ id: e.id, numero: e.numero, fait: e.fait }));
         let evs = await lireEvenements();
         controler(`Ancien dossier : identifiants ${JSON.stringify(evs.map(e => e.id))}`,
-            new Set(evs.map(e => e.id)).size === 3 && evs[0].id === 1773471600000 && evs[2].id === 1773471600001 && UUID.test(evs[1].id));
+            new Set(evs.map(e => e.id)).size === 3 && evs[0].id === 1773471600000 && evs[2].id === 1773471600001 && evs[1].id === '1773471600000~2');
 
         // Validation du rappel du 1er événement dans la fenêtre « Alertes en attente » :
         // avant réparation, le 2e (même identifiant) était validé en même temps
@@ -105,10 +106,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
         await page.locator('textarea[placeholder="Description..."]').fill('Nouveau message après réparation.');
         await bouton(/^✓ ENREGISTRER$/).click();
         await page.waitForTimeout(1500);
-        const dernier = await page.evaluate(() => {
-            const d = JSON.parse(localStorage.getItem('SSF_UNIFIED_STATE_ancien---doublons---14-03-2026_V13'));
-            return d.events.find(e => (e.evenement || '').includes('Nouveau message'));
-        });
+        const dernier = (await lireDossier()).events.find(e => (e.evenement || '').includes('Nouveau message'));
         controler(`Nouvel événement : identifiant ${dernier && dernier.id}`, !!dernier && UUID.test(dernier.id));
     } finally {
         await app.close();

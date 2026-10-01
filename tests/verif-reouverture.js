@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { _electron: electron } = require('playwright-core');
+const { attendreEcriture, lireSecours } = require('./outils-fichiers');
 
 const RACINE = path.join(__dirname, '..');
 
@@ -49,15 +50,18 @@ const RACINE = path.join(__dirname, '..');
         await page.waitForTimeout(500);
         await bouton('Clôturer le secours').click();
         await bouton('Heure actuelle').click();
-        await page.waitForTimeout(1500); // sauvegarde différée (600 ms)
+        await page.waitForTimeout(1500);
+        await attendreEcriture(); // le serveur écrit les fichiers peu après chaque action
 
         const avant = await page.evaluate(() => document.body.innerText);
         console.log('Avant redémarrage  : clôturé =', avant.includes('CLÔTURÉ'), '| cavité affichée =', avant.includes('Gouffre de Vérification'));
-        const stocke = await page.evaluate(() => {
-            const k = Object.keys(localStorage).find(c => c.includes('gouffre-de-v'));
-            const d = k ? JSON.parse(localStorage.getItem(k)) : {};
-            return { cle: k, missionInfo: d.missionInfo || null, clotureInfo: d.clotureInfo || null };
-        });
+        const lireDossier = () => {
+            const tous = lireSecours(dossierDonnees);
+            const id = Object.keys(tous).find(c => c.includes('Gouffre de Vérification'));
+            return { id, donnees: id ? tous[id] : {} };
+        };
+        const enregistre = lireDossier();
+        const stocke = { secours: enregistre.id, missionInfo: enregistre.donnees.missionInfo || null, clotureInfo: enregistre.donnees.clotureInfo || null };
         console.log('Dossier enregistré :', JSON.stringify(stocke));
 
         // 3. Redémarrage de l'interface et réouverture du dossier
@@ -72,22 +76,20 @@ const RACINE = path.join(__dirname, '..');
         console.log('Après réouverture  : clôturé =', clotureOk, '| cavité et commune affichées =', caviteOk);
         // 4. Ancien dossier (enregistré avant la correction, sans ces infos) : la réouverture
         //    ne doit pas enregistrer de champs techniques (rawData = copie du dossier)
-        await page.evaluate(() => {
-            const k = Object.keys(localStorage).find(c => c.includes('gouffre-de-v'));
-            const d = JSON.parse(localStorage.getItem(k));
-            delete d.missionInfo; delete d.clotureInfo;
-            localStorage.setItem(k, JSON.stringify(d));
-        });
+        await attendreEcriture();
+        const fichierMission = path.join(dossierDonnees, 'secours', require('../serveur/stockage').nomDossier(enregistre.id), 'mission.json');
+        const mission = JSON.parse(fs.readFileSync(fichierMission, 'utf8'));
+        delete mission.donnees.missionInfo; delete mission.donnees.clotureInfo;
+        fs.writeFileSync(fichierMission, JSON.stringify(mission));
         await charger();
         await bouton('Rouvrir un dossier').click();
         await page.getByText('Gouffre de Vérification', { exact: false }).first().click();
         await bouton('Rouvrir').last().click();
         await page.waitForTimeout(1500);
-        const ancien = await page.evaluate(() => {
-            const k = Object.keys(localStorage).find(c => c.includes('gouffre-de-v'));
-            return JSON.parse(localStorage.getItem(k)).missionInfo;
-        });
-        const ancienOk = !!ancien && !('rawData' in ancien) && !('rouvrir' in ancien);
+        await attendreEcriture();
+        const ancien = lireDossier().donnees.missionInfo;
+        // Ancien dossier : infos absentes (valeurs par défaut à l'écran), jamais de champs techniques
+        const ancienOk = !ancien || (!('rawData' in ancien) && !('rouvrir' in ancien));
         console.log('Ancien dossier     : missionInfo enregistré =', JSON.stringify(ancien), '→', ancienOk ? 'sans champ technique' : 'CHAMPS TECHNIQUES PRÉSENTS');
         ok = clotureOk && caviteOk && ancienOk;
     } finally {

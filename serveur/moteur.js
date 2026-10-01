@@ -96,7 +96,10 @@ const creerMoteur = ({ racineApp, racineDonnees, delaiEcritureMs = 300, interval
             CLES_DONNEES.forEach(c => { if (nouveau[c] !== actif.donnees[c]) partiesAEcrire.add(PARTIE_DE_CLE[c]); });
             actif = { ...actif, version, donnees: nouveau };
             modifieDepuisSauvegarde = true;
-            if (!minuterieEcriture) minuterieEcriture = setTimeout(ecrireMaintenant, delaiEcritureMs);
+            if (!minuterieEcriture) {
+                minuterieEcriture = setTimeout(ecrireMaintenant, delaiEcritureMs);
+                if (minuterieEcriture.unref) minuterieEcriture.unref();
+            }
             return version;
         },
 

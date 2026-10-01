@@ -112,6 +112,8 @@ const usePlanning = ({
                 onAutoPropagateRef.current({ count: sauveteursPropager.length, duree, noms, heure });
             }
         };
+        // Recopie automatique : faite par le poste principal seulement
+        if (!EST_POSTE_PRINCIPAL) return;
         const now = new Date();
         const msEcoules = (now.getMinutes() % 15) * 60000 + now.getSeconds() * 1000 + now.getMilliseconds();
         const msJusquAuProchain = 15 * 60000 - msEcoules;

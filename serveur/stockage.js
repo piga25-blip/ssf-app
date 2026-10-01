@@ -60,8 +60,8 @@ const creerStockage = (racineDonnees) => {
                 const rep = path.join(racine, d.name);
                 const meta = lireJSON(path.join(rep, 'dossier.json'));
                 if (!meta) return null;
-                const mission = lireJSON(path.join(rep, 'mission.json')) || {};
-                const mc = lireJSON(path.join(rep, 'main-courante.json')) || {};
+                const mission = (lireJSON(path.join(rep, 'mission.json')) || {}).donnees || {};
+                const mc = (lireJSON(path.join(rep, 'main-courante.json')) || {}).donnees || {};
                 return {
                     rescueId: meta.rescueId, majLe: meta.majLe, version: meta.version,
                     missionInfo: mission.missionInfo || null, clotureInfo: mission.clotureInfo || null,

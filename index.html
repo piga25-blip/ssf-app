@@ -676,7 +676,7 @@
             const [showImportMcModal, setShowImportMcModal] = useState(false);
 
             // Informations de mission (saisies au démarrage)
-            const [showMissionInfoModal, setShowMissionInfoModal] = useState(true);
+            const [showMissionInfoModal, setShowMissionInfoModal] = useState(EST_POSTE_PRINCIPAL); // consultation : pas de démarrage
             const [modalRepos, setModalRepos] = useState(null); // Modale durée de repos — partagée planning↔MC
             const [showClotureModal, setShowClotureModal] = useState(false);
 
@@ -767,7 +767,7 @@
                 } else {
                     // Premier lancement : demander le nom après un court délai
                     const timer = setTimeout(() => {
-                        if (mcConfigured) { // Attendre que la config MC soit faite
+                        if (mcConfigured && EST_POSTE_PRINCIPAL) { // Attendre que la config MC soit faite (poste principal)
                             setShowSecretaireModal(true);
                         }
                     }, 1000);
@@ -792,7 +792,7 @@
 
             // Attribuer un n° permanent aux sauveteurs actifs qui n'en ont pas (anciens dossiers)
             useEffect(() => {
-                if (activeSauveteurIds.some(id => !sauveteurPermanentNumbers[id])) actions.numeroterSauveteursManquants();
+                if (EST_POSTE_PRINCIPAL && activeSauveteurIds.some(id => !sauveteurPermanentNumbers[id])) actions.numeroterSauveteursManquants();
             }, [activeSauveteurIds]);
 
 
