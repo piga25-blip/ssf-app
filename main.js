@@ -10,9 +10,10 @@ if (process.env.SSF_TEST_USER_DATA) {
 
 const crypto = require('crypto');
 const fs = require('fs');
-const { demarrerServeur, adressesReseau } = require('./serveur/serveur');
+const { demarrerServeur, adressesReseau, codeQR } = require('./serveur/serveur');
 const { creerMoteur } = require('./serveur/moteur');
 const { creerCanal } = require('./serveur/canal');
+const { creerPrecompilation } = require('./serveur/precompilation');
 const { reprendreMemoireNavigateur, reglagesARecopier, marquerReglagesRecopies } = require('./serveur/migration');
 
 let mainWindow;
@@ -49,9 +50,13 @@ app.whenReady().then(async () => {
   const fichierReglages = path.join(app.getPath('userData'), 'reglages-serveur.json');
   let reglages = { modeReseau: false, saisieDistante: false };
   try { reglages = { ...reglages, ...JSON.parse(fs.readFileSync(fichierReglages, 'utf8')) }; } catch (e) { /* premier lancement */ }
-  serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: reglages.modeReseau ? '0.0.0.0' : '127.0.0.1' });
+  // Interface précompilée (tablettes) ; SSF_SANS_PRECOMPILATION=1 : transformation dans le navigateur
+  const precompilation = process.env.SSF_SANS_PRECOMPILATION ? null
+    : creerPrecompilation(__dirname, path.join(app.getPath('userData'), 'cache-interface'));
+  serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: reglages.modeReseau ? '0.0.0.0' : '127.0.0.1', precompilation });
   const reseau = {
-    infos: () => ({ actif: serveurSSF.hote === '0.0.0.0', port: serveurSSF.port, adresses: adressesReseau(), saisieDistante: !!reglages.saisieDistante }),
+    infos: () => ({ actif: serveurSSF.hote === '0.0.0.0', port: serveurSSF.port, saisieDistante: !!reglages.saisieDistante,
+      adresses: adressesReseau().map(a => ({ ...a, qr: codeQR(`http://${a.adresse}:${serveurSSF.port}/`) })) }),
     basculer: async (actif) => {
       await serveurSSF.changerHote(actif ? '0.0.0.0' : '127.0.0.1');
       if (!actif && canalSSF) canalSSF.deconnecterDistants();

@@ -63,7 +63,9 @@ const ID_SECOURS = /Gouffre Multiposte/;
         await b(p, 'Activer le mode réseau').click();
         await p.waitForTimeout(1500);
         const adresse = await p.locator('span.font-mono.text-xl').first().innerText();
-        await p.locator('label', { hasText: 'Autoriser la saisie sur les autres postes' }).locator('input').check();
+        // La case se coche à la réponse du serveur
+        await p.locator('label', { hasText: 'Autoriser la saisie sur les autres postes' }).locator('input').click();
+        await p.waitForFunction(() => [...document.querySelectorAll('label')].some(l => l.innerText.includes('Autoriser la saisie') && l.querySelector('input').checked), null, { timeout: 10000 });
         await p.waitForTimeout(800);
         await b(p, /^Fermer$/).last().click();
 

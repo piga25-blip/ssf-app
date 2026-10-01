@@ -44,11 +44,28 @@ const fichierAutorise = (racine, chemin) => {
 
 // Démarre le serveur. port : port souhaité (0 = au hasard, pour les tests) ; si le port est
 // pris, essaie les suivants. hote : '127.0.0.1' (ce poste seulement) ou '0.0.0.0' (réseau local).
-const demarrerServeur = ({ racine, port = 8080, hote = '127.0.0.1', essais = 20 }) => new Promise((resoudre, rejeter) => {
+// precompilation (facultatif, serveur/precompilation.js) : page et scripts servis déjà transformés
+const demarrerServeur = ({ racine, port = 8080, hote = '127.0.0.1', essais = 20, precompilation = null }) => new Promise((resoudre, rejeter) => {
     const serveur = http.createServer((req, res) => {
         if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); res.end(); return; }
         const fichier = fichierAutorise(racine, req.url);
         if (!fichier) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('Introuvable'); return; }
+        // Interface précompilée (sauf « ?babel=1 » : transformation dans le navigateur, comme avant)
+        const requete = new URL(req.url, 'http://x').searchParams;
+        if (precompilation && !requete.has('babel')) {
+            try {
+                let code = null, type = null;
+                if (path.basename(fichier) === 'index.html' && path.dirname(fichier) === racine) { code = precompilation.page(fichier); type = TYPES['.html']; }
+                else if (requete.get('compile') === '1' && /\.(js|jsx)$/.test(fichier)) { code = precompilation.script(fichier); type = TYPES['.js']; }
+                if (code !== null) {
+                    res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+                    res.end(req.method === 'HEAD' ? undefined : code);
+                    return;
+                }
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end("Erreur de préparation de l'interface : " + e.message); return;
+            }
+        }
         fs.readFile(fichier, (err, contenu) => {
             if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('Introuvable'); return; }
             res.writeHead(200, {
@@ -93,4 +110,14 @@ const adressesReseau = () => {
     return resultat;
 };
 
-module.exports = { demarrerServeur, fichierAutorise, adressesReseau };
+// Code QR (image SVG) d'une adresse, à photographier avec une tablette ou un téléphone
+const codeQR = (texte) => {
+    const qr = require('qrcode').create(texte, { errorCorrectionLevel: 'M' });
+    const n = qr.modules.size, marge = 4, d = qr.modules.data;
+    let chemin = '';
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (d[y * n + x]) chemin += `M${x + marge} ${y + marge}h1v1h-1z`;
+    const t = n + 2 * marge;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${t} ${t}" shape-rendering="crispEdges"><rect width="${t}" height="${t}" fill="#fff"/><path d="${chemin}" fill="#000"/></svg>`;
+};
+
+module.exports = { demarrerServeur, fichierAutorise, adressesReseau, codeQR };

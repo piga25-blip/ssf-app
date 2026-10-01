@@ -462,7 +462,7 @@ comportent différemment sur tablette (iPad notamment). À ajouter aux tests.
 | **0 – Préparation** ✅ (rien de réseau) | ✅ scénario de référence (A4, fait le 01/10/2026 : `tests/SCENARIO_REFERENCE.md`), ✅ identifiants uniques (A2, fait le 01/10/2026 : `nouvelId()` / `garantirIdsUniques()` dans `utils.js`), ✅ copies périmées corrigées (A3, fait le 01/10/2026 : mises à jour à partir de l'état le plus récent + distributeur de numéros `reserverNumerosMC()` dans `index.html`), ✅ **modifications regroupées en actions nommées (B1, fait le 01/10/2026 : `donnees.js`, voir « Architecture des données » ci-dessous)** |
 | **1** ✅ | stockage en fichiers découpés + journal + serveur, postes **en consultation seule** ; modifications automatiques faites par le serveur (A1) ; blocage des mises à jour pendant le mode réseau (B3) |
 | **2** ✅ | saisie de la **main courante** et des **passages aux points phones** sur plusieurs postes (numéros et heure donnés par le serveur) |
-| **3** | inscription des sauveteurs, missions, équipes, planning sur plusieurs postes (étape A puis B) ; avertissement de modification simultanée dans les fenêtres |
+| **3** ✅ | inscription des sauveteurs, missions, équipes, planning sur plusieurs postes (étape A puis B) ; avertissement de modification simultanée dans les fenêtres |
 | **4** | code de session, rôles, imports réservés à l'administrateur (B5), reprise après panne, saisie hors connexion |
 
 ---
@@ -523,6 +523,23 @@ transmet aux autres postes. Les autres postes (navigateur) reçoivent l'état pu
 **Reste à prévoir :** saisie des inscriptions, équipes et planning sur plusieurs postes (lot 3) ;
 code de session et rôles par poste (lot 4) : pour l'instant, la saisie s'autorise pour tous les
 autres postes à la fois ; avertissement « modifié entre-temps par X » dans les fenêtres (lot 3).
+
+---
+
+## 6 quinquies. Lot 3 réalisé (01/10/2026)
+
+| Étape | Contenu |
+|---|---|
+| 3.1 | **Conflits refusés** par `donnees.js` avec un message au poste concerné : équipe ou numéro d'équipe déjà pris, point phone déjà existant ou supprimé, équipe terminée ou disparue… Identifiant EXT-nnn automatique pris entre-temps → le suivant libre. Version sûre de la fonction réductrice sur les écrans |
+| 3.2 | **Postes de saisie** (décision 2) : inscriptions, équipes, planning, points phones, en plus de la main courante. Restent au poste principal : dossier, infos et clôture du secours, imports, remises à zéro, secrétaires, réglages du planning. Heure donnée par le serveur pour toutes ces actions (écarts entre lignes conservés) |
+| 3.3 | **Avertissements** : « modifié(e) sur un autre poste pendant votre modification » dans les fenêtres (ligne de main courante, équipe, sauveteur, point phone) ; « Planning modifié sur … » (décision 3) |
+| 3.4 | **Tablettes** : interface précompilée par le serveur (`serveur/precompilation.js`, mêmes réglages que Babel, cache sur disque `cache-interface/`) : page affichée en 0,2 s au lieu de 3,8 s ; `?babel=1` pour l'ancienne page ; code QR de l'adresse dans « Mode réseau » |
+
+**Reste à prévoir :**
+- tablettes : la grille du planning (sélection à la souris, poignée de recopie) n'est pas adaptée au
+  toucher ; la saisie de la main courante et des points phones fonctionne ;
+- lot 4 : code de session, rôles par poste, imports réservés et confirmés, reprise après panne,
+  saisie hors connexion ; nom des postes (secrétaire au lieu de l'adresse IP).
 
 ---
 

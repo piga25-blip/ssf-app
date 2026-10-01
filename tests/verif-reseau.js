@@ -49,6 +49,8 @@ const NAVIGATEUR = path.join(__dirname, 'aides', 'navigateur');
         await page.waitForTimeout(1500);
         const adresse = await page.locator('span.font-mono.text-xl').first().innerText().catch(() => null);
         controler(`Mode réseau activé, adresse affichée : ${adresse}`, !!adresse && /^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/.test(adresse));
+        controler('Code QR de l\'adresse affiché', (await page.locator('img[alt^="Code QR"]').count()) > 0);
+        await page.screenshot({ path: path.join(__dirname, 'sortie', 'mode-reseau.png') });
         await bouton(page, /^Fermer$/).last().click();
         if (!adresse) throw new Error('pas d\'adresse réseau sur ce poste : test impossible');
 

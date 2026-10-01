@@ -33,7 +33,9 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                         <p className="font-bold text-lg">{reseau.actif ? '🟢 Mode réseau activé' : '⚪ Mode réseau désactivé'}</p>
                                         <p className="text-sm text-gray-600">
                                             {reseau.actif
-                                                ? 'Les autres postes du réseau local peuvent ouvrir l\'application (consultation seule).'
+                                                ? (reseau.saisieDistante
+                                                    ? 'Les autres postes du réseau local peuvent ouvrir l\'application et saisir (voir ci-dessous).'
+                                                    : 'Les autres postes du réseau local peuvent ouvrir l\'application (consultation seule).')
                                                 : 'L\'application n\'est accessible que sur ce poste.'}
                                         </p>
                                     </div>
@@ -50,9 +52,13 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                     {reseau.adresses.length === 0 ? (
                                         <p className="text-red-600 text-sm">⚠️ Aucun réseau détecté sur ce poste. Branchez-le au réseau local (câble ou Wi-Fi).</p>
                                     ) : reseau.adresses.map(a => (
-                                        <div key={a.adresse} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-2">
-                                            <span className="font-mono text-xl font-bold text-blue-800">http://{a.adresse}:{reseau.port}</span>
-                                            <span className="text-xs text-gray-500 ml-3">{a.interface}</span>
+                                        <div key={a.adresse} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-2 gap-3">
+                                            <div>
+                                                <span className="font-mono text-xl font-bold text-blue-800">http://{a.adresse}:{reseau.port}</span>
+                                                <span className="block text-xs text-gray-500">{a.interface} — tablette : photographiez le code</span>
+                                            </div>
+                                            {a.qr && <img alt={'Code QR http://' + a.adresse + ':' + reseau.port} title="À photographier avec l'appareil photo d'une tablette"
+                                                src={'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(a.qr)} style={{ width: '112px', height: '112px', flexShrink: 0 }} />}
                                         </div>
                                     ))}
                                     {reseau.adresses.length > 1 && (
