@@ -29,8 +29,12 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
+  // VERSION RÉSEAU (TEST) : mise à jour automatique désactivée, sinon elle
+  // serait remplacée par la version officielle publiée sur GitHub.
+  const MISE_A_JOUR_AUTO = false;
+
   mainWindow.webContents.once('did-finish-load', () => {
-    if (app.isPackaged) {
+    if (MISE_A_JOUR_AUTO && app.isPackaged) {
       autoUpdater.checkForUpdates().catch((err) => {
         console.log('Vérification MAJ échouée :', err.message);
       });

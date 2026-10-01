@@ -3,6 +3,32 @@
 > Document de travail rédigé le 01/10/2026 (version de l'application : 13.41.10).
 > Rien n'est encore codé : ce document sert de référence pour une future mise en œuvre.
 
+## Organisation du travail
+
+| Dossier | Branche git | Rôle |
+|---|---|---|
+| `C:\Projets\SSF` | `main` | Version officielle : corrections et mises à jour publiées |
+| `C:\Projets\SSF-Reseau` | `reseau-local` | Version réseau, **jamais publiée** tant qu'elle n'est pas validée |
+
+Le second dossier est un *worktree* git : même projet, deux dossiers de travail.
+Les corrections de `main` sont reprises dans `reseau-local` uniquement sur décision
+(`git merge main` depuis `C:\Projets\SSF-Reseau`).
+
+La version réseau a une **identité distincte** pour cohabiter sans risque avec la version officielle :
+
+| Élément | Version officielle | Version réseau (test) |
+|---|---|---|
+| Nom (`productName`) | Application SSF | Application SSF Reseau (test) |
+| Identifiant (`appId`) | `fr.ssf.app` | `fr.ssf.app.reseau` |
+| Dossier de données | `%APPDATA%\Application SSF` | `%APPDATA%\Application SSF Reseau (test)` |
+| Titre de la fenêtre | Application SSF Unifiée | … – RÉSEAU (TEST) |
+| Mise à jour automatique | active | **désactivée** (`MISE_A_JOUR_AUTO` dans `main.js`) |
+| Publication GitHub | `gh release create` | **aucune** (`publish: null`, scripts `publish` supprimés) |
+
+⚠️ **Au moment de la fusion finale dans `main`**, ces six éléments devront être remis à
+l'identique de la version officielle. Sinon, la mise à jour s'installerait comme une
+application séparée et ne retrouverait pas les données des utilisateurs.
+
 ---
 
 ## 0. Pourquoi est-ce intéressant d'avoir l'application en réseau
