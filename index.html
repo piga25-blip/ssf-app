@@ -571,6 +571,7 @@
     <script type="text/babel" src="constants.js"></script>
     <script type="text/babel" src="utils.js"></script>
     <script type="text/babel" src="storage.js"></script>
+    <script type="text/babel" src="donnees.js"></script>
     <script type="text/babel" src="Events.jsx"></script>
     <script type="text/babel" src="Planning.jsx"></script>
     <script type="text/babel" src="Teams.jsx"></script>
@@ -595,17 +596,35 @@
             const [currentRescueId, setCurrentRescueId] = useState(DEFAULT_RESCUE_ID);
             const [tempRescueIdInput, setTempRescueIdInput] = useState(DEFAULT_RESCUE_ID);
 
-            // Données partagées
-            const [masterSauveteursList, setMasterSauveteursList] = useState([]);
-            const [activeSauveteurIds, setActiveSauveteurIds] = useState([]);
-            const [sauveteurPermanentNumbers, setSauveteurPermanentNumbers] = useState({}); // Map: sauveteurId -> numéro permanent
-            const [nextPermanentNumber, setNextPermanentNumber] = useState(1); // Prochain numéro à attribuer
-            const [teams, setTeams] = useState([]);
-            const [usedTeamNumbers, setUsedTeamNumbers] = useState([]); // Historique des numéros utilisés
-            const [secretaires, setSecretaires] = useState(['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
+            // ===== DONNÉES PARTAGÉES DU SECOURS (lot 0, B1) =====
+            // Toutes les données partagées sont dans un seul état, modifié uniquement par des
+            // actions nommées (donnees.js). Par défaut, le planning commence 1 h avant l'heure actuelle.
+            const [donnees, dispatchDonnees] = React.useReducer(reducteurDonnees, null,
+                () => etatInitialDonnees(Math.max(0, new Date().getHours() - 1)));
+            const {
+                masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber,
+                teams, usedTeamNumbers, secretaires, pointsPhone, events, nextEventNumber,
+                planning, startHour, totalDays, missionInfo, clotureInfo, mcMode, mcIdentifiant, mcConfigured,
+            } = donnees;
+            // Anciennes fonctions de modification, conservées pendant la transition vers les
+            // actions nommées (action REMPLACER) : même usage qu'un setter React.
+            const setters = React.useMemo(() => {
+                const s = {};
+                CLES_DONNEES.forEach(cle => { s[cle] = valeur => dispatchDonnees({ type: 'REMPLACER', cle, valeur }); });
+                return s;
+            }, []);
+            const {
+                masterSauveteursList: setMasterSauveteursList, activeSauveteurIds: setActiveSauveteurIds,
+                sauveteurPermanentNumbers: setSauveteurPermanentNumbers, nextPermanentNumber: setNextPermanentNumber,
+                teams: setTeams, usedTeamNumbers: setUsedTeamNumbers, secretaires: setSecretaires, pointsPhone: setPointsPhone,
+                events: setEvents, nextEventNumber: setNextEventNumber,
+                planning: setPlanning, startHour: setStartHour, totalDays: setTotalDays,
+                missionInfo: setMissionInfo, clotureInfo: setClotureInfo,
+                mcMode: setMcMode, mcIdentifiant: setMcIdentifiant, mcConfigured: setMcConfigured,
+            } = setters;
+
             const [currentSecretaire, setCurrentSecretaire] = useState(''); // Secrétaire mémorisé pour ce PC
             const [showSecretaireModal, setShowSecretaireModal] = useState(false); // Modal changement secrétaire
-            const [pointsPhone, setPointsPhone] = useState([{ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 }]);
             const [categories] = useState([
                 { id: 'secours', nom: '🚑 Secours', couleur: 'red' },
                 { id: 'logistique', nom: '📦 Logistique', couleur: 'blue' },
@@ -620,8 +639,6 @@
             ]);
 
             // Données Main Courante
-            const [events, setEvents] = useState([]);
-            const [nextEventNumber, setNextEventNumber] = useState(1);
 
             // Distributeur de numéros de main courante (lot 0, A3).
             // Calculer le numéro depuis nextEventNumber connu au moment du clic pouvait donner
@@ -643,9 +660,6 @@
             if (window.__SSF_TEST__) Object.assign(window.__SSF_TEST__, { setEvents, setTeams, setPointsPhone, setMasterSauveteursList, reserverNumerosMC });
 
             // Configuration MC Secondaire
-            const [mcMode, setMcMode] = useState('principale'); // 'principale' ou 'secondaire'
-            const [mcIdentifiant, setMcIdentifiant] = useState(''); // Ex: A, B, CT1, CT2...
-            const [mcConfigured, setMcConfigured] = useState(false);
             const [showMcConfigModal, setShowMcConfigModal] = useState(false); // Désactivé par défaut pour STANDALONE
             const [showModeSelectionModal, setShowModeSelectionModal] = useState(false); // Modal de choix de mode au démarrage (après saisie mission)
             const [standaloneMode, setStandaloneMode] = useState(''); // 'terrain' ou 'base'
@@ -654,13 +668,6 @@
             // Informations de mission (saisies au démarrage)
             const [showMissionInfoModal, setShowMissionInfoModal] = useState(true);
             const [modalRepos, setModalRepos] = useState(null); // Modale durée de repos — partagée planning↔MC
-            const [missionInfo, setMissionInfo] = useState({
-                typeSecours: 'secours', // 'secours' ou 'exercice'
-                nomCavite: '',
-                commune: '',
-                delaiAlerteOccupation: 6 // en heures
-            });
-            const [clotureInfo, setClotureInfo] = useState(null); // {dateHeure, isoTimestamp} ou null
             const [showClotureModal, setShowClotureModal] = useState(false);
 
             // Encart discret (auto-masqué) affiché quand le planning est recopié
@@ -677,9 +684,6 @@
 
             // ===== HOOK PLANNING =====
             const {
-                planning, setPlanning,
-                startHour, setStartHour,
-                totalDays, setTotalDays,
                 selectedActivityId, setSelectedActivityId,
                 selectedCells, setSelectedCells,
                 lastSelectedCell, setLastSelectedCell,
@@ -695,6 +699,7 @@
                 activeSauveteurIds, setActiveSauveteurIds,
                 nextPermanentNumber, setNextPermanentNumber,
                 setSauveteurPermanentNumbers,
+                planning, setPlanning, startHour, totalDays,
                 onAutoPropagate: handleAutoPropagate
             });
 

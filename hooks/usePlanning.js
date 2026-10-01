@@ -2,15 +2,9 @@ const usePlanning = ({
     activeSauveteurIds, setActiveSauveteurIds,
     nextPermanentNumber, setNextPermanentNumber,
     setSauveteurPermanentNumbers,
+    planning, setPlanning, startHour, totalDays,
     onAutoPropagate
 }) => {
-    const [planning, setPlanning] = useState({});
-    const getDefaultStartHour = () => {
-        const now = new Date();
-        return Math.max(0, now.getHours() - 1);
-    };
-    const [startHour, setStartHour] = useState(getDefaultStartHour());
-    const [totalDays, setTotalDays] = useState(DEFAULT_TOTAL_DAYS);
     const [selectedActivityId, setSelectedActivityId] = useState('nondef');
     const [selectedCells, setSelectedCells] = useState(new Set());
     const [lastSelectedCell, setLastSelectedCell] = useState(null);
@@ -189,9 +183,6 @@ const usePlanning = ({
     }, [activeSauveteurIds, planning, startHour, totalDays, planningAutoPropagate]);
 
     return {
-        planning, setPlanning,
-        startHour, setStartHour,
-        totalDays, setTotalDays,
         selectedActivityId, setSelectedActivityId,
         selectedCells, setSelectedCells,
         lastSelectedCell, setLastSelectedCell,
