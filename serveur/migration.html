@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Reprise des données</title></head>
+<body>
+<script>
+    // Page invisible ouverte en file:// (même mémoire de navigateur que les versions précédentes) :
+    // transmet tout son contenu à la partie « moteur », qui l'enregistre en fichiers. Rien n'est effacé.
+    const contenu = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const cle = localStorage.key(i);
+        contenu[cle] = localStorage.getItem(cle);
+    }
+    window.migration.envoyer(contenu);
+</script>
+</body>
+</html>

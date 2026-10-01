@@ -19,7 +19,7 @@ const RACINE = path.join(__dirname, '..');
     const app = await electron.launch({ args: [RACINE], cwd: RACINE, env: { ...process.env, SSF_TEST_USER_DATA: dossierDonnees, SSF_PORT: '0' } });
     let ok = false;
     try {
-        const page = await app.firstWindow();
+        const page = await require('./outils-fichiers').fenetrePrincipale(app);
         await app.context().addInitScript(() => {
             window.alert = () => {};
             window.confirm = () => true;

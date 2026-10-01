@@ -372,7 +372,7 @@ const ETAPES = [
         env: { ...process.env, SSF_TEST_USER_DATA: dossierDonnees, SSF_PORT: '0' },
     });
     try {
-        page = await app.firstWindow();
+        page = await require('./outils-fichiers').fenetrePrincipale(app);
         page.on('pageerror', e => erreurs.push(e.message));
         page.on('console', m => { if (m.type() === 'error') erreurs.push(m.text()); });
         // Fenêtres alert / confirm remplacées par des versions NON bloquantes qui gardent

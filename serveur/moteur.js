@@ -122,6 +122,9 @@ const creerMoteur = ({ racineApp, racineDonnees, delaiEcritureMs = 300, interval
             stockage.supprimer(rescueId);
         },
 
+        // Outils pour la reprise des données des versions précédentes (serveur/migration.js)
+        outilsReprise: () => ({ stockage, CLES_DONNEES, estVide }),
+
         ecrireMaintenant,
         fermer() { ecrireMaintenant(); clearInterval(sauvegardePeriodique); },
     };

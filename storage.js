@@ -14,7 +14,21 @@
 //   'ssf_standalone_id'             — identifiant standalone (string)
 //   'ssf_planning_scroll'           — position scroll planning (string)
 //   'ssf_mission_keywords'          — mots-clés mission personnalisés (JSON array)
-//   'SSF_UNIFIED_STATE_<id>_V<n>'   — état complet d'un secours (JSON object)
+//   (les secours eux-mêmes sont enregistrés en fichiers par le serveur intégré depuis le lot 1 ;
+//    l'ancienne clé 'SSF_UNIFIED_STATE_<id>_V<n>' n'est plus utilisée)
+
+// Lot 1 : réglages de ce poste repris des versions précédentes (mémoire du navigateur en file://),
+// recopiés une seule fois dans la mémoire actuelle, sans écraser un réglage déjà présent.
+(() => {
+    try {
+        const repris = window.electronAPI && window.electronAPI.reglagesRepris;
+        if (!repris) return;
+        Object.entries(repris).forEach(([cle, valeur]) => { if (localStorage.getItem(cle) === null) localStorage.setItem(cle, valeur); });
+        window.electronAPI.reglagesRecopies();
+    } catch (e) {
+        console.warn('[storage] recopie des réglages repris échouée :', e);
+    }
+})();
 
 // Lit une valeur brute (string). Renvoie defaultValue si clé absente ou accès impossible.
 const storageGet = (key, defaultValue = null) => {

@@ -21,7 +21,7 @@ const RACINE = path.join(__dirname, '..');
     const controles = [];
     const controler = (libelle, ok) => { controles.push(ok); console.log(`${ok ? '✅' : '❌'} ${libelle}`); };
     try {
-        const page = await app.firstWindow();
+        const page = await require('./outils-fichiers').fenetrePrincipale(app);
         await app.context().addInitScript(() => {
             window.alert = () => {};
             window.confirm = () => true;

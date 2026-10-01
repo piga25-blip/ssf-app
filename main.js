@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const { demarrerServeur } = require('./serveur/serveur');
 const { creerMoteur } = require('./serveur/moteur');
 const { creerCanal } = require('./serveur/canal');
+const { reprendreMemoireNavigateur, reglagesARecopier, marquerReglagesRecopies } = require('./serveur/migration');
 
 let mainWindow;
 let serveurSSF = null; // { serveur, port, hote }
@@ -45,6 +46,9 @@ app.whenReady().then(async () => {
   const port = process.env.SSF_PORT !== undefined ? parseInt(process.env.SSF_PORT, 10) : 8080;
   serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: '127.0.0.1' });
   moteurSSF = creerMoteur({ racineApp: __dirname, racineDonnees: app.getPath('userData') });
+  // Premier lancement de cette version : reprise des secours rangés dans la mémoire du navigateur
+  const rapport = await reprendreMemoireNavigateur({ BrowserWindow, ipcMain, racineDonnees: app.getPath('userData'), moteur: moteurSSF });
+  if (rapport) console.log(`Reprise des données : ${rapport.secours.length} secours repris, ${rapport.ignores.length} ignoré(s), ${rapport.erreurs.length} erreur(s)`);
   canalSSF = creerCanal({ serveurHttp: serveurSSF.serveur, moteur: moteurSSF, jetonPrincipal: JETON_PRINCIPAL,
     versionApp: app.getVersion(), journalConsole: (m) => console.log(m) });
   console.log(`Serveur SSF : http://localhost:${serveurSSF.port}`);
@@ -69,6 +73,9 @@ app.on('before-quit', () => {
 });
 
 app.on('window-all-closed', () => {
+  // Au démarrage, la fenêtre invisible de reprise des données se ferme avant l'ouverture de la
+  // fenêtre principale : ce n'est pas une fermeture de l'application
+  if (!mainWindow) return;
   if (process.platform !== 'darwin') app.quit();
 });
 
@@ -122,6 +129,12 @@ ipcMain.on('unstick-window', () => {
     mainWindow.webContents.focus();
   }, 30);
 });
+
+// Réglages de ce poste repris des versions précédentes, à recopier dans la mémoire du navigateur
+ipcMain.on('get-reglages-repris-sync', (event) => {
+  event.returnValue = (mainWindow && event.sender === mainWindow.webContents) ? reglagesARecopier(app.getPath('userData')) : null;
+});
+ipcMain.on('reglages-recopies', () => marquerReglagesRecopies(app.getPath('userData')));
 
 // Jeton du poste principal, pour preload.js (uniquement la fenêtre de ce poste)
 ipcMain.on('get-jeton-sync', (event) => {

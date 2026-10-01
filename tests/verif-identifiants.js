@@ -25,7 +25,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
     const controles = [];
     const controler = (libelle, ok) => { controles.push(ok); console.log(`${ok ? '✅' : '❌'} ${libelle}`); };
     try {
-        const page = await app.firstWindow();
+        const page = await require('./outils-fichiers').fenetrePrincipale(app);
         await app.context().addInitScript(() => { window.alert = () => {}; window.confirm = () => true; });
         const charger = async () => {
             await page.reload();

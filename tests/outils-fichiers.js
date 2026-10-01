@@ -21,4 +21,16 @@ const ecrireSecours = (dossierDonnees, rescueId, donnees) => {
     creerStockage(dossierDonnees).creer(rescueId, donnees);
 };
 
-module.exports = { attendreEcriture, lireSecours, ecrireSecours };
+// Fenêtre principale de l'application (servie en http://localhost) ; au premier lancement, une
+// fenêtre invisible de reprise des données (file://) s'ouvre d'abord puis se ferme
+const fenetrePrincipale = async (app, delaiMs = 60000) => {
+    const fin = Date.now() + delaiMs;
+    while (Date.now() < fin) {
+        const w = app.windows().find(p => p.url().startsWith('http'));
+        if (w) return w;
+        await new Promise(r => setTimeout(r, 100));
+    }
+    throw new Error('fenêtre principale introuvable');
+};
+
+module.exports = { attendreEcriture, lireSecours, ecrireSecours, fenetrePrincipale };
