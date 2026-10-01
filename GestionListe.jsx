@@ -1,7 +1,7 @@
 ﻿// ============================================
 // MODAL - LISTE PRÉFECTORALE
 // ============================================
-let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, activeSauveteurIds, onClose }) => {
+let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, onClose }) => {
     const [nouveauSauveteur, setNouveauSauveteur] = useState({ id: '', nom: '', prenom: '', role: '', ssf: '' });
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
@@ -52,7 +52,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
             SSF: nouveauSauveteur.ssf || '00'
         };
 
-        setMasterSauveteursList(prev => prev.some(s => s.id === newSauv.id) ? prev : [...prev, newSauv]);
+        actions.ajouterSauveteurListe(newSauv);
         setNouveauSauveteur({ id: '', nom: '', prenom: '', role: '', ssf: '' });
     };
 
@@ -62,7 +62,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
             return;
         }
         if (window.confirm('Voulez-vous vraiment supprimer ce sauveteur ?')) {
-            setMasterSauveteursList(prev => prev.filter(s => s.id !== id));
+            actions.supprimerSauveteurListe(id);
         }
     };
 
@@ -80,7 +80,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
             : `Voulez-vous vraiment supprimer les ${suppressibles.length} sauveteur(s) de la liste ?`;
 
         if (window.confirm(message)) {
-            setMasterSauveteursList(prev => prev.filter(s => activeSauveteurIds.includes(s.id)));
+            actions.supprimerSauveteursInactifs();
         }
     };
 
@@ -105,9 +105,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
             return;
         }
         
-        setMasterSauveteursList(prev => prev.map(s => 
-            s.id === editingId ? { ...s, name: editData.name, role: editData.role, SSF: editData.SSF } : s
-        ));
+        actions.modifierSauveteurListe(editingId, { name: editData.name, role: editData.role, SSF: editData.SSF });
         setEditingId(null);
         setEditData({});
     };
@@ -178,7 +176,7 @@ let GestionListeModal = ({ masterSauveteursList, setMasterSauveteursList, active
                 }
 
                 if (nouveauxSauveteurs.length > 0) {
-                    setMasterSauveteursList(prev => [...prev.filter(s => !nouveauxSauveteurs.find(n => n.id === s.id)), ...nouveauxSauveteurs]);
+                    actions.importerSauveteursListe(nouveauxSauveteurs);
                     alert(`${nouveauxSauveteurs.length} sauveteur(s) importé(s) avec succès`);
                 }
             } catch (error) {

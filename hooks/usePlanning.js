@@ -73,40 +73,6 @@ const usePlanning = ({
         });
     };
 
-    const handleAddSauveteurToPlanning = useCallback((sauveteurId) => {
-        verifierEtPropagerAvantAction();
-
-        const now = new Date();
-        const currentMinutesInDay = now.getHours() * 60 + now.getMinutes();
-        const startMinutesInDay = startHour * 60;
-        let minutesSinceStart = currentMinutesInDay - startMinutesInDay;
-        if (minutesSinceStart < 0) minutesSinceStart += 24 * 60;
-        const slotIndex = Math.floor(minutesSinceStart / 15);
-        const totalSlots = getTotalSlots(totalDays);
-
-        if (!activeSauveteurIds.includes(sauveteurId)) {
-            setActiveSauveteurIds(prev => [...prev, sauveteurId]);
-            setNextPermanentNumber(prevNumber => {
-                setSauveteurPermanentNumbers(prev => ({ ...prev, [sauveteurId]: prevNumber }));
-                return prevNumber + 1;
-            });
-            // La ligne de main courante est créée par l'appelant (fenêtre d'arrivée : une
-            // seule ligne groupée « Arrivée de : A, B, C »), pas ici.
-            const newPlanning = Array(totalSlots).fill('nondef');
-            if (slotIndex >= 0 && slotIndex < totalSlots) newPlanning[slotIndex] = 'disponible';
-            setPlanning(prev => ({ ...prev, [sauveteurId]: newPlanning }));
-
-        } else {
-            if (slotIndex >= 0 && slotIndex < totalSlots) {
-                setPlanning(prev => {
-                    const existingRow = prev[sauveteurId] ? [...prev[sauveteurId]] : Array(totalSlots).fill('nondef');
-                    while (existingRow.length < totalSlots) existingRow.push('nondef');
-                    existingRow[slotIndex] = 'disponible';
-                    return { ...prev, [sauveteurId]: existingRow };
-                });
-            }
-        }
-    }, [activeSauveteurIds, planning, totalDays, startHour]);
 
     const sauveursAyantQuitte = useMemo(() => {
         return activeSauveteurIds.filter(function(id) {
@@ -192,7 +158,6 @@ const usePlanning = ({
         fillPreviewCells, setFillPreviewCells,
         sauveursAyantQuitte,
         verifierEtPropagerAvantAction,
-        handleAddSauveteurToPlanning,
         planningAutoPropagate, setPlanningAutoPropagate
     };
 };

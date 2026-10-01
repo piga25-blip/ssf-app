@@ -657,6 +657,8 @@
             // Point d'entrée réservé aux tests automatiques (tests/verif-copies-perimees.js) :
             // simule une donnée arrivée d'ailleurs pendant une action. Inactif en utilisation
             // normale (window.__SSF_TEST__ n'existe que si un test l'a créé).
+            // Actions nommées (donnees.js) : seule façon de modifier les données partagées
+            const actions = React.useMemo(() => creerActionsDonnees(dispatchDonnees, reserverNumerosMC), [reserverNumerosMC]);
             if (window.__SSF_TEST__) Object.assign(window.__SSF_TEST__, { setEvents, setTeams, setPointsPhone, setMasterSauveteursList, reserverNumerosMC });
 
             // Configuration MC Secondaire
@@ -693,7 +695,6 @@
                 fillPreviewCells, setFillPreviewCells,
                 sauveursAyantQuitte,
                 verifierEtPropagerAvantAction,
-                handleAddSauveteurToPlanning,
                 planningAutoPropagate, setPlanningAutoPropagate
             } = usePlanning({
                 activeSauveteurIds, setActiveSauveteurIds,
@@ -866,32 +867,10 @@
                 return () => clearTimeout(saveTimeoutRef.current);
             }, [masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber, teams, usedTeamNumbers, secretaires, pointsPhone, missionInfo, clotureInfo, events, nextEventNumber, planning, startHour, totalDays, mcMode, mcIdentifiant, mcConfigured, currentRescueId]);
 
-            // Initialiser les numéros permanents pour les sauveteurs déjà dans le planning
+            // Attribuer un n° permanent aux sauveteurs actifs qui n'en ont pas (anciens dossiers)
             useEffect(() => {
-                // Utiliser une ref pour éviter les boucles
-                const currentNumbers = sauveteurPermanentNumbers;
-                const sauveteursSansNumero = activeSauveteurIds.filter(id => !currentNumbers[id]);
-                
-                if (sauveteursSansNumero.length > 0) {
-                    console.log('Initialisation des numéros permanents pour', sauveteursSansNumero.length, 'sauveteurs');
-                    
-                    const newNumbers = {};
-                    let currentNumber = nextPermanentNumber;
-                    
-                    sauveteursSansNumero.forEach(id => {
-                        newNumbers[id] = currentNumber;
-                        console.log(`Attribution du numéro ${currentNumber} au sauveteur ${id}`);
-                        currentNumber++;
-                    });
-                    
-                    setSauveteurPermanentNumbers(prev => ({
-                        ...prev,
-                        ...newNumbers
-                    }));
-                    
-                    setNextPermanentNumber(currentNumber);
-                }
-            }, [activeSauveteurIds]); // IMPORTANT: Ne pas inclure sauveteurPermanentNumbers dans les dépendances
+                if (activeSauveteurIds.some(id => !sauveteurPermanentNumbers[id])) actions.numeroterSauveteursManquants();
+            }, [activeSauveteurIds]);
 
 
             // Gestion des sauveteurs
@@ -1902,7 +1881,7 @@
                             <ModalErrorBoundary onClose={() => setShowGestionListe(false)}>
                                 <GestionListeModal
                                     masterSauveteursList={masterSauveteursList}
-                                    setMasterSauveteursList={setMasterSauveteursList}
+                                    actions={actions}
                                     activeSauveteurIds={activeSauveteurIds}
                                     onClose={() => setShowGestionListe(false)}
                                 />
@@ -1926,7 +1905,8 @@
                                     setPlanning={setPlanning}
                                     totalDays={totalDays}
                                     onClose={() => setShowGestionPlanning(false)}
-                                    handleAddSauveteurToPlanning={handleAddSauveteurToPlanning}
+                                    actions={actions}
+                                    verifierEtPropagerAvantAction={verifierEtPropagerAvantAction}
                                     mcMode={mcMode}
                                     mcIdentifiant={mcIdentifiant}
                                     startHour={startHour}

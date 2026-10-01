@@ -81,7 +81,7 @@ GestionSecretairesModal = React.memo(GestionSecretairesModal);
 const GestionPlanningModal = ({ 
     masterSauveteursList, activeSauveteurIds, setActiveSauveteurIds,
     teams, setTeams, events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC,
-    planning, setPlanning, totalDays, onClose, handleAddSauveteurToPlanning, mcMode, mcIdentifiant, startHour
+    planning, setPlanning, totalDays, onClose, actions, verifierEtPropagerAvantAction, mcMode, mcIdentifiant, startHour
 }) => {
     const [selectedSauveteurs, setSelectedSauveteurs] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -106,106 +106,23 @@ const GestionPlanningModal = ({
             alert('Veuillez sélectionner au moins un sauveteur');
             return;
         }
-
-        selectedSauveteurs.forEach(id => {
-            handleAddSauveteurToPlanning(id);
-        });
-
-        const sauv = selectedSauveteurs.map(id => masterSauveteursList.find(s => s.id === id));
-        const nomsArrivants = sauv.map(s => s.name).join(', ');
-
-        // Message différent selon le mode MC
-        const evenementMessage = (mcMode === 'secondaire') 
-            ? `Sauveteurs requis : ${nomsArrivants}`
-            : `Arrivée de : ${nomsArrivants}`;
-
-        const nArrivee = reserverNumerosMC();
-        const newEvent = {
-            id: nouvelId(),
-            isoTimestamp: new Date().toISOString(),
-            secretaire: 'Système',
-            dateHeure: new Date().toLocaleString('fr-FR'),
-            messageImportant: false,
-            categorie: 'personnel',
-            evenement: evenementMessage,
-            numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nArrivee.toString().padStart(3, '0')}` : 
-                nArrivee.toString().padStart(3, '0'),
-            fait: false
-        };
-
-        setEvents(prev => [...prev, newEvent]);
+        verifierEtPropagerAvantAction();
+        actions.arriveeSauveteurs(selectedSauveteurs);
         setSelectedSauveteurs([]);
         alert('✅ Sauveteurs ajoutés au planning !');
     };
+
 
     const handleDepart = () => {
         if (selectedSauveteurs.length === 0) {
             alert('Veuillez sélectionner au moins un sauveteur');
             return;
         }
-
-        const sauv = selectedSauveteurs.map(id => {
-            const s = masterSauveteursList.find(s => s.id === id);
-            return s ? s.name : '';
-        }).filter(Boolean);
-        const nomsPartants = sauv.join(', ');
-
-        // Ne PAS supprimer du planning — juste marquer "Quitter le secours" sur le slot actuel
-        const nowD = new Date();
-        let hD = nowD.getHours() - startHour;
-        if (hD < 0) hD += 24;
-        const slotD = hD * 4 + Math.floor(nowD.getMinutes() / 15);
-        const totalSlotsD = getTotalSlots(totalDays);
-
-        setPlanning(function(prev) {
-            const np = {...prev};
-            selectedSauveteurs.forEach(function(id) {
-                if (!np[id]) return;
-                const row = [...np[id]];
-                // Propager les slots vides précédents
-                var lastAct = null;
-                for (var s = slotD - 1; s >= 0; s--) {
-                    if (row[s] && row[s] !== 'nondef' && row[s] !== 'effacer') { lastAct = row[s]; break; }
-                }
-                if (lastAct) {
-                    for (var s2 = slotD - 1; s2 >= 0; s2--) {
-                        if (!row[s2] || row[s2] === 'nondef' || row[s2] === 'effacer') row[s2] = lastAct;
-                        else break;
-                    }
-                }
-                if (slotD >= 0 && slotD < totalSlotsD) row[slotD] = 'quitter_secours';
-                np[id] = row;
-            });
-            return np;
-        });
-
-        // Retirer des équipes uniquement — garder dans activeSauveteurIds pour rester visible dans le planning
-        // (les équipes devenues vides sont conservées)
-        setTeams(prev => prev.map(function(team) {
-            return {...team, members: team.members.filter(function(id){ return !selectedSauveteurs.includes(id); })};
-        }));
-        // NE PAS retirer de activeSauveteurIds : la personne reste visible dans le planning
-        const nDepart = reserverNumerosMC();
-
-        const newEvent = {
-            id: nouvelId(),
-            isoTimestamp: new Date().toISOString(),
-            secretaire: 'Système',
-            dateHeure: new Date().toLocaleString('fr-FR'),
-            messageImportant: false,
-            categorie: 'personnel',
-            evenement: 'Départ de : ' + nomsPartants,
-            numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nDepart.toString().padStart(3, '0')}` : 
-                nDepart.toString().padStart(3, '0'),
-            fait: false
-        };
-
-        setEvents(prev => [...prev, newEvent]);
+        actions.departSauveteurs(selectedSauveteurs);
         setSelectedSauveteurs([]);
         alert('✅ Sauveteurs retirés du planning !');
     };
+
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
