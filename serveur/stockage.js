@@ -21,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PARTIES = {
-    'mission.json': ['missionInfo', 'clotureInfo', 'secretaires', 'mcMode', 'mcIdentifiant', 'mcConfigured'],
+    'mission.json': ['missionInfo', 'clotureInfo', 'secretaires', 'mcMode', 'mcIdentifiant', 'mcConfigured', 'mcRecopie'],
     'inscription.json': ['masterSauveteursList', 'activeSauveteurIds', 'sauveteurPermanentNumbers', 'nextPermanentNumber'],
     'main-courante.json': ['events', 'nextEventNumber'],
     'planning.json': ['planning', 'startHour', 'totalDays'],

@@ -247,6 +247,23 @@ const base = () => {
     verifier('Équipes : réactivation (« engage »)', e.teams[0].status === 'active' && e.teams[0].dissolvedAt === null && e.planning.S1[13] === 'engage');
 }
 
+// ===== Recopie d'une main courante papier (PC Base Arrière)
+{
+    let e = etatInitialDonnees(8);
+    e = appliquer(e, { type: 'SECOURS/CONFIGURER_MC', mode: 'secondaire', identifiant: 'VEHICULE1', recopie: { auteur: 'Paul PAPIER', commenceLe: iso(20) } });
+    verifier('Recopie : configuration (auteur du papier)', e.mcMode === 'secondaire' && e.mcRecopie && e.mcRecopie.auteur === 'Paul PAPIER');
+    const papier = (id, h, m) => ({ id, numero: '#AUTO', isoTimestamp: iso(h, m), dateHeure: '', secretaire: 'Paul PAPIER', evenement: 'Papier ' + id, fait: false, recopie: { par: 'Rita', le: iso(20) } });
+    e = appliquer(e, { type: 'MC/RECOPIER', evenement: papier('p1', 14, 30) });
+    e = appliquer(e, { type: 'MC/RECOPIER', evenement: papier('p2', 16, 5) });
+    e = appliquer(e, { type: 'MC/RECOPIER', evenement: papier('p3', 15, 10) });
+    verifier('Recopie : ligne oubliée rangée à sa place et renumérotée', e.events.map(x => x.id + ' ' + x.numero).join() === 'p1 VEHICULE1-001,p3 VEHICULE1-002,p2 VEHICULE1-003' && e.nextEventNumber === 4, e.events.map(x => x.id + ' ' + x.numero));
+    e = appliquer(e, { type: 'MC/MODIFIER', id: 'p2', champs: { isoTimestamp: iso(13), dateHeure: '14/03/2026 13:00:00' }, par: 'Rita', horodatage: iso(21) });
+    verifier('Recopie : heure corrigée → rangée à nouveau, correction gardée', e.events.map(x => x.id + ' ' + x.numero).join() === 'p2 VEHICULE1-001,p1 VEHICULE1-002,p3 VEHICULE1-003'
+        && e.events[0].corrections.length === 1 && e.events[0].corrections[0].avant.isoTimestamp === iso(16, 5), e.events.map(x => x.id + ' ' + x.numero));
+    e = appliquer(e, { type: 'MC/MODIFIER', id: 'p3', champs: { evenement: 'Texte corrigé' }, par: 'Rita', horodatage: iso(21) });
+    verifier('Recopie : correction du texte seul → ordre inchangé', e.events.map(x => x.id).join() === 'p2,p1,p3' && e.events[2].evenement === 'Texte corrigé');
+}
+
 // ===== Dossier et secours
 {
     let e = base();

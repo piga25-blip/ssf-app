@@ -11,7 +11,7 @@ Depuis `C:\Projets\SSF-Reseau` :
 
 | Commande | Effet |
 |---|---|
-| **`npm test`** | **Lance tout** : 15 tests (environ 11 min) — à faire après chaque modification |
+| **`npm test`** | **Lance tout** : 16 tests (environ 12 min) — à faire après chaque modification |
 | `npm run test:scenario` | Rejoue le scénario et le compare à la référence → ✅ SUCCÈS ou ❌ ÉCHEC avec la liste des différences |
 | `npm run test:scenario:maj` | Rejoue le scénario et **remplace** la référence (uniquement après un changement voulu et vérifié) |
 | `node tests/scenario-reference.js --jusqua=12` | S'arrête après l'étape 12 et enregistre une capture et la description de l'écran dans `tests/sortie/` |
@@ -101,6 +101,7 @@ Tests ciblés, ajoutés lors de la correction de défauts de la version officiel
 | `node tests/verif-conflits-multiposte.js` | Conflits entre postes (lot 3) : même équipe, même point phone et identifiants automatiques créés au même instant sur deux postes (un seul retenu, refus explicite, ou identifiant suivant) ; avertissement « modifiée sur un autre poste » dans une fenêtre de modification ; notification « planning modifié sur … » |
 | `node tests/verif-precompilation.js` | Interface précompilée par le serveur (lot 3, tablettes) : page sans Babel, affichée environ 20 fois plus vite (0,2 s au lieu de 3,8 s) ; cache sur disque |
 | `node tests/verif-session.js` | Lot 4 : code de session (sans code aucune donnée, mauvais code refusé, adresse du code QR), poste nommé d'après son secrétaire, rôle réglé poste par poste, changement du code → postes déconnectés, saisie bloquée hors connexion sans envoi au retour, copie de secours proposée |
+| `node tests/verif-recopie-papier.js` | 13.42.0 : PC Base Arrière en recopie d'une main courante papier (date et heure du papier, ligne oubliée rangée à sa place, heure corrigée, ligne recopiée sur un autre poste non recalée par le serveur, export) |
 | `node tests/verif-version.js` | Poste principal relancé dans une autre version : l'autre poste se reconnecte seul et demande de recharger la page |
 | `node tests/verif-actions.js` | Les 46 actions nommées de `donnees.js` (lot 0, B1), exécutées **directement dans Node.js** sans l'application : résultat de chaque action et état d'origine jamais modifié (158 contrôles, environ 1 s). Prouve que `donnees.js` pourra tourner sur le serveur |
 | `node tests/verif-copies-perimees.js` | Modifications sur copie périmée (lot 0, A3) : une donnée ajoutée « d'ailleurs » au milieu d'une action (ligne de main courante, équipe, point phone, sauveteur) n'est plus effacée, et les numéros de main courante restent uniques. Vérifié le 01/10/2026 : l'ancien code perdait les 4 données |

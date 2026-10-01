@@ -95,7 +95,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
         await page.waitForTimeout(1500);
         // Fermeture des fenêtres restantes (alerte 002, choix du mode)
         await page.locator('button:visible', { hasText: '×' }).last().click().catch(() => {});
-        await page.getByText('PC de Terrain', { exact: false }).last().click();
+        await page.getByText('PC de Terrain', { exact: false }).last().dispatchEvent('click'); // la fenêtre d'alertes peut recouvrir la carte
         await bouton('Confirmer et Démarrer').last().click();
         await page.waitForTimeout(1000);
         evs = await lireEvenements();

@@ -1,7 +1,7 @@
 {
   "name": "ssf-app-reseau",
   "productName": "Application SSF Reseau (test)",
-  "version": "13.41.13",
+  "version": "13.42.0",
   "description": "Application SSF - Secours Souterrain Français",
   "main": "main.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "build:dir": "set NODE_TLS_REJECT_UNAUTHORIZED=0 && electron-builder build --win --dir",
     "test:scenario": "node tests/scenario-reference.js",
     "test:scenario:maj": "node tests/scenario-reference.js --maj-reference",
-    "test": "node tests/verif-actions.js && node tests/verif-serveur.js && node tests/verif-stockage.js && node tests/verif-precompilation.js && node tests/scenario-reference.js && node tests/verif-reouverture.js && node tests/verif-export-import.js && node tests/verif-identifiants.js && node tests/verif-copies-perimees.js && node tests/verif-reprise.js && node tests/verif-reseau.js && node tests/verif-version.js && node tests/verif-saisie-multiposte.js && node tests/verif-conflits-multiposte.js && node tests/verif-session.js"
+    "test": "node tests/verif-actions.js && node tests/verif-serveur.js && node tests/verif-stockage.js && node tests/verif-precompilation.js && node tests/scenario-reference.js && node tests/verif-reouverture.js && node tests/verif-export-import.js && node tests/verif-identifiants.js && node tests/verif-copies-perimees.js && node tests/verif-reprise.js && node tests/verif-reseau.js && node tests/verif-version.js && node tests/verif-saisie-multiposte.js && node tests/verif-conflits-multiposte.js && node tests/verif-session.js && node tests/verif-recopie-papier.js"
   },
   "dependencies": {
     "electron-updater": "^6.3.9",

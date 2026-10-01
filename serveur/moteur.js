@@ -72,6 +72,8 @@ const creerMoteur = ({ racineApp, racineDonnees, delaiEcritureMs = 300, interval
             const a = { ...action };
             if (a.horodatage !== undefined) a.horodatage = decaler(a.horodatage);
             if (a.type === 'MC/INSERER') a.evenement = { ...a.evenement, poste: nomPoste };   // heure choisie entre deux lignes
+            // Ligne recopiée du papier : l'heure écrite sur le papier est gardée telle quelle
+            else if (a.type === 'MC/RECOPIER') a.evenement = { ...a.evenement, poste: nomPoste, recopie: { ...(a.evenement.recopie || {}), le: maintenant } };
             else if (a.evenement) a.evenement = ligne(a.evenement);
             if (Array.isArray(a.evenements)) a.evenements = a.evenements.map(ligne);
             if (a.evenementValidation) a.evenementValidation = ligne(a.evenementValidation);

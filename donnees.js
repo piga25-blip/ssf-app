@@ -19,7 +19,7 @@ const CLES_DONNEES = [
     'events', 'nextEventNumber',
     'planning', 'startHour', 'totalDays',
     'missionInfo', 'clotureInfo',
-    'mcMode', 'mcIdentifiant', 'mcConfigured',
+    'mcMode', 'mcIdentifiant', 'mcConfigured', 'mcRecopie',
 ];
 
 // Actions permises aux postes de saisie (autres postes du réseau, quand le poste principal autorise
@@ -29,7 +29,7 @@ const CLES_DONNEES = [
 const ACTIONS_SAISIE_DISTANTE = [
     // Main courante et points phones (lot 2)
     'MC/AJOUTER', 'MC/AJOUTER_PLUSIEURS', 'MC/MODIFIER', 'MC/INSERER', 'MC/VALIDER_RAPPEL', 'MC/REPORTER_RAPPEL',
-    'MC/AJOUTER_PRESENTS_POINT_PHONE', 'PLANNING/AFFECTER_DEPUIS_MC',
+    'MC/AJOUTER_PRESENTS_POINT_PHONE', 'PLANNING/AFFECTER_DEPUIS_MC', 'MC/RECOPIER',
     // Inscriptions (lot 3)
     'SAUVETEURS/LISTE_AJOUTER', 'SAUVETEURS/LISTE_MODIFIER', 'SAUVETEURS/LISTE_SUPPRIMER', 'SAUVETEURS/ARRIVEE', 'SAUVETEURS/DEPART',
     // Points phones (lot 3)
@@ -64,6 +64,7 @@ const etatInitialDonnees = (startHour) => ({
     mcMode: 'principale',
     mcIdentifiant: '',
     mcConfigured: false,
+    mcRecopie: null, // PC Base Arrière en recopie d'une main courante papier : { auteur, commenceLe }
 });
 
 // ---------- Numéros de main courante (lot 2) ----------
@@ -110,6 +111,15 @@ const numeroterLignes = (etat) => {
         return { ...e, numero: formaterNumeroMC(etat, n++, e.numero === NUMERO_AUTO) };
     });
     return { ...etat, events, nextEventNumber: n };
+};
+
+// Recopie d'une main courante papier : lignes rangées par date/heure écrite sur le papier,
+// puis renumérotées dans cet ordre (une ligne oubliée se range à sa place)
+const rangerRecopie = (etat) => {
+    const events = [...etat.events]
+        .sort((a, b) => (Date.parse(a.isoTimestamp) || 0) - (Date.parse(b.isoTimestamp) || 0))
+        .map((e, i) => ({ ...e, numero: formaterNumeroMC(etat, i + 1) }));
+    return { ...etat, events, nextEventNumber: events.length + 1 };
 };
 
 // Index du créneau de 15 min du planning correspondant à un horodatage (heure locale)
@@ -378,6 +388,11 @@ const ACTIONS_DONNEES = {
         return { ...etat, events: [...etat.events, evenement] };
     },
 
+    // Ligne recopiée d'une main courante papier : date/heure du papier, rangée à sa place
+    'MC/RECOPIER'(etat, { evenement }) {
+        return rangerRecopie({ ...etat, events: [...etat.events, evenement] });
+    },
+
     // Plusieurs lignes d'un coup (ex. fenêtre de repos : une ligne par groupe de sauveteurs)
     'MC/AJOUTER_PLUSIEURS'(etat, { evenements }) {
         return { ...etat, events: [...etat.events, ...evenements] };
@@ -385,7 +400,11 @@ const ACTIONS_DONNEES = {
 
     // Correction d'une ligne (décision 9) : les valeurs d'avant sont gardées dans « corrections »
     // avec l'auteur et l'heure ; rien n'est jamais effacé. par / horodatage : qui corrige, et quand.
-    'MC/MODIFIER'(etat, { id, champs, par, horodatage }) {
+    'MC/MODIFIER'(etat, { id, champs, par, horodatage, dejaRange }) {
+        // Heure d'une ligne recopiée du papier corrigée : la main courante est rangée à nouveau
+        if (etat.mcRecopie && champs.isoTimestamp && !dejaRange) {
+            return rangerRecopie(ACTIONS_DONNEES['MC/MODIFIER'](etat, { id, champs, par, horodatage, dejaRange: true }));
+        }
         return { ...etat, events: etat.events.map(e => {
             if (e.id !== id) return e;
             // Absent, vide, nul ou « non » : même valeur (un champ vide du formulaire n'est pas une correction)
@@ -677,8 +696,8 @@ const ACTIONS_DONNEES = {
     },
 
     // Mode de la main courante (principale / secondaire et son identifiant)
-    'SECOURS/CONFIGURER_MC'(etat, { mode, identifiant }) {
-        return { ...etat, mcMode: mode, mcIdentifiant: identifiant, mcConfigured: true };
+    'SECOURS/CONFIGURER_MC'(etat, { mode, identifiant, recopie }) {
+        return { ...etat, mcMode: mode, mcIdentifiant: identifiant, mcConfigured: true, mcRecopie: recopie || null };
     },
 
     'SECOURS/CLOTURER'(etat, { horodatageCloture, evenement }) {
@@ -746,6 +765,7 @@ const creerActionsDonnees = (dispatch) => {
         viderPointsPhone: () => dispatch({ type: 'POINTS_PHONE/VIDER' }),
         // Main courante (lignes construites par les écrans : identifiant, numéro et heure compris)
         ajouterLigneMC: (evenement) => dispatch({ type: 'MC/AJOUTER', evenement }),
+        recopierLigneMC: (evenement) => dispatch({ type: 'MC/RECOPIER', evenement }),
         ajouterLignesMC: (evenements) => dispatch({ type: 'MC/AJOUTER_PLUSIEURS', evenements }),
         modifierLigneMC: (id, champs, par) => dispatch({ type: 'MC/MODIFIER', id, champs, par, horodatage: new Date().toISOString() }),
         insererLigneMC: (evenement, idReference, avant) => dispatch({ type: 'MC/INSERER', evenement, idReference, avant }),
@@ -776,7 +796,7 @@ const creerActionsDonnees = (dispatch) => {
         reinitialiserDossier: (valeurs) => dispatch({ type: 'DOSSIER/REINITIALISER', valeurs }),
         // Secours
         definirInfosSecours: (missionInfo) => dispatch({ type: 'SECOURS/DEFINIR_INFOS', missionInfo }),
-        configurerMC: (mode, identifiant) => dispatch({ type: 'SECOURS/CONFIGURER_MC', mode, identifiant }),
+        configurerMC: (mode, identifiant, recopie = null) => dispatch({ type: 'SECOURS/CONFIGURER_MC', mode, identifiant, recopie }),
         cloturerSecours: (horodatageCloture, evenement) => dispatch({ type: 'SECOURS/CLOTURER', horodatageCloture, evenement }),
         rouvrirSecours: () => dispatch({ type: 'SECOURS/ROUVRIR' }),
         // Secrétaires

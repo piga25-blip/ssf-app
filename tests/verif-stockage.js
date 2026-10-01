@@ -67,6 +67,18 @@ const ligne = (id, numero) => ({ id, numero, isoTimestamp: '2026-03-14T08:00:00.
         const encore = creerMoteur({ racineApp: RACINE, racineDonnees: donnees }).ouvrir('EXERCICE - Test - 14-03-2026');
         verifier('Rechargement suivant : rien en double', encore.donnees.events.length === 2 && encore.version === 4);
 
+        // Ligne recopiée du papier envoyée par un autre poste : l'heure du papier n'est pas recalée
+        {
+            const m = creerMoteur({ racineApp: RACINE, racineDonnees: donnees, delaiEcritureMs: 60000 });
+            const papier = { id: 'p1', numero: '#AUTO', isoTimestamp: '2026-03-14T13:30:00.000Z', evenement: 'Papier', recopie: { par: 'Rita', le: '2000-01-01T00:00:00.000Z' } };
+            const a = m.horodaterActionDistante({ type: 'MC/RECOPIER', evenement: papier }, 'Rita (192.168.1.30)');
+            const b = m.horodaterActionDistante({ type: 'MC/AJOUTER', evenement: { ...papier, isoTimestamp: '2026-03-14T13:30:00.000Z' } }, 'Rita (192.168.1.30)');
+            verifier("Recopie papier d'un autre poste : heure du papier gardée, heure de recopie = serveur",
+                a.evenement.isoTimestamp === papier.isoTimestamp && a.evenement.recopie.par === 'Rita' && Date.now() - Date.parse(a.evenement.recopie.le) < 5000
+                && a.evenement.poste === 'Rita (192.168.1.30)' && b.evenement.isoTimestamp !== papier.isoTimestamp, a.evenement);
+            m.fermer();
+        }
+
         // Renommage et suppression
         moteur = creerMoteur({ racineApp: RACINE, racineDonnees: donnees, delaiEcritureMs: 50 });
         moteur.ouvrir('EXERCICE - Test - 14-03-2026');

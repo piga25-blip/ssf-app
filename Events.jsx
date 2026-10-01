@@ -444,7 +444,7 @@ let HistoriqueCorrections = ({ event }) => {
 let MainCouranteTab = ({
     events, nextEventNumber, actions,
     secretaires, sauveteursSurSiteNoms, teams, sauveteursSurSite,
-    showSearchModal, setShowSearchModal, mcMode, mcIdentifiant,
+    showSearchModal, setShowSearchModal, mcMode, mcIdentifiant, mcRecopie,
     pointsPhone, masterSauveteursList, categories,
     currentSecretaire, setCurrentSecretaire, showSecretaireModal, setShowSecretaireModal,
     showAlertsModal, setShowAlertsModal, alertModalPosition, setAlertModalPosition,
@@ -470,6 +470,26 @@ let MainCouranteTab = ({
         lieuDepart: 'souterre',
         sensEntree: null
     });
+    // ── Recopie d'une main courante papier (PC Base Arrière) ──────────
+    // Chaque ligne prend la date et l'heure écrites sur le papier ; la main courante
+    // est rangée dans l'ordre chronologique et renumérotée après chaque ligne.
+    const [recopieDate, setRecopieDate] = useState(() => {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    });
+    const [recopieHeure, setRecopieHeure] = useState('');
+    const [infoRecopie, setInfoRecopie] = useState('');
+    const refHeureRecopie = React.useRef(null);
+    const horaireRecopie = (date, heure) => {
+        if (!date || !heure) return null;
+        const d = new Date(date + 'T' + heure);
+        return isNaN(d.getTime()) ? null : d;
+    };
+    // Rangement fait à l'application de l'action (donnees.js) ; ici seulement pour annoncer la place
+    const rangerRecopie = (liste) => {
+        const rangees = [...liste].sort((a, b) => (Date.parse(a.isoTimestamp) || 0) - (Date.parse(b.isoTimestamp) || 0));
+        return rangees.map((e, i) => ({ ...e, numero: `${mcIdentifiant}-${(i + 1).toString().padStart(3, '0')}` }));
+    };
     const [insertAfterEvent, setInsertAfterEvent] = useState(null);
     const [insertMode, setInsertMode] = useState('after'); // 'after' (défaut) ou 'before' (insérer avant le tout premier événement)
     const [insertBornes, setInsertBornes] = useState({ min: null, max: null, defaut: null });
@@ -743,7 +763,13 @@ let MainCouranteTab = ({
             equipe: event.equipe || '',
             departDuPC: event.departDuPC || false,
             lieuDepart: event.lieuDepart || 'souterre',
-            sensEntree: event.sensEntree !== undefined ? event.sensEntree : null
+            sensEntree: event.sensEntree !== undefined ? event.sensEntree : null,
+            ...(event.recopie ? (() => {
+                const d = new Date(event.isoTimestamp);
+                const p = (n) => String(n).padStart(2, '0');
+                return isNaN(d.getTime()) ? { recopieDate: '', recopieHeure: '' }
+                    : { recopieDate: d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()), recopieHeure: p(d.getHours()) + ':' + p(d.getMinutes()) };
+            })() : {})
         });
     };
 
@@ -759,8 +785,17 @@ let MainCouranteTab = ({
             alert('Veuillez renseigner soit un événement, soit au moins une information de localisation');
             return;
         }
+        let horaireCorrige = null;
+        if (editingEvent.recopie) {
+            horaireCorrige = horaireRecopie(editFormData.recopieDate, editFormData.recopieHeure);
+            if (!horaireCorrige) {
+                alert('📝 Indiquez la date et l\'heure écrites sur le papier pour cette ligne.');
+                return;
+            }
+        }
 
         actions.modifierLigneMC(editingEvent.id, {
+                    ...(horaireCorrige ? { isoTimestamp: horaireCorrige.toISOString(), dateHeure: horaireCorrige.toLocaleString('fr-FR') } : {}),
                     secretaire: editFormData.secretaire,
                     messageImportant: editFormData.messageImportant,
                     categorie: editFormData.categorie,
@@ -1019,6 +1054,7 @@ let MainCouranteTab = ({
                                     ${event.messageImportant ? '<span class="badge-important">⚠️ IMPORTANT</span>' : ''}
                                     ${event.fait ? '<span class="badge-fait">✓ FAIT</span>' : ''}
                                     ${event.importedFrom ? '<span class="badge-imported">📥 ' + event.importedFrom + '</span>' : ''}
+                                    ${event.recopie ? '<span class="badge-imported">📝 Recopiée du papier par ' + event.recopie.par + ' le ' + new Date(event.recopie.le).toLocaleString('fr-FR') + '</span>' : ''}
                                 </td>
                                 <td style="font-size:10px;color:#374151;">${localisation || '-'}</td>
                             </tr>`;
@@ -1068,7 +1104,19 @@ let MainCouranteTab = ({
             alert('Une communication doit avoir un libellé (au moins 1 caractère).');
             return;
         }
-        
+        const horairePapier = mcRecopie ? horaireRecopie(recopieDate, recopieHeure) : null;
+        if (mcRecopie) {
+            if (!horairePapier) {
+                alert('📝 Indiquez la date et l\'heure écrites sur le papier pour cette ligne.');
+                refHeureRecopie.current?.focus();
+                return;
+            }
+            if (horairePapier > new Date() && !window.confirm('⚠️ La date et l\'heure saisies (' + horairePapier.toLocaleString('fr-FR') + ') sont dans le futur.\n\nEnregistrer quand même ?')) {
+                refHeureRecopie.current?.focus();
+                return;
+            }
+        }
+
         let messageComplet = formData.evenement || '';
         // Ajouter mention Départ PC dans le libellé si coché
         if (formData.departDuPC && !messageComplet.toLowerCase().includes('départ')) {
@@ -1104,9 +1152,9 @@ let MainCouranteTab = ({
 
         const newEvent = {
             id: nouvelId(),
-            isoTimestamp: new Date().toISOString(),
-            secretaire: formData.secretaire,
-            dateHeure: new Date().toLocaleString('fr-FR'),
+            isoTimestamp: (horairePapier || new Date()).toISOString(),
+            secretaire: mcRecopie ? mcRecopie.auteur : formData.secretaire,
+            dateHeure: (horairePapier || new Date()).toLocaleString('fr-FR'),
             messageImportant: formData.messageImportant,
             categorie: formData.categorie,
             fichier: formData.fichier,
@@ -1119,6 +1167,22 @@ let MainCouranteTab = ({
             numero: NUMERO_AUTO, // attribué à l'application de l'action (préfixe en MC secondaire)
             fait: false
         };
+        if (mcRecopie) {
+            newEvent.recopie = { par: secretaireValue, le: new Date().toISOString() };
+            const rangees = rangerRecopie([...events, newEvent]);
+            const place = rangees.find(e => e.id === newEvent.id);
+            const derniere = rangees[rangees.length - 1].id === newEvent.id;
+            actions.recopierLigneMC(newEvent);
+            setInfoRecopie((derniere ? '✓ Ligne N°' : '↕️ Ligne rangée à sa place chronologique : N°') + place.numero + ' — ' + place.dateHeure);
+            setFormData({
+                secretaire: formData.secretaire, messageImportant: false, categorie: 'autre', fichier: null,
+                evenement: '', dateRappel: '', heureRappel: '', expediteur: '', destinataire: '',
+                pointPhone: '', personneConcernee: '', equipe: '', departDuPC: false, lieuDepart: 'souterre', sensEntree: null
+            });
+            setRecopieHeure('');
+            setTimeout(() => refHeureRecopie.current?.focus(), 60);
+            return; // recopie après coup : pas de mise à jour du planning
+        }
 
         actions.ajouterLigneMC(newEvent);
 
@@ -1763,10 +1827,27 @@ let MainCouranteTab = ({
             )}
 
             <div className="space-y-4 mb-6">
+                {mcRecopie && (
+                    <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-3 flex items-center gap-4 flex-wrap">
+                        <div className="font-bold text-amber-900">📝 Recopie papier — {mcRecopie.auteur}</div>
+                        <label className="flex items-center gap-2 text-sm font-semibold">
+                            Date
+                            <input type="date" value={recopieDate} onChange={(e) => setRecopieDate(e.target.value)}
+                                className="px-2 py-1.5 border-2 border-amber-400 rounded text-sm bg-white" />
+                        </label>
+                        <label className="flex items-center gap-2 text-sm font-semibold">
+                            Heure écrite
+                            <input ref={refHeureRecopie} type="time" value={recopieHeure} onChange={(e) => setRecopieHeure(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); refDestinataire.current?.focus(); } }}
+                                className="px-2 py-1.5 border-2 border-amber-400 rounded text-sm bg-white font-mono" />
+                        </label>
+                        {infoRecopie && <span className="text-sm text-amber-800">{infoRecopie}</span>}
+                    </div>
+                )}
                 <div className="grid grid-cols-12 gap-2">
                     <div className="col-span-2">
                         <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs font-semibold">Secrétaire</label>
+                            <label className="block text-xs font-semibold">{mcRecopie ? 'Recopié par' : 'Secrétaire'}</label>
                             <button
                                 onClick={() => setShowSecretaireModal(true)}
                                 className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded hover:bg-blue-200"
@@ -2577,6 +2658,20 @@ let MainCouranteTab = ({
                                     </div>
                                 </div>
 
+                                {editingEvent.recopie && (
+                                    <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-3">
+                                        <div className="text-sm font-semibold text-amber-900 mb-2">📝 Date et heure écrites sur le papier</div>
+                                        <div className="flex gap-3 items-center flex-wrap">
+                                            <input type="date" value={editFormData.recopieDate || ''}
+                                                onChange={(e) => setEditFormData({...editFormData, recopieDate: e.target.value})}
+                                                className="px-3 py-2 border rounded-lg" />
+                                            <input type="time" value={editFormData.recopieHeure || ''}
+                                                onChange={(e) => setEditFormData({...editFormData, recopieHeure: e.target.value})}
+                                                className="px-3 py-2 border rounded-lg" />
+                                            <span className="text-xs text-amber-800">Recopiée par {editingEvent.recopie.par} le {new Date(editingEvent.recopie.le).toLocaleString('fr-FR')}</span>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold mb-2">📅 Date de rappel</label>
@@ -2801,7 +2896,13 @@ let MainCouranteTab = ({
                                     <tr key={event.id} className={`border-b hover:bg-blue-50 ${rowClass}`}>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-blue-700">{event.numero}</span>
+                                                <span className="font-bold text-blue-700 whitespace-nowrap">{event.numero}</span>
+                                                {event.recopie && (
+                                                    <span className="text-xs bg-amber-100 text-amber-800 border border-amber-300 rounded px-1 whitespace-nowrap"
+                                                        title={`Recopiée d'une main courante papier par ${event.recopie.par} le ${new Date(event.recopie.le).toLocaleString('fr-FR')} — date et heure écrites sur le papier`}>
+                                                        📝 papier
+                                                    </span>
+                                                )}
                                                 {events.length > 0 && event.id === events[0].id && (
                                                     <button
                                                         onClick={() => openInsertModal(event, 'before')}

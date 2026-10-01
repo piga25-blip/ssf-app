@@ -689,13 +689,20 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
 const ModeSelectionModal = ({ onConfirm }) => {
     const [selectedMode, setSelectedMode] = React.useState('');
     const [identifiant, setIdentifiant] = React.useState('');
+    // PC Base Arrière : saisie en direct, ou recopie d'une main courante écrite sur papier
+    const [typeBase, setTypeBase] = React.useState('direct');
+    const [auteurPapier, setAuteurPapier] = React.useState('');
 
     const handleConfirm = () => {
 if (selectedMode === 'base' && !identifiant.trim()) {
     alert('⚠️ Veuillez saisir un identifiant pour le PC Base Arrière');
     return;
 }
-if (!['terrain', 'planning', 'base'].includes(selectedMode)) {
+if (selectedMode === 'base' && typeBase === 'recopie' && !auteurPapier.trim()) {
+    alert('⚠️ Veuillez indiquer qui a rédigé la main courante papier');
+    return;
+}
+if (!['terrain', 'base'].includes(selectedMode)) {
     alert('⚠️ Veuillez sélectionner un mode');
     return;
 }
@@ -703,12 +710,10 @@ try {
     if (selectedMode === 'terrain') {
         // PC de Terrain : mode principale, numérotation simple
         onConfirm('principale', '');
-    } else if (selectedMode === 'planning') {
-        // Mode Planning Déporté : mode secondaire, identifiant PLANNING
-        onConfirm('secondaire', 'PLANNING');
     } else {
         // PC Base Arrière : mode secondaire, avec identifiant
-        onConfirm('secondaire', identifiant.trim());
+        onConfirm('secondaire', identifiant.trim(),
+            typeBase === 'recopie' ? { auteur: auteurPapier.trim(), commenceLe: new Date().toISOString() } : null);
     }
 } catch (error) {
     console.error('Erreur sélection du mode :', error);
@@ -749,40 +754,6 @@ try {
                     </div>
                     <div className="text-3xl">
                         {selectedMode === 'terrain' ? '✅' : '○'}
-                    </div>
-                </div>
-            </div>
-
-            {/* Mode Planning Déporté */}
-            <div 
-                onClick={() => setSelectedMode('planning')}
-                className={`border-4 rounded-lg p-6 cursor-pointer transition-all ${
-                    selectedMode === 'planning' 
-                        ? 'border-green-600 bg-green-50' 
-                        : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'
-                }`}
-            >
-                <div className="flex items-center gap-4">
-                    <div className="text-5xl">📅</div>
-                    <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                            Planning Déporté 📊
-                        </h2>
-                        <p className="text-gray-700 mb-2">
-                            Gestion du planning uniquement - À synchroniser avec le PC Maître
-                        </p>
-                        <ul className="text-sm text-gray-600 list-disc list-inside space-y-1 mb-2">
-                            <li>Saisir les mêmes arrivées que le PC Maître</li>
-                            <li>Créer les mêmes équipes</li>
-                            <li>Gérer le planning des rotations</li>
-                            <li>Exporter régulièrement vers le PC Maître</li>
-                        </ul>
-                        <p className="text-sm text-gray-600 font-mono bg-gray-100 px-3 py-1 rounded inline-block">
-                            Numérotation : PLANNING-001, PLANNING-002...
-                        </p>
-                    </div>
-                    <div className="text-3xl">
-                        {selectedMode === 'planning' ? '✅' : '○'}
                     </div>
                 </div>
             </div>
@@ -828,6 +799,30 @@ try {
                                         {identifiant || 'XXX'}-001, {identifiant || 'XXX'}-002...
                                     </span>
                                 </p>
+                                <div className="mt-4 space-y-2" onClick={(e) => e.stopPropagation()}>
+                                    <label className="flex items-start gap-2 cursor-pointer">
+                                        <input type="radio" name="type-base" checked={typeBase === 'direct'} onChange={() => setTypeBase('direct')} className="mt-1" />
+                                        <span><strong>Saisie en direct</strong> <span className="text-sm text-gray-600">— les événements sont notés au fur et à mesure</span></span>
+                                    </label>
+                                    <label className="flex items-start gap-2 cursor-pointer">
+                                        <input type="radio" name="type-base" checked={typeBase === 'recopie'} onChange={() => setTypeBase('recopie')} className="mt-1" />
+                                        <span><strong>📝 Recopie d'une main courante papier</strong> <span className="text-sm text-gray-600">— après coup, avec la date et l'heure écrites sur le papier</span></span>
+                                    </label>
+                                    {typeBase === 'recopie' && (
+                                        <div className="ml-6">
+                                            <label className="block text-sm font-semibold mb-1 text-gray-700">
+                                                Rédigée sur papier par :
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={auteurPapier}
+                                                onChange={(e) => setAuteurPapier(e.target.value)}
+                                                placeholder="Ex: Martin DUPONT"
+                                                className="w-full px-3 py-2 border-2 border-amber-400 rounded-lg focus:border-amber-600 focus:outline-none"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
