@@ -94,6 +94,16 @@ const affecterCreneau = (ligne, slot, activite) => {
     return r;
 };
 
+// Met une activité sur le créneau actuel (horodatage) des sauveteurs indiqués qui ont une
+// ligne de planning ; rien si l'heure est hors du planning. Renvoie le nouveau planning.
+const affecterAuCreneauActuel = (etat, ids, horodatage, activite) => {
+    const slot = indexCreneau(etat, horodatage);
+    if (slot < 0 || slot >= getTotalSlots(etat.totalDays)) return etat.planning;
+    const planning = { ...etat.planning };
+    ids.forEach(id => { if (planning[id]) { const r = [...planning[id]]; r[slot] = activite; planning[id] = r; } });
+    return planning;
+};
+
 // Instant (ms) d'une date/heure affichée « jj/mm/aaaa hh:mm(:ss) » ou « jj/mm/aaaa à hh:mm »,
 // à la minute (tri de l'import d'une main courante secondaire)
 const dateHeureAffichee = (texte) => {
@@ -371,6 +381,145 @@ const ACTIONS_DONNEES = {
         return { ...etat, planning, events: [...etat.events, evenement] };
     },
 
+    // ===== Équipes =====
+    // Les lignes de main courante (evenement / evenements) sont construites par l'appelant ;
+    // null = pas de ligne (ex. certaines opérations en main courante secondaire).
+
+    // Création : les membres quittent leur ancienne équipe ; numéro mémorisé ; activité
+    // « Engagé » (ou « Gestion » si la mission contient « gestion ») au créneau actuel
+    'EQUIPES/CREER'(etat, { equipe, horodatage, evenements }) {
+        const teams = etat.teams
+            .map(t => t.members.some(id => equipe.members.includes(id)) ? { ...t, members: t.members.filter(id => !equipe.members.includes(id)) } : t)
+            .concat([equipe]);
+        const activite = equipe.mission.toLowerCase().includes('gestion') ? 'gestion' : 'engage';
+        return {
+            ...etat, teams,
+            usedTeamNumbers: [...etat.usedTeamNumbers, { numero: equipe.id, mission: equipe.mission }],
+            planning: affecterAuCreneauActuel(etat, equipe.members, horodatage, activite),
+            events: [...etat.events, ...evenements],
+        };
+    },
+
+    'EQUIPES/MODIFIER'(etat, { id, champs, horodatage, ancienneMission, evenement }) {
+        const teams = etat.teams.map(t => t.id !== id ? t : {
+            ...t, ...champs,
+            history: [...(t.history || []), {
+                timestamp: horodatage, action: 'modification_mission',
+                details: { ancienne_mission: ancienneMission, nouvelle_mission: champs.mission },
+            }],
+        });
+        return { ...etat, teams, events: evenement ? [...etat.events, evenement] : etat.events };
+    },
+
+    // Fin de mission : l'équipe est marquée dissoute (conservée), ses membres « Disponible »
+    'EQUIPES/DISSOUDRE'(etat, { id, horodatage, evenement }) {
+        const equipe = etat.teams.find(t => t.id === id);
+        if (!equipe) return etat;
+        const teams = etat.teams.map(t => t.id !== id ? t : {
+            ...t, status: 'dissolved', dissolvedAt: horodatage,
+            history: [...(t.history || []), { timestamp: horodatage, action: 'dissolution', details: {} }],
+        });
+        return {
+            ...etat, teams,
+            planning: affecterAuCreneauActuel(etat, equipe.members, horodatage, 'disponible'),
+            events: evenement ? [...etat.events, evenement] : etat.events,
+        };
+    },
+
+    // Annule une fin de mission : l'équipe redevient active, ses membres « Engagé »
+    'EQUIPES/REACTIVER'(etat, { id, horodatage, evenement }) {
+        const equipe = etat.teams.find(t => t.id === id);
+        if (!equipe) return etat;
+        const teams = etat.teams.map(t => t.id !== id ? t : {
+            ...t, status: 'active', dissolvedAt: null,
+            history: [...(t.history || []), { timestamp: horodatage, action: 'reactivation', details: {} }],
+        });
+        // (pas de limite de fin de planning ici, comme avant)
+        const slot = indexCreneau(etat, horodatage);
+        const planning = { ...etat.planning };
+        if (slot >= 0) equipe.members.forEach(m => { if (planning[m]) { const r = [...planning[m]]; r[slot] = 'engage'; planning[m] = r; } });
+        return { ...etat, teams, planning, events: [...etat.events, evenement] };
+    },
+
+    // Ajout de membres : ils quittent leur ancienne équipe ; « Engagé » (ou « Gestion ») au créneau actuel
+    'EQUIPES/AJOUTER_MEMBRES'(etat, { id, membres, horodatage, evenement }) {
+        const equipe = etat.teams.find(t => t.id === id);
+        const teams = etat.teams.map(t => {
+            if (t.id === id) {
+                return {
+                    ...t, members: [...t.members, ...membres],
+                    history: [...(t.history || []), { timestamp: horodatage, action: 'ajout_membres', details: { membres: nomsSauveteurs(etat, membres) } }],
+                };
+            }
+            return t.members.some(m => membres.includes(m)) ? { ...t, members: t.members.filter(m => !membres.includes(m)) } : t;
+        });
+        const activite = equipe && equipe.mission.toLowerCase().includes('gestion') ? 'gestion' : 'engage';
+        return {
+            ...etat, teams,
+            planning: affecterAuCreneauActuel(etat, membres, horodatage, activite),
+            events: [...etat.events, evenement],
+        };
+    },
+
+    // Membre libéré vers le PC : « Disponible » au créneau actuel ; une équipe vidée disparaît
+    'EQUIPES/LIBERER_MEMBRE'(etat, { idEquipe, idMembre, horodatage, evenement }) {
+        const nom = nomsSauveteurs(etat, [idMembre])[0];
+        const teams = etat.teams.map(t => t.id !== idEquipe ? t : {
+            ...t, members: t.members.filter(m => m !== idMembre),
+            history: [...(t.history || []), { timestamp: horodatage, action: 'retrait_membre', details: { membre: nom, destination: 'PC' } }],
+        }).filter(t => t.members.length > 0);
+        return {
+            ...etat, teams,
+            planning: affecterAuCreneauActuel(etat, [idMembre], horodatage, 'disponible'),
+            events: evenement ? [...etat.events, evenement] : etat.events,
+        };
+    },
+
+    // Membre déplacé d'une équipe à une autre ; une équipe vidée disparaît
+    'EQUIPES/DEPLACER_MEMBRE'(etat, { idOrigine, idDestination, idMembre, horodatage, evenement }) {
+        const nom = nomsSauveteurs(etat, [idMembre])[0];
+        const origine = etat.teams.find(t => t.id === idOrigine);
+        const destination = etat.teams.find(t => t.id === idDestination);
+        if (!origine || !destination) return etat;
+        const teams = etat.teams.map(t => {
+            if (t.id === idOrigine) return {
+                ...t, members: t.members.filter(m => m !== idMembre),
+                history: [...(t.history || []), { timestamp: horodatage, action: 'retrait_membre', details: { membre: nom, destination: destination.name } }],
+            };
+            if (t.id === idDestination) return {
+                ...t, members: [...t.members, idMembre],
+                history: [...(t.history || []), { timestamp: horodatage, action: 'ajout_membres', details: { membres: [nom], origine: origine.name } }],
+            };
+            return t;
+        }).filter(t => t.members.length > 0);
+        return { ...etat, teams, events: evenement ? [...etat.events, evenement] : etat.events };
+    },
+
+    // Nouvel ordre des membres (le premier est le chef). changementChef : un membre a été
+    // glissé en première position (seul cas enregistré dans l'historique, comme avant)
+    'EQUIPES/REORDONNER_MEMBRES'(etat, { id, membres, changementChef, horodatage, evenement }) {
+        const teams = etat.teams.map(t => {
+            if (t.id !== id) return t;
+            const equipe = { ...t, members: membres };
+            if (changementChef) {
+                equipe.history = [...(t.history || []), {
+                    timestamp: horodatage, action: 'changement_chef',
+                    details: { ancien_chef: nomsSauveteurs(etat, [t.members[0]])[0], nouveau_chef: nomsSauveteurs(etat, [membres[0]])[0] },
+                }];
+            }
+            return equipe;
+        });
+        return { ...etat, teams, events: evenement ? [...etat.events, evenement] : etat.events };
+    },
+
+    // Scission : les membres détachés forment la nouvelle équipe
+    'EQUIPES/SCINDER'(etat, { idSource, nouvelleEquipe, evenements }) {
+        const teams = etat.teams
+            .map(t => t.id === idSource ? { ...t, members: t.members.filter(m => !nouvelleEquipe.members.includes(m)) } : t)
+            .concat([nouvelleEquipe]);
+        return { ...etat, teams, events: [...etat.events, ...evenements] };
+    },
+
     // ===== Secours =====
 
     'SECOURS/CLOTURER'(etat, { horodatageCloture, evenement }) {
@@ -446,6 +595,16 @@ const creerActionsDonnees = (dispatch, reserverNumerosMC) => {
         importerMCSecondaire: (evenements) => dispatch({ type: 'MC/IMPORTER_SECONDAIRE', evenements }),
         importerEvenements: (evenements) => dispatch({ type: 'MC/IMPORTER_EVENEMENTS', evenements }),
         affecterPlanningDepuisMC: (evenement, ids, activite, slot) => dispatch({ type: 'PLANNING/AFFECTER_DEPUIS_MC', evenement, ids, activite, slot }),
+        // Équipes (lignes de main courante construites par l'écran des équipes)
+        creerEquipe: (equipe, horodatage, evenements) => dispatch({ type: 'EQUIPES/CREER', equipe, horodatage, evenements }),
+        modifierEquipe: (id, champs, ancienneMission, evenement) => dispatch({ type: 'EQUIPES/MODIFIER', id, champs, ancienneMission, horodatage: new Date().toISOString(), evenement }),
+        dissoudreEquipe: (id, horodatage, evenement) => dispatch({ type: 'EQUIPES/DISSOUDRE', id, horodatage, evenement }),
+        reactiverEquipe: (id, horodatage, evenement) => dispatch({ type: 'EQUIPES/REACTIVER', id, horodatage, evenement }),
+        ajouterMembresEquipe: (id, membres, horodatage, evenement) => dispatch({ type: 'EQUIPES/AJOUTER_MEMBRES', id, membres, horodatage, evenement }),
+        libererMembre: (idEquipe, idMembre, horodatage, evenement) => dispatch({ type: 'EQUIPES/LIBERER_MEMBRE', idEquipe, idMembre, horodatage, evenement }),
+        deplacerMembre: (idOrigine, idDestination, idMembre, horodatage, evenement) => dispatch({ type: 'EQUIPES/DEPLACER_MEMBRE', idOrigine, idDestination, idMembre, horodatage, evenement }),
+        reordonnerMembres: (id, membres, changementChef, horodatage, evenement) => dispatch({ type: 'EQUIPES/REORDONNER_MEMBRES', id, membres, changementChef, horodatage, evenement }),
+        scinderEquipe: (idSource, nouvelleEquipe, evenements) => dispatch({ type: 'EQUIPES/SCINDER', idSource, nouvelleEquipe, evenements }),
         // Secours
         cloturerSecours: (horodatageCloture, evenement) => dispatch({ type: 'SECOURS/CLOTURER', horodatageCloture, evenement }),
         rouvrirSecours: () => dispatch({ type: 'SECOURS/ROUVRIR' }),

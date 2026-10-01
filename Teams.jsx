@@ -3,7 +3,7 @@
 // ============================================
 let GestionEquipesModal = ({
     teams, setTeams, usedTeamNumbers, setUsedTeamNumbers, masterSauveteursList, activeSauveteurIds,
-    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, onClose, mcMode, mcIdentifiant,
+    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, actions, onClose, mcMode, mcIdentifiant,
     startHour, totalDays, planning, setPlanning, verifierEtPropagerAvantAction, pointsPhone, sauveursAyantQuitte
 }) => {
     const [nouvelleEquipe, setNouvelleEquipe] = useState({ numero: '', mission: '', ordreMission: '' });
@@ -204,15 +204,6 @@ let GestionEquipesModal = ({
             ]
         };
 
-        setTeams(prevTeams => prevTeams
-            .map(t => t.members.some(id => selectedMembres.includes(id))
-                ? { ...t, members: t.members.filter(id => !selectedMembres.includes(id)) }
-                : t)
-            .concat([newTeam]));
-        
-        // Ajouter le numéro à l'historique
-        setUsedTeamNumbers(prev => [...prev, { numero: teamId, mission: nouvelleEquipe.mission }]);
-
         const membresNomsString = membresNoms.join(', ');
 
         // Message différent selon le mode MC
@@ -220,94 +211,19 @@ let GestionEquipesModal = ({
             ? `Prévision pour équipe (${nouvelleEquipe.mission}) : ${membresNomsString}`
             : `Création Équipe ${nouvelleEquipe.numero}\nChef: ${chefNom}\nMission: ${nouvelleEquipe.mission}\nMembres: ${membresNomsString}`;
 
-        const newEvent = {
-            id: nouvelId(),
-            isoTimestamp: new Date().toISOString(),
-            secretaire: 'Système',
-            dateHeure: new Date().toLocaleString('fr-FR'),
-            messageImportant: false,
-            categorie: 'equipe',
-            evenement: evenementMessage,
-            numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : 
-                reserverNumerosMC().toString().padStart(3, '0'),
-            fait: false
-        };
+        const horodatage = new Date().toISOString();
+        const evenements = [{ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : reserverNumerosMC().toString().padStart(3, '0'), fait: false }];
 
-        setEvents(prevEvents => [...prevEvents, newEvent]);
-        
-        // Affecter automatiquement l'activité "Engagé" aux membres de l'équipe au quart d'heure actuel
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinutes = now.getMinutes();
-        
-        // Calculer les minutes écoulées depuis startHour aujourd'hui
-        const currentMinutesInDay = currentHour * 60 + currentMinutes;
-        const startMinutesInDay = startHour * 60;
-        let minutesSinceStart = currentMinutesInDay - startMinutesInDay;
-        
-        // Si on est avant startHour, on est encore dans les slots de la veille
-        if (minutesSinceStart < 0) {
-            minutesSinceStart += 24 * 60;
-        }
-        
-        // Convertir en index de slot (1 slot = 15 minutes)
-        const slotIndex = Math.floor(minutesSinceStart / 15);
-        const totalSlots = getTotalSlots(totalDays);
-        
-        console.log('🔍 Création équipe - Calcul slot:', {
-            currentHour,
-            currentMinutes,
-            startHour,
-            minutesSinceStart,
-            slotIndex,
-            totalSlots,
-            isValidSlot: slotIndex >= 0 && slotIndex < totalSlots
-        });
-        
-        
-        // Vérifier que le slot est dans la plage du planning
-        if (slotIndex >= 0 && slotIndex < totalSlots) {
-            // Détecter si c'est une équipe de gestion (Gestion PC, Gestion matériel, etc.)
+        // Activité « Engagé » (« Gestion » pour une équipe de gestion) au quart d'heure actuel,
+        // si l'heure est dans le planning : appliquée par l'action, avec sa ligne de main courante
+        const slotIndex = indexCreneau({ startHour }, horodatage);
+        if (slotIndex >= 0 && slotIndex < getTotalSlots(totalDays)) {
             const isGestion = nouvelleEquipe.mission.toLowerCase().includes('gestion');
-            const activityToAssign = isGestion ? 'gestion' : 'engage';
-            
-            // Mettre à jour le planning pour tous les membres de l'équipe
-            setPlanning(prevPlanning => {
-                const updatedPlanning = { ...prevPlanning };
-                selectedMembres.forEach(memberId => {
-                    if (updatedPlanning[memberId]) {
-                        const newPlanningForMember = [...updatedPlanning[memberId]];
-                        const oldActivity = newPlanningForMember[slotIndex];
-                        newPlanningForMember[slotIndex] = activityToAssign;
-                        updatedPlanning[memberId] = newPlanningForMember;
-                        console.log(`✅ Planning mis à jour pour ${memberId}: slot ${slotIndex}, ${oldActivity} → ${activityToAssign}`);
-                    } else {
-                        console.warn(`⚠️ Pas de planning trouvé pour membre ${memberId}`);
-                    }
-                });
-                return updatedPlanning;
-            });
-            
-            // Créer un événement MC pour l'affectation
-            const engageEvent = {
-                id: nouvelId(),
-                isoTimestamp: new Date().toISOString(),
-                secretaire: 'Système',
-                dateHeure: new Date().toLocaleString('fr-FR'),
-                messageImportant: false,
-                categorie: 'equipe',
-                evenement: `👔 Activité "${isGestion ? 'Gestion' : 'Engage'}" affectée à : ${membresNomsString}`,
-                numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                    `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : 
-                    reserverNumerosMC().toString().padStart(3, '0'),
-                fait: false
-            };
-            
-            setEvents(prevEvents => [...prevEvents, engageEvent]);
-        } else {
-            console.warn('⚠️ Slot invalide pour affecter "Engagé":', slotIndex, '/', totalSlots);
+            evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Activité "${isGestion ? 'Gestion' : 'Engage'}" affectée à : ${membresNomsString}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : reserverNumerosMC().toString().padStart(3, '0'), fait: false });
         }
+
+        // Équipe créée (ses membres quittent leur ancienne équipe), numéro mémorisé, planning, main courante
+        actions.creerEquipe(newTeam, horodatage, evenements);
         
         setNouvelleEquipe({ numero: '', mission: '', ordreMission: '' });
         setSelectedMembres([]);
@@ -355,45 +271,17 @@ let GestionEquipesModal = ({
             return;
         }
 
-        setTeams(prev => prev.map(t => {
-            if (t.id === editingTeam.id) {
-                return {
-                    ...t,
-                    mission: nouvelleEquipe.mission,
-                    ordreMission: nouvelleEquipe.ordreMission || '',
-                    typeMission: typeMission,
-                    lieu: equipeLieu,
-                    history: [
-                        ...(t.history || []),
-                        {
-                            timestamp: new Date().toISOString(),
-                            action: 'modification_mission',
-                            details: {
-                                ancienne_mission: editingTeam.mission,
-                                nouvelle_mission: nouvelleEquipe.mission
-                            }
-                        }
-                    ]
-                };
-            }
-            return t;
-        }));
-
-        // Événement MC pour modification de mission
-        if (!mcMode || mcMode === 'principale') {
-            const newEvent = {
-                id: nouvelId(),
-            isoTimestamp: new Date().toISOString(),
-                secretaire: 'Système',
-                dateHeure: new Date().toLocaleString('fr-FR'),
-                messageImportant: false,
-                categorie: 'equipe',
-                evenement: `✏️ Modification ${editingTeam.name}\nNouvelle mission: ${nouvelleEquipe.mission}`,
-                numero: reserverNumerosMC().toString().padStart(3, '0'),
-                fait: false
-            };
-            setEvents(prevEvents => [...prevEvents, newEvent]);
-        }
+        // Ligne de main courante pour la modification de mission (MC principale uniquement)
+        const horodatage = new Date().toISOString();
+        const evenement = (!mcMode || mcMode === 'principale')
+            ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `✏️ Modification ${editingTeam.name}\nNouvelle mission: ${nouvelleEquipe.mission}`, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false }
+            : null;
+        actions.modifierEquipe(editingTeam.id, {
+            mission: nouvelleEquipe.mission,
+            ordreMission: nouvelleEquipe.ordreMission || '',
+            typeMission: typeMission,
+            lieu: equipeLieu,
+        }, editingTeam.mission, evenement);
 
         annulerEdition();
         alert('✅ Équipe modifiée !');
@@ -404,76 +292,18 @@ let GestionEquipesModal = ({
         if (!team) return;
 
         if (window.confirm(`Dissoudre l'équipe ${team.name} ?`)) {
-            const now = new Date().toISOString();
-            
-            // Récupérer les noms des membres de l'équipe
+            const horodatage = new Date().toISOString();
             const membresNoms = team.members
                 .map(memberId => masterSauveteursList.find(s => s.id === memberId)?.name)
                 .filter(Boolean)
                 .join(', ');
-            
-            // Marquer l'équipe comme dissoute au lieu de la supprimer
-            setTeams(prev => prev.map(t => {
-                if (t.id === teamId) {
-                    return {
-                        ...t,
-                        status: 'dissolved',
-                        dissolvedAt: now,
-                        history: [
-                            ...(t.history || []),
-                            {
-                                timestamp: now,
-                                action: 'dissolution',
-                                details: {}
-                            }
-                        ]
-                    };
-                }
-                return t;
-            }));
-
-            // Mettre tous les membres en "Disponible" sur le slot actuel du planning
-            const nowDate = new Date();
-            const currentHour = nowDate.getHours();
-            const currentMinute = nowDate.getMinutes();
-            let hoursFromStart = currentHour - startHour;
-            if (hoursFromStart < 0) hoursFromStart += 24;
-            const quarterHour = Math.floor(currentMinute / 15);
-            const currentSlot = hoursFromStart * 4 + quarterHour;
-            const totalSlots = getTotalSlots(totalDays);
-
-            if (currentSlot >= 0 && currentSlot < totalSlots) {
-                setPlanning(prev => {
-                    const newPlanning = { ...prev };
-                    team.members.forEach(memberId => {
-                        if (newPlanning[memberId]) {
-                            const memberPlanning = [...newPlanning[memberId]];
-                            memberPlanning[currentSlot] = 'disponible';
-                            newPlanning[memberId] = memberPlanning;
-                        }
-                    });
-                    return newPlanning;
-                });
-            }
-
-            // Événement MC uniquement si MC Principale
-            if (!mcMode || mcMode === 'principale') {
-                const newEvent = {
-                    id: nouvelId(),
-                    isoTimestamp: new Date().toISOString(),
-                    secretaire: 'Système',
-                    dateHeure: new Date().toLocaleString('fr-FR'),
-                    messageImportant: false,
-                    categorie: 'equipe',
-                    evenement: `🔚 Dissolution ${team.name}\nMembres: ${membresNoms}`,
-                    pointPhone: (function() { try { var pp = (pointsPhone||[]).find(function(pp){return (typeof pp==='object'?pp.lettre:pp)==='PC';}); return pp ? 'PC - '+(pp.nom||'Poste de Commandement') : 'PC - Poste de Commandement'; } catch(e){ return 'PC - Poste de Commandement'; } })(),
-                    equipe: team.name,
-                    numero: reserverNumerosMC().toString().padStart(3, '0'),
-                    fait: false
-                };
-
-                setEvents(prev => [...prev, newEvent]);
-            }
+            // Ligne de main courante uniquement en MC principale
+            const pointPhonePC = (function() { try { var pp = (pointsPhone||[]).find(function(pp){return (typeof pp==='object'?pp.lettre:pp)==='PC';}); return pp ? 'PC - '+(pp.nom||'Poste de Commandement') : 'PC - Poste de Commandement'; } catch(e){ return 'PC - Poste de Commandement'; } })();
+            const evenement = (!mcMode || mcMode === 'principale')
+                ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔚 Dissolution ${team.name}\nMembres: ${membresNoms}`, pointPhone: pointPhonePC, equipe: team.name, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false }
+                : null;
+            // Équipe marquée dissoute, membres « Disponible » au créneau actuel
+            actions.dissoudreEquipe(teamId, horodatage, evenement);
         }
     };
 
@@ -483,89 +313,21 @@ let GestionEquipesModal = ({
             return;
         }
 
-        const now = new Date().toISOString();
-        const membresAjoutesNoms = selectedNewMembres
-            .map(id => masterSauveteursList.find(s => s.id === id)?.name)
-            .filter(Boolean);
-
-        const updatedTeams = (prev) => prev.map(team => {
-            if (team.id === teamId) {
-                return {
-                    ...team,
-                    members: [...team.members, ...selectedNewMembres],
-                    history: [
-                        ...(team.history || []),
-                        {
-                            timestamp: now,
-                            action: 'ajout_membres',
-                            details: {
-                                membres: membresAjoutesNoms
-                            }
-                        }
-                    ]
-                };
-            }
-            if (team.members.some(id => selectedNewMembres.includes(id))) {
-                return { ...team, members: team.members.filter(id => !selectedNewMembres.includes(id)) };
-            }
-            return team;
-        });
-
-        setTeams(updatedTeams);
-        
-        // Mettre à jour le planning des nouveaux membres avec l'activité "Engagé" sur le slot actuel
-        const nowDate = new Date();
-        const currentHour = nowDate.getHours();
-        const currentMinute = nowDate.getMinutes();
-        let hoursFromStart = currentHour - startHour;
-        if (hoursFromStart < 0) hoursFromStart += 24;
-        const quarterHour = Math.floor(currentMinute / 15);
-        const currentSlot = hoursFromStart * 4 + quarterHour;
-        const totalSlots = getTotalSlots(totalDays);
-
-        setPlanning(prev => {
-            const newPlanning = { ...prev };
-            // Détecter si c'est une équipe de gestion (Gestion PC, Gestion matériel, etc.)
-            const teamToAdd = teams.find(t => t.id === teamId);
-            const isGestionTeam = teamToAdd && teamToAdd.mission.toLowerCase().includes('gestion');
-            const activityToAssign = isGestionTeam ? 'gestion' : 'engage';
-            selectedNewMembres.forEach(memberId => {
-                if (newPlanning[memberId] && currentSlot >= 0 && currentSlot < totalSlots) {
-                    const memberPlanning = [...newPlanning[memberId]];
-                    memberPlanning[currentSlot] = activityToAssign;
-                    newPlanning[memberId] = memberPlanning;
-                }
-            });
-            return newPlanning;
-        });
-
-        // Création d'événement dans la Main Courante
+        const horodatage = new Date().toISOString();
         const team = teams.find(t => t.id === teamId);
-        const membresNoms = membresAjoutesNoms.join(', ');
+        const membresNoms = selectedNewMembres
+            .map(id => masterSauveteursList.find(s => s.id === id)?.name)
+            .filter(Boolean)
+            .join(', ');
 
         // Message différent selon le mode MC
-        let evenementMessage;
-        if (mcMode === 'secondaire') {
-            evenementMessage = `➕ Ajout à ${team.name} (${team.mission}) : ${membresNoms}`;
-        } else {
-            evenementMessage = `➕ Ajout à ${team.name} : ${membresNoms}`;
-        }
+        const evenementMessage = (mcMode === 'secondaire')
+            ? `➕ Ajout à ${team.name} (${team.mission}) : ${membresNoms}`
+            : `➕ Ajout à ${team.name} : ${membresNoms}`;
+        const evenement = { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : reserverNumerosMC().toString().padStart(3, '0'), fait: false };
 
-        const newEvent = {
-            id: nouvelId(),
-            isoTimestamp: new Date().toISOString(),
-            secretaire: 'Système',
-            dateHeure: new Date().toLocaleString('fr-FR'),
-            messageImportant: false,
-            categorie: 'equipe',
-            evenement: evenementMessage,
-            numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : 
-                reserverNumerosMC().toString().padStart(3, '0'),
-            fait: false
-        };
-
-        setEvents(prevEvents => [...prevEvents, newEvent]);
+        // Membres ajoutés (retirés de leur ancienne équipe), « Engagé » au créneau actuel, main courante
+        actions.ajouterMembresEquipe(teamId, selectedNewMembres, horodatage, evenement);
 
         alert(`✅ ${selectedNewMembres.length} membre(s) ajouté(s) à l'équipe !`);
         setAddingMembersToTeam(null);
@@ -589,71 +351,14 @@ let GestionEquipesModal = ({
 
         // Retour au PC
         if (destination === 'PC' || destination === '**PC**') {
-            const now = new Date().toISOString();
-            const membreNom = membre.name;
-            
-            const newTeams = (prev) => prev.map(team => {
-                if (team.id === equipeOrigineId) {
-                    return {
-                        ...team,
-                        members: team.members.filter(id => id !== memberId),
-                        history: [
-                            ...(team.history || []),
-                            {
-                                timestamp: now,
-                                action: 'retrait_membre',
-                                details: {
-                                    membre: membreNom,
-                                    destination: 'PC'
-                                }
-                            }
-                        ]
-                    };
-                }
-                return team;
-            }).filter(team => team.members.length > 0);
-
-            setTeams(newTeams);
-
-            // Mettre le membre en "Disponible" sur le slot actuel du planning
-            const nowDate = new Date();
-            const currentHour = nowDate.getHours();
-            const currentMinute = nowDate.getMinutes();
-            let hoursFromStart = currentHour - startHour;
-            if (hoursFromStart < 0) hoursFromStart += 24;
-            const quarterHour = Math.floor(currentMinute / 15);
-            const currentSlot = hoursFromStart * 4 + quarterHour;
-            const totalSlots = getTotalSlots(totalDays);
-
-            if (currentSlot >= 0 && currentSlot < totalSlots) {
-                setPlanning(prev => {
-                    const newPlanning = { ...prev };
-                    if (newPlanning[memberId]) {
-                        const memberPlanning = [...newPlanning[memberId]];
-                        memberPlanning[currentSlot] = 'disponible';
-                        newPlanning[memberId] = memberPlanning;
-                    }
-                    return newPlanning;
-                });
-            }
-
-            // Événement MC uniquement si MC Principale
-            if (!mcMode || mcMode === 'principale') {
-                const newEvent = {
-                    id: nouvelId(),
-                    isoTimestamp: new Date().toISOString(),
-                    secretaire: 'Système',
-                    dateHeure: new Date().toLocaleString('fr-FR'),
-                    messageImportant: false,
-                    categorie: 'equipe',
-                    evenement: `↩️ ${membre.name} libéré de ${equipeOrigine.name} vers PC`,
-                    pointPhone: (function(){ try { var pp=(pointsPhone||[]).find(function(p){return (typeof p==='object'?p.lettre:p)==='PC';}); return pp?'PC - '+(pp.nom||'Poste de Commandement'):'PC - Poste de Commandement'; }catch(e){return 'PC - Poste de Commandement';} })(),
-                    numero: reserverNumerosMC().toString().padStart(3, '0'),
-                    fait: false
-                };
-
-                setEvents(prev => [...prev, newEvent]);
-            }
+            const horodatage = new Date().toISOString();
+            // Ligne de main courante uniquement en MC principale
+            const pointPhonePC = (function(){ try { var pp=(pointsPhone||[]).find(function(p){return (typeof p==='object'?p.lettre:p)==='PC';}); return pp?'PC - '+(pp.nom||'Poste de Commandement'):'PC - Poste de Commandement'; }catch(e){return 'PC - Poste de Commandement';} })();
+            const evenement = (!mcMode || mcMode === 'principale')
+                ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `↩️ ${membre.name} libéré de ${equipeOrigine.name} vers PC`, pointPhone: pointPhonePC, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false }
+                : null;
+            // Retiré de l'équipe (une équipe vidée disparaît), « Disponible » au créneau actuel
+            actions.libererMembre(equipeOrigineId, memberId, horodatage, evenement);
             setMouvements({...mouvements, [memberId]: ''});
             alert('✅ Membre libéré au PC');
         }
@@ -667,65 +372,13 @@ let GestionEquipesModal = ({
                 return;
             }
 
-            const now = new Date().toISOString();
-            const membreNom = membre.name;
-
-            const newTeams = (prev) => prev.map(team => {
-                if (team.id === equipeOrigineId) {
-                    return {
-                        ...team,
-                        members: team.members.filter(id => id !== memberId),
-                        history: [
-                            ...(team.history || []),
-                            {
-                                timestamp: now,
-                                action: 'retrait_membre',
-                                details: {
-                                    membre: membreNom,
-                                    destination: equipeDest.name
-                                }
-                            }
-                        ]
-                    };
-                }
-                if (team.id === teamIdDest) {
-                    return {
-                        ...team,
-                        members: [...team.members, memberId],
-                        history: [
-                            ...(team.history || []),
-                            {
-                                timestamp: now,
-                                action: 'ajout_membres',
-                                details: {
-                                    membres: [membreNom],
-                                    origine: equipeOrigine.name
-                                }
-                            }
-                        ]
-                    };
-                }
-                return team;
-            }).filter(team => team.members.length > 0);
-
-            setTeams(newTeams);
-
-            // Événement MC uniquement si MC Principale
-            if (!mcMode || mcMode === 'principale') {
-                const newEvent = {
-                    id: nouvelId(),
-            isoTimestamp: new Date().toISOString(),
-                    secretaire: 'Système',
-                    dateHeure: new Date().toLocaleString('fr-FR'),
-                    messageImportant: false,
-                    categorie: 'equipe',
-                    evenement: `🔄 ${membre.name} : ${equipeOrigine.name} → ${equipeDest.name}`,
-                    numero: reserverNumerosMC().toString().padStart(3, '0'),
-                    fait: false
-                };
-
-                setEvents(prev => [...prev, newEvent]);
-            }
+            const horodatage = new Date().toISOString();
+            // Ligne de main courante uniquement en MC principale
+            const evenement = (!mcMode || mcMode === 'principale')
+                ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔄 ${membre.name} : ${equipeOrigine.name} → ${equipeDest.name}`, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false }
+                : null;
+            // Une équipe vidée disparaît
+            actions.deplacerMembre(equipeOrigineId, teamIdDest, memberId, horodatage, evenement);
             setMouvements({...mouvements, [memberId]: ''});
             alert('✅ Membre déplacé');
         }
@@ -737,53 +390,13 @@ let GestionEquipesModal = ({
 
         if (!window.confirm('Reactiver ' + team.name + ' ? Mission : ' + team.mission + ' - Les membres redeviendront engages.')) return;
 
-        const now = new Date().toISOString();
-
-        // Remettre l'équipe en actif
-        setTeams(prev => prev.map(t => {
-            if (t.id !== teamId) return t;
-            return {
-                ...t,
-                status: 'active',
-                dissolvedAt: null,
-                history: [...(t.history || []), { timestamp: now, action: 'reactivation', details: {} }]
-            };
-        }));
-
-        // Remettre les membres en engagé sur le planning
-        const nowDate = new Date();
-        let hoursFromStart = nowDate.getHours() - startHour;
-        if (hoursFromStart < 0) hoursFromStart += 24;
-        const currentSlot = hoursFromStart * 4 + Math.floor(nowDate.getMinutes() / 15);
-
-        if (currentSlot >= 0) {
-            setPlanning(prev => {
-                const np = { ...prev };
-                team.members.forEach(memberId => {
-                    if (np[memberId]) {
-                        const row = [...np[memberId]];
-                        row[currentSlot] = 'engage';
-                        np[memberId] = row;
-                    }
-                });
-                return np;
-            });
-        }
-
-        // Événement MC
+        const horodatage = new Date().toISOString();
         const membresNoms = team.members.map(id => { const s = masterSauveteursList.find(s => s.id === id); return s ? s.name : id; }).join(', ');
-        const newEvent = {
-            id: nouvelId(),
-            isoTimestamp: now,
-            secretaire: 'Système',
-            dateHeure: new Date().toLocaleString('fr-FR'),
-            messageImportant: true,
-            categorie: 'equipe',
+        const evenement = { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: true, categorie: 'equipe',
             evenement: '↩️ REACTIVATION ' + team.name + ' - Mission : ' + team.mission + ' - Membres : ' + membresNoms,
-            numero: reserverNumerosMC().toString().padStart(3, '0'),
-            fait: false
-        };
-        setEvents(prev => [...prev, newEvent]);
+            numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false };
+        // Équipe active de nouveau, membres « Engagé » au créneau actuel
+        actions.reactiverEquipe(teamId, horodatage, evenement);
 
         alert('✅ ' + team.name + ' réactivée ! Un événement a été ajouté à la Main Courante.');
     };
@@ -932,60 +545,19 @@ let GestionEquipesModal = ({
         newMembers.splice(currentIndex, 1);
         newMembers.splice(targetIndex, 0, draggedMember);
 
-        const now = new Date().toISOString();
+        const horodatage = new Date().toISOString();
         const isChiefChange = targetIndex === 0 && currentIndex !== 0;
 
-        // Mettre à jour l'équipe
-        const newTeams = (prev) => prev.map(t => {
-            if (t.id === teamId) {
-                const updatedTeam = { ...t, members: newMembers };
-                
-                // Ajouter à l'historique si changement de chef
-                if (isChiefChange) {
-                    const nouveauChefNom = masterSauveteursList.find(s => s.id === draggedMember)?.name;
-                    const ancienChefNom = masterSauveteursList.find(s => s.id === team.members[0])?.name;
-                    
-                    updatedTeam.history = [
-                        ...(t.history || []),
-                        {
-                            timestamp: now,
-                            action: 'changement_chef',
-                            details: {
-                                ancien_chef: ancienChefNom,
-                                nouveau_chef: nouveauChefNom
-                            }
-                        }
-                    ];
-                }
-                
-                return updatedTeam;
-            }
-            return t;
-        });
-
-        setTeams(newTeams);
-
-        // Ajouter un événement dans la main courante UNIQUEMENT si changement de chef (position 0)
+        // Ligne de main courante UNIQUEMENT si changement de chef (position 0), en MC principale
+        let evenement = null;
         if (isChiefChange && (!mcMode || mcMode === 'principale')) {
             const nouveauChef = masterSauveteursList.find(s => s.id === draggedMember);
             const ancienChef = masterSauveteursList.find(s => s.id === team.members[0]);
-            
             if (nouveauChef && ancienChef) {
-                const newEvent = {
-                    id: nouvelId(),
-            isoTimestamp: new Date().toISOString(),
-                    secretaire: 'Système',
-                    dateHeure: new Date().toLocaleString('fr-FR'),
-                    messageImportant: false,
-                    categorie: 'equipe',
-                    evenement: `👔 Changement de chef ${team.name}\nAncien chef: ${ancienChef.name}\nNouveau chef: ${nouveauChef.name}`,
-                    numero: reserverNumerosMC().toString().padStart(3, '0'),
-                    fait: false
-                };
-
-                setEvents(prev => [...prev, newEvent]);
+                evenement = { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Changement de chef ${team.name}\nAncien chef: ${ancienChef.name}\nNouveau chef: ${nouveauChef.name}`, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false };
             }
         }
+        actions.reordonnerMembres(teamId, newMembers, isChiefChange, horodatage, evenement);
 
         setDraggedMember(null);
         setDraggedTeamId(null);
@@ -1742,7 +1314,6 @@ let GestionEquipesModal = ({
                         if (teams.find(t => t.name === newName)) { alert(`"${newName}" existe déjà`); return; }
                         const newTeam = { id: 'T'+newNum.trim()+'_'+Date.now(), name: newName, mission: team.mission, ordreMission: team.ordreMission || '', typeMission: team.typeMission, lieu: team.lieu, sousTerre: team.sousTerre, members: membresSelec, status: 'active' };
                         const membresRestants = team.members.filter(id => !membresSelec.includes(id));
-                        setTeams(prev => prev.map(t => t.id === team.id ? {...t, members: membresRestants} : t).concat([newTeam]));
                         const nomsDetaches = membresSelec.map(id=>{const s=masterSauveteursList.find(sv=>sv.id===id);return s?s.name:id;}).join(', ');
                         // Trouver le dernier point phone connu de l'équipe source
                         const eventsEquipeSource = events
@@ -1781,7 +1352,8 @@ let GestionEquipesModal = ({
                                 fait: false
                             });
                         }
-                        setEvents(prev=>[...prev, ...newEvents]);
+                        // Membres détachés retirés de l'équipe source, nouvelle équipe, main courante
+                        actions.scinderEquipe(team.id, newTeam, newEvents);
                         setModalScindre(null);
                     };
                     return (

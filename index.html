@@ -1917,6 +1917,7 @@
                         {showGestionEquipes && (
                             <ModalErrorBoundary onClose={() => setShowGestionEquipes(false)}>
                                 <GestionEquipesModal
+                                    actions={actions}
                                     teams={teams}
                                     setTeams={setTeams}
                                     usedTeamNumbers={usedTeamNumbers}
