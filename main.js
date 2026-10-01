@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 
@@ -106,7 +106,16 @@ autoUpdater.on('update-downloaded', () => {
   mainWindow.webContents.send('update-downloaded');
 });
 
-ipcMain.on('install-update', () => {
+ipcMain.on('install-update', async () => {
+  // Mode réseau actif : l'installation redémarrerait l'application et couperait les autres postes
+  if (serveurSSF && serveurSSF.hote === '0.0.0.0') {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'info', title: 'Mise à jour reportée',
+      message: 'Le mode réseau est activé : d\'autres postes utilisent l\'application.',
+      detail: 'Désactivez le mode réseau (bouton « 🌐 Mode réseau »), puis cliquez de nouveau sur la mise à jour.',
+    });
+    return;
+  }
   autoUpdater.quitAndInstall(false, true);
 });
 

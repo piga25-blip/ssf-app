@@ -11,7 +11,7 @@ Depuis `C:\Projets\SSF-Reseau` :
 
 | Commande | Effet |
 |---|---|
-| **`npm test`** | **Lance tout** : le scénario puis les vérifications complémentaires (environ 3 min) — à faire après chaque modification |
+| **`npm test`** | **Lance tout** : 11 tests (environ 6 min) — à faire après chaque modification |
 | `npm run test:scenario` | Rejoue le scénario et le compare à la référence → ✅ SUCCÈS ou ❌ ÉCHEC avec la liste des différences |
 | `npm run test:scenario:maj` | Rejoue le scénario et **remplace** la référence (uniquement après un changement voulu et vérifié) |
 | `node tests/scenario-reference.js --jusqua=12` | S'arrête après l'étape 12 et enregistre une capture et la description de l'écran dans `tests/sortie/` |
@@ -93,6 +93,11 @@ Tests ciblés, ajoutés lors de la correction de défauts de la version officiel
 |---|---|
 | `node tests/verif-reouverture.js` | Un dossier clôturé, rouvert après redémarrage, reste clôturé avec sa cavité et sa commune ; un ancien dossier rouvert n'enregistre pas de champs techniques |
 | `node tests/verif-export-import.js` | « Exporter Tout » contient infos du secours, clôture, n° permanents et n° d'équipe ; « Importer Tout » les reprend du fichier |
+| `node tests/verif-serveur.js` | Serveur intégré (lot 1) : fichiers servis, et surtout refusés (code du « moteur », tests, documentation, dépendances, sorties du dossier) ; port suivant si le port est pris |
+| `node tests/verif-stockage.js` | Stockage du serveur (lot 1) : fichiers par partie, journal, **reprise après arrêt brutal** (actions du journal rattrapées sans doublon), renommage, suppression ; canal : rôles (jeton), diffusion des actions, refus des modifications d'un poste en consultation, liste des postes |
+| `node tests/verif-reprise.js` | Reprise des secours des versions précédentes (mémoire du navigateur en `file://`) : secours repris en fichiers (vide ignoré), réglages du poste recopiés, réouverture à l'écran, pas de seconde reprise, ancienne mémoire intacte |
+| `node tests/verif-reseau.js` | Mode réseau de bout en bout : activation, adresse affichée, autre poste (navigateur sans jeton) en consultation, mise à jour en direct, saisie refusée, liste des postes, désactivation → autre poste déconnecté |
+| `node tests/verif-version.js` | Poste principal relancé dans une autre version : l'autre poste se reconnecte seul et demande de recharger la page |
 | `node tests/verif-actions.js` | Les 46 actions nommées de `donnees.js` (lot 0, B1), exécutées **directement dans Node.js** sans l'application : résultat de chaque action et état d'origine jamais modifié (158 contrôles, environ 1 s). Prouve que `donnees.js` pourra tourner sur le serveur |
 | `node tests/verif-copies-perimees.js` | Modifications sur copie périmée (lot 0, A3) : une donnée ajoutée « d'ailleurs » au milieu d'une action (ligne de main courante, équipe, point phone, sauveteur) n'est plus effacée, et les numéros de main courante restent uniques. Vérifié le 01/10/2026 : l'ancien code perdait les 4 données |
 | `node tests/verif-identifiants.js` | Identifiants d'événements uniques (lot 0, A2) : 10 000 tirages sans doublon, y compris sans `crypto.randomUUID` (postes en `http://`) ; un ancien dossier avec doublons est réparé et valider un rappel ne touche plus que l'événement concerné |

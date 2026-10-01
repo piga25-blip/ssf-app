@@ -459,8 +459,8 @@ comportent différemment sur tablette (iPad notamment). À ajouter aux tests.
 
 | Lot | Contenu |
 |---|---|
-| **0 – Préparation** (rien de réseau) | ✅ scénario de référence (A4, fait le 01/10/2026 : `tests/SCENARIO_REFERENCE.md`), ✅ identifiants uniques (A2, fait le 01/10/2026 : `nouvelId()` / `garantirIdsUniques()` dans `utils.js`), ✅ copies périmées corrigées (A3, fait le 01/10/2026 : mises à jour à partir de l'état le plus récent + distributeur de numéros `reserverNumerosMC()` dans `index.html`), ✅ **modifications regroupées en actions nommées (B1, fait le 01/10/2026 : `donnees.js`, voir « Architecture des données » ci-dessous)** |
-| **1** | stockage en fichiers découpés + journal + serveur, postes **en consultation seule** ; modifications automatiques faites par le serveur (A1) ; blocage des mises à jour pendant le mode réseau (B3) |
+| **0 – Préparation** ✅ (rien de réseau) | ✅ scénario de référence (A4, fait le 01/10/2026 : `tests/SCENARIO_REFERENCE.md`), ✅ identifiants uniques (A2, fait le 01/10/2026 : `nouvelId()` / `garantirIdsUniques()` dans `utils.js`), ✅ copies périmées corrigées (A3, fait le 01/10/2026 : mises à jour à partir de l'état le plus récent + distributeur de numéros `reserverNumerosMC()` dans `index.html`), ✅ **modifications regroupées en actions nommées (B1, fait le 01/10/2026 : `donnees.js`, voir « Architecture des données » ci-dessous)** |
+| **1** ✅ | stockage en fichiers découpés + journal + serveur, postes **en consultation seule** ; modifications automatiques faites par le serveur (A1) ; blocage des mises à jour pendant le mode réseau (B3) |
 | **2** | saisie de la **main courante** et des **passages aux points phones** sur plusieurs postes (numéros et heure donnés par le serveur) |
 | **3** | inscription des sauveteurs, missions, équipes, planning sur plusieurs postes (étape A puis B) ; avertissement de modification simultanée dans les fenêtres |
 | **4** | code de session, rôles, imports réservés à l'administrateur (B5), reprise après panne, saisie hors connexion |
@@ -482,6 +482,32 @@ comportent différemment sur tablette (iPad notamment). À ajouter aux tests.
   l'enverra au serveur, qui exécutera la même fonction `reducteurDonnees` (vérifié : elle tourne
   dans Node.js, test `tests/verif-actions.js`), attribuera les numéros et diffusera l'action.
 - Reste local à chaque poste : secrétaire courant, affichage, sélection dans le planning.
+
+---
+
+## 6 ter. Lot 1 réalisé (01/10/2026)
+
+| Étape | Contenu |
+|---|---|
+| 1.1 | Serveur intégré (`serveur/serveur.js`) : la fenêtre du poste principal charge l'application par `http://localhost:8080` (port suivant s'il est pris) ; liste blanche stricte des fichiers servis |
+| 1.2 | Données enregistrées par le serveur : un dossier par secours dans `<données de l'application>/secours/`, un fichier par partie, `journal.log` (écrit avant les fichiers ; rattrapage après arrêt brutal), sauvegardes horodatées toutes les 30 min (20 gardées) ; `donnees.js` exécuté côté serveur (`serveur/moteur.js`) ; canal temps réel WebSocket `/canal` (`serveur/canal.js`, `hooks/useConnexion.js`) |
+| 1.3 | Reprise des secours des versions précédentes (`serveur/migration.js`) au premier lancement ; ancienne mémoire jamais effacée ; compte rendu dans `reprise-memoire-navigateur.json` |
+| 1.4 | Bouton « 🌐 Mode réseau » : écoute sur le réseau local (0.0.0.0) ou ce poste seul (127.0.0.1) sans redémarrer, adresse à saisir, postes connectés ; réglage conservé (`reglages-serveur.json`, désactivé par défaut) ; désactivation → postes distants déconnectés |
+| 1.5 | Postes en consultation : bandeau, aucune fenêtre de démarrage ni de configuration, aucune modification automatique, modifications refusées par le serveur ; contrôle de version (demande de rechargement) ; installation d'une mise à jour bloquée tant que le mode réseau est actif |
+
+**Fonctionnement :** le poste principal (fenêtre Electron, reconnu par un jeton secret fourni par
+`preload.js`) applique chaque action tout de suite puis l'envoie au serveur, qui l'enregistre et la
+transmet aux autres postes. Les autres postes (navigateur) reçoivent l'état puis chaque action.
+
+**Reste à prévoir (lots suivants) :**
+- lot 2 : saisie sur plusieurs postes → numéros de main courante attribués par le serveur, ordre des
+  actions décidé par le serveur ; les créneaux du planning calculés à partir de l'heure locale
+  (`indexCreneau`) supposent que tous les postes sont sur le même fuseau horaire ;
+- installateur : règle de pare-feu Windows pour l'application (sinon Windows pose la question au
+  premier passage en mode réseau) ; QR code de l'adresse (avec les tablettes, lot 3) ;
+- modifications automatiques (recopie du planning, n° permanents, alertes) : faites par le poste
+  principal ; à confier au serveur quand plusieurs postes saisiront (A1) ;
+- fusion finale dans `main` : rétablir l'identité de l'application (voir « Organisation du travail »).
 
 ---
 

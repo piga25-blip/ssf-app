@@ -94,9 +94,18 @@ let ModeReseauModal = ({ connexion, onClose }) => {
 
 // Bandeau d'un poste en consultation (autre poste du réseau)
 let BandeauConsultation = ({ connexion, rescueId }) => (
-    <div style={{ position: 'sticky', top: 0, zIndex: 40, background: connexion.connecte ? '#1e3a8a' : '#b91c1c', color: 'white',
-        padding: '8px 16px', borderRadius: '8px', marginBottom: '12px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-        <span>👁 Poste en consultation seule{rescueId ? ' — ' + rescueId : ''}</span>
-        <span>{connexion.connecte ? '🟢 Connecté au poste principal' : '🔴 Connexion perdue — reconnexion en cours…'}</span>
+    <div style={{ position: 'sticky', top: 0, zIndex: 40, marginBottom: '12px' }}>
+        <div style={{ background: connexion.connecte ? '#1e3a8a' : '#b91c1c', color: 'white', padding: '8px 16px', borderRadius: '8px',
+            fontWeight: 600, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <span>👁 Poste en consultation seule{rescueId ? ' — ' + rescueId : ''}</span>
+            <span>{connexion.connecte ? '🟢 Connecté au poste principal' : '🔴 Connexion perdue — reconnexion en cours…'}</span>
+        </div>
+        {connexion.versionChangee && (
+            <div style={{ background: '#fef3c7', color: '#92400e', border: '2px solid #f59e0b', padding: '8px 16px', borderRadius: '8px', marginTop: '6px',
+                fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                <span>⚠️ Le poste principal a été mis à jour (version {connexion.versionServeur}) : rechargez la page.</span>
+                <button onClick={() => window.location.reload()} style={{ background: '#d97706', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 14px', fontWeight: 700, cursor: 'pointer' }}>Recharger</button>
+            </div>
+        )}
     </div>
 );

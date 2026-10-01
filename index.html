@@ -1967,7 +1967,7 @@
                             return <ReposRootModal />;
                         })()}
 
-                        {(!mcConfigured || showMcConfigModal) && (
+                        {EST_POSTE_PRINCIPAL && (!mcConfigured || showMcConfigModal) && (
                             <ModalErrorBoundary onClose={() => mcConfigured && setShowMcConfigModal(false)}>
                                 <McConfigModal
                                     mcMode={mcMode}
