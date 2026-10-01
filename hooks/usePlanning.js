@@ -1,7 +1,5 @@
 const usePlanning = ({
-    activeSauveteurIds, setActiveSauveteurIds,
-    nextPermanentNumber, setNextPermanentNumber,
-    setSauveteurPermanentNumbers,
+    activeSauveteurIds,
     planning, actions, startHour, totalDays,
     onAutoPropagate
 }) => {

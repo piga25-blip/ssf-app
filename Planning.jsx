@@ -1,13 +1,13 @@
 // COMPOSANT PLANNING
 // ============================================
 let PlanningTab = ({
-    masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, planning, setPlanning,
-    teams, startHour, setStartHour, totalDays, setTotalDays,
+    masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, planning, 
+    teams, startHour, totalDays, 
     selectedActivityId, setSelectedActivityId, selectedCells, setSelectedCells,
     lastSelectedCell, setLastSelectedCell, isDragging, setIsDragging,
     isFilling, setIsFilling, fillStartCell, setFillStartCell,
     fillPreviewCells, setFillPreviewCells,
-    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, actions,
+    events, nextEventNumber, reserverNumerosMC, actions,
     mcMode, mcIdentifiant, setActiveTab, setModalRepos,
     planningAutoPropagate, setPlanningAutoPropagate
 }) => {
@@ -346,7 +346,7 @@ let PlanningTab = ({
         
         setIsDragging(false);
         console.log('=== END handleMouseUp ===\n');
-    }, [isDragging, isFilling, selectedCells, fillPreviewCells, selectedActivityId, sauveteurToTeamMap, totalSlots, setPlanning, setSelectedCells, setLastSelectedCell, setIsDragging, setFillPreviewCells, setFillStartCell, setIsFilling, activeSauveteursDetails, sauveteurIdToIndexMap]);
+    }, [isDragging, isFilling, selectedCells, fillPreviewCells, selectedActivityId, sauveteurToTeamMap, totalSlots, setSelectedCells, setLastSelectedCell, setIsDragging, setFillPreviewCells, setFillStartCell, setIsFilling, activeSauveteursDetails, sauveteurIdToIndexMap]);
 
     useEffect(() => {
         const handleGlobalMouseUp = () => handleMouseUp();
@@ -763,13 +763,10 @@ let PlanningTab = ({
                 setSelectedCells={setSelectedCells}
                 setLastSelectedCell={setLastSelectedCell}
                 planning={planning}
-                setPlanning={setPlanning}
                 sauveteurToTeamMap={sauveteurToTeamMap}
                 totalSlots={totalSlots}
                 events={events}
-                setEvents={setEvents}
                 nextEventNumber={nextEventNumber}
-                setNextEventNumber={setNextEventNumber}
                 reserverNumerosMC={reserverNumerosMC}
                 actions={actions}
                 mcMode={mcMode}
@@ -823,13 +820,10 @@ const PaletteActivites = ({
     setSelectedCells,
     setLastSelectedCell,
     planning,
-    setPlanning,
     sauveteurToTeamMap,
     totalSlots,
     events,
-    setEvents,
     nextEventNumber,
-    setNextEventNumber,
     reserverNumerosMC,
     actions,
     mcMode,

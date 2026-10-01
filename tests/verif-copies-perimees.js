@@ -87,12 +87,12 @@ const RACINE = path.join(__dirname, '..');
         await page.evaluate(() => {
             window.__injection = (api) => {
                 const n = api.reserverNumerosMC();
-                api.setEvents(prev => [...prev, {
+                api.actions.ajouterLigneMC({
                     id: 'externe-1', isoTimestamp: new Date().toISOString(), dateHeure: new Date().toLocaleString('fr-FR'),
                     secretaire: 'Autre poste', categorie: 'communication', evenement: 'Message saisi sur un autre poste',
                     numero: String(n).padStart(3, '0'), fait: false, messageImportant: false,
-                }]);
-                api.setTeams(prev => [...prev, { id: 'T9', name: 'Équipe 9', mission: 'Créée sur un autre poste', members: [], status: 'active', history: [] }]);
+                });
+                api.actions.creerEquipe({ id: 'T9', name: 'Équipe 9', mission: 'Créée sur un autre poste', members: [], status: 'active', history: [] }, new Date().toISOString(), []);
             };
         });
         const carte = page.locator('div.border-blue-300:visible').filter({ has: page.getByText('Équipe 1', { exact: true }) }).first();
@@ -114,7 +114,7 @@ const RACINE = path.join(__dirname, '..');
 
         // 2. Suppression du point phone B ; pendant la confirmation, un autre poste ajoute le point Z
         await page.evaluate(() => {
-            window.__injection = (api) => api.setPointsPhone(prev => [...prev, { lettre: 'Z', nom: 'Ajouté ailleurs', typePP: 'surface', sousTerre: false, ordre: 9 }]);
+            window.__injection = (api) => api.actions.ajouterPointPhone('Z', 'Ajouté ailleurs', 'surface', '9');
         });
         await bouton('Points Phone').click();
         await page.locator('div:visible', { hasText: 'Puits' }).filter({ has: page.locator('button', { hasText: '🗑️' }) }).last()
@@ -127,7 +127,7 @@ const RACINE = path.join(__dirname, '..');
 
         // 3. Suppression de DELTA de la liste ; pendant la confirmation, un autre poste ajoute ECHO
         await page.evaluate(() => {
-            window.__injection = (api) => api.setMasterSauveteursList(prev => [...prev, { id: 'EXT-099', name: 'ECHO Eve', role: 'Secouriste', SSF: '00' }]);
+            window.__injection = (api) => api.actions.ajouterSauveteurListe({ id: 'EXT-099', name: 'ECHO Eve', role: 'Secouriste', SSF: '00' });
         });
         await bouton('Liste Préfectorale').click();
         await page.locator('tr:visible', { hasText: 'DELTA Dan' }).locator('button[title="Supprimer"]').click();

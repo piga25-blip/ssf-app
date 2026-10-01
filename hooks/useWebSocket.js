@@ -1,9 +1,14 @@
-const useWebSocket = ({
-    setEvents, setMasterSauveteursList, setTeams, setSecretaires, setPointsPhone,
-    setMissionInfo, setClotureInfo, setPlanning, setActiveSauveteurIds,
-    setNextEventNumber, setSauveteurPermanentNumbers, setNextPermanentNumber,
-    setUsedTeamNumbers, setStartHour, setTotalDays, setMcMode, setMcIdentifiant, setMcConfigured
-}) => {
+// ANCIEN CODE RÉSEAU (état complet échangé) : sera remplacé au lot 1 du plan réseau.
+// Les données reçues sont appliquées par l'action nommée de chargement de dossier.
+const useWebSocket = ({ actions }) => {
+    const charger = (cle) => (valeur) => actions.chargerDossier({ [cle]: valeur });
+    const setEvents = charger('events'), setMasterSauveteursList = charger('masterSauveteursList'), setTeams = charger('teams'),
+        setSecretaires = charger('secretaires'), setPointsPhone = charger('pointsPhone'), setMissionInfo = charger('missionInfo'),
+        setClotureInfo = charger('clotureInfo'), setPlanning = charger('planning'), setActiveSauveteurIds = charger('activeSauveteurIds'),
+        setNextEventNumber = charger('nextEventNumber'), setSauveteurPermanentNumbers = charger('sauveteurPermanentNumbers'),
+        setNextPermanentNumber = charger('nextPermanentNumber'), setUsedTeamNumbers = charger('usedTeamNumbers'),
+        setStartHour = charger('startHour'), setTotalDays = charger('totalDays'), setMcMode = charger('mcMode'),
+        setMcIdentifiant = charger('mcIdentifiant'), setMcConfigured = charger('mcConfigured');
     const [connectedUsers, setConnectedUsers] = useState([]);
     const [notification, setNotification] = useState(null);
     const ws = useRef(null);

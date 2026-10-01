@@ -606,23 +606,6 @@
                 teams, usedTeamNumbers, secretaires, pointsPhone, events, nextEventNumber,
                 planning, startHour, totalDays, missionInfo, clotureInfo, mcMode, mcIdentifiant, mcConfigured,
             } = donnees;
-            // Anciennes fonctions de modification, conservées pendant la transition vers les
-            // actions nommées (action REMPLACER) : même usage qu'un setter React.
-            const setters = React.useMemo(() => {
-                const s = {};
-                CLES_DONNEES.forEach(cle => { s[cle] = valeur => dispatchDonnees({ type: 'REMPLACER', cle, valeur }); });
-                return s;
-            }, []);
-            const {
-                masterSauveteursList: setMasterSauveteursList, activeSauveteurIds: setActiveSauveteurIds,
-                sauveteurPermanentNumbers: setSauveteurPermanentNumbers, nextPermanentNumber: setNextPermanentNumber,
-                teams: setTeams, usedTeamNumbers: setUsedTeamNumbers, secretaires: setSecretaires, pointsPhone: setPointsPhone,
-                events: setEvents, nextEventNumber: setNextEventNumber,
-                planning: setPlanning, startHour: setStartHour, totalDays: setTotalDays,
-                missionInfo: setMissionInfo, clotureInfo: setClotureInfo,
-                mcMode: setMcMode, mcIdentifiant: setMcIdentifiant, mcConfigured: setMcConfigured,
-            } = setters;
-
             const [currentSecretaire, setCurrentSecretaire] = useState(''); // Secrétaire mémorisé pour ce PC
             const [showSecretaireModal, setShowSecretaireModal] = useState(false); // Modal changement secrétaire
             const [categories] = useState([
@@ -651,7 +634,7 @@
             const reserverNumerosMC = useCallback((nombre = 1) => {
                 const premier = numeroMCRef.current;
                 numeroMCRef.current = premier + nombre;
-                setNextEventNumber(n => Math.max(n, premier + nombre));
+                dispatchDonnees({ type: 'MC/RESERVER_NUMEROS', jusqua: premier + nombre });
                 return premier;
             }, []);
             // Point d'entrée réservé aux tests automatiques (tests/verif-copies-perimees.js) :
@@ -659,7 +642,7 @@
             // normale (window.__SSF_TEST__ n'existe que si un test l'a créé).
             // Actions nommées (donnees.js) : seule façon de modifier les données partagées
             const actions = React.useMemo(() => creerActionsDonnees(dispatchDonnees, reserverNumerosMC), [reserverNumerosMC]);
-            if (window.__SSF_TEST__) Object.assign(window.__SSF_TEST__, { setEvents, setTeams, setPointsPhone, setMasterSauveteursList, reserverNumerosMC });
+            if (window.__SSF_TEST__) Object.assign(window.__SSF_TEST__, { actions, reserverNumerosMC });
 
             // Configuration MC Secondaire
             const [showMcConfigModal, setShowMcConfigModal] = useState(false); // Désactivé par défaut pour STANDALONE
@@ -697,9 +680,7 @@
                 verifierEtPropagerAvantAction,
                 planningAutoPropagate, setPlanningAutoPropagate
             } = usePlanning({
-                activeSauveteurIds, setActiveSauveteurIds,
-                nextPermanentNumber, setNextPermanentNumber,
-                setSauveteurPermanentNumbers,
+                activeSauveteurIds,
                 planning, actions, startHour, totalDays,
                 onAutoPropagate: handleAutoPropagate
             });
@@ -729,12 +710,7 @@
                 connectedUsers, notification, setNotification,
                 ws, isReceivingData,
                 userName, pcName, userRole, userMode, userId
-            } = useWebSocket({
-                setEvents, setMasterSauveteursList, setTeams, setSecretaires, setPointsPhone,
-                setMissionInfo, setClotureInfo, setPlanning, setActiveSauveteurIds,
-                setNextEventNumber, setSauveteurPermanentNumbers, setNextPermanentNumber,
-                setUsedTeamNumbers, setStartHour, setTotalDays, setMcMode, setMcIdentifiant, setMcConfigured
-            });
+            } = useWebSocket({ actions });
 
             // ===== VERSION STANDALONE - PAS DE WEBSOCKET =====
             // Les données sont sauvegardées uniquement en local (localStorage)
@@ -791,28 +767,30 @@
                 if (savedData) {
                     try {
                         const data = JSON.parse(savedData);
-                        setMasterSauveteursList(data.masterSauveteursList || []);
-                        setActiveSauveteurIds(data.activeSauveteurIds || []);
-                        setSauveteurPermanentNumbers(data.sauveteurPermanentNumbers || {});
-                        setNextPermanentNumber(data.nextPermanentNumber || 1);
-                        setTeams(data.teams || []);
-                        setUsedTeamNumbers(data.usedTeamNumbers || []);
-                        setSecretaires(data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
                         const loadedPP = data.pointsPhone || [];
                         if (!loadedPP.find(function(pp) { return (typeof pp === 'object' ? pp.lettre : pp) === 'PC'; })) {
                             loadedPP.unshift({ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 });
                         }
-                        setPointsPhone(loadedPP);
-                        if (data.missionInfo) setMissionInfo(data.missionInfo);
-                        if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                        setEvents(garantirIdsUniques(data.events || []));
-                        setNextEventNumber(data.nextEventNumber || 1);
-                        setPlanning(data.planning || {});
-                        setStartHour(data.startHour || 0);
-                        setTotalDays(data.totalDays || DEFAULT_TOTAL_DAYS);
-                        setMcMode(data.mcMode || 'principale');
-                        setMcIdentifiant(data.mcIdentifiant || '');
-                        setMcConfigured(data.mcConfigured || false);
+                        actions.chargerDossier({
+                            masterSauveteursList: data.masterSauveteursList || [],
+                            activeSauveteurIds: data.activeSauveteurIds || [],
+                            sauveteurPermanentNumbers: data.sauveteurPermanentNumbers || {},
+                            nextPermanentNumber: data.nextPermanentNumber || 1,
+                            teams: data.teams || [],
+                            usedTeamNumbers: data.usedTeamNumbers || [],
+                            secretaires: data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3'],
+                            pointsPhone: loadedPP,
+                            ...(data.missionInfo ? { missionInfo: data.missionInfo } : {}),
+                            ...(data.clotureInfo ? { clotureInfo: data.clotureInfo } : {}),
+                            events: data.events || [],
+                            nextEventNumber: data.nextEventNumber || 1,
+                            planning: data.planning || {},
+                            startHour: data.startHour || 0,
+                            totalDays: data.totalDays || DEFAULT_TOTAL_DAYS,
+                            mcMode: data.mcMode || 'principale',
+                            mcIdentifiant: data.mcIdentifiant || '',
+                            mcConfigured: data.mcConfigured || false,
+                        });
                     } catch (error) {
                         console.error('Erreur chargement:', error);
                     }
@@ -1044,15 +1022,17 @@
                 if (!window.confirm(`⚠️ Restaurer la sauvegarde du ${save.label} ?\nToutes les données actuelles seront remplacées.`)) return;
                 try {
                     const data = JSON.parse(save.data);
-                    setMasterSauveteursList(data.masterSauveteursList || []);
-                    setActiveSauveteurIds(data.activeSauveteurIds || []);
-                    setTeams(data.teams || []);
-                    setSecretaires(data.secretaires || []);
-                    setEvents(garantirIdsUniques(data.events || []));
-                    setNextEventNumber(data.nextEventNumber || 1);
-                    setPlanning(data.planning || {});
-                    setStartHour(data.startHour !== undefined ? data.startHour : 9);
-                    setTotalDays(data.totalDays || 1);
+                    actions.chargerDossier({
+                        masterSauveteursList: data.masterSauveteursList || [],
+                        activeSauveteurIds: data.activeSauveteurIds || [],
+                        teams: data.teams || [],
+                        secretaires: data.secretaires || [],
+                        events: data.events || [],
+                        nextEventNumber: data.nextEventNumber || 1,
+                        planning: data.planning || {},
+                        startHour: data.startHour !== undefined ? data.startHour : 9,
+                        totalDays: data.totalDays || 1,
+                    });
                     setShowAutoSaveModal(false);
                     alert('✅ Sauvegarde restaurée avec succès !');
                 } catch(e) {
@@ -1170,29 +1150,31 @@
                     try {
                         const data = JSON.parse(event.target.result);
                         
-                        setMasterSauveteursList(data.masterSauveteursList || []);
-                        setActiveSauveteurIds(data.activeSauveteurIds || []);
-                        // Anciens exports sans ces champs : numéros recalculés comme avant
-                        setSauveteurPermanentNumbers(data.sauveteurPermanentNumbers || {});
-                        setNextPermanentNumber(data.nextPermanentNumber || 1);
-                        setTeams(data.teams || []);
-                        setUsedTeamNumbers(data.usedTeamNumbers || []);
-                        setSecretaires(data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
                         const loadedPP = data.pointsPhone || [];
                         if (!loadedPP.find(pp => (typeof pp === 'object' ? pp.lettre : pp) === 'PC')) {
                             loadedPP.unshift({ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 });
                         }
-                        setPointsPhone(loadedPP);
-                        if (data.missionInfo) setMissionInfo(data.missionInfo);
-                        if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                        setEvents(garantirIdsUniques(data.events || []));
-                        setNextEventNumber(data.nextEventNumber || 1);
-                        setPlanning(data.planning || {});
-                        setStartHour(data.startHour || 0);
-                        setTotalDays(data.totalDays || DEFAULT_TOTAL_DAYS);
-                        setMcMode(data.mcMode || 'principale');
-                        setMcIdentifiant(data.mcIdentifiant || '');
-                        setMcConfigured(data.mcConfigured || false);
+                        actions.chargerDossier({
+                            masterSauveteursList: data.masterSauveteursList || [],
+                            activeSauveteurIds: data.activeSauveteurIds || [],
+                            // Anciens exports sans ces champs : numéros recalculés comme avant
+                            sauveteurPermanentNumbers: data.sauveteurPermanentNumbers || {},
+                            nextPermanentNumber: data.nextPermanentNumber || 1,
+                            teams: data.teams || [],
+                            usedTeamNumbers: data.usedTeamNumbers || [],
+                            secretaires: data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3'],
+                            pointsPhone: loadedPP,
+                            ...(data.missionInfo ? { missionInfo: data.missionInfo } : {}),
+                            ...(data.clotureInfo ? { clotureInfo: data.clotureInfo } : {}),
+                            events: data.events || [],
+                            nextEventNumber: data.nextEventNumber || 1,
+                            planning: data.planning || {},
+                            startHour: data.startHour || 0,
+                            totalDays: data.totalDays || DEFAULT_TOTAL_DAYS,
+                            mcMode: data.mcMode || 'principale',
+                            mcIdentifiant: data.mcIdentifiant || '',
+                            mcConfigured: data.mcConfigured || false,
+                        });
 
                         alert(`✅ Données importées avec succès !\nVersion: ${data.version || 'Inconnue'}`);
                     } catch (error) {
@@ -1210,19 +1192,21 @@
                     if (!window.confirm('⚠️ RESET APPLICATION\n\nEffacer toutes les données du secours actuel ?\n\nCette action est IRRÉVERSIBLE !')) {
                         return;
                     }
-                    setMasterSauveteursList([]);
-                    setActiveSauveteurIds([]);
-                    setSauveteurPermanentNumbers({});
-                    setNextPermanentNumber(1);
-                    setTeams([]);
-                    setUsedTeamNumbers([]);
-                    setPointsPhone([{ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 }]);
-                    setSecretaires(['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
-                    setEvents([]);
-                    setNextEventNumber(1);
-                    setPlanning({});
-                    setStartHour(getDefaultStartHour());
-                    setTotalDays(DEFAULT_TOTAL_DAYS);
+                    actions.reinitialiserDossier({
+                        masterSauveteursList: [],
+                        activeSauveteurIds: [],
+                        sauveteurPermanentNumbers: {},
+                        nextPermanentNumber: 1,
+                        teams: [],
+                        usedTeamNumbers: [],
+                        pointsPhone: [{ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 }],
+                        secretaires: ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3'],
+                        events: [],
+                        nextEventNumber: 1,
+                        planning: {},
+                        startHour: Math.max(0, new Date().getHours() - 1),
+                        totalDays: DEFAULT_TOTAL_DAYS,
+                    });
                     alert('✅ Application réinitialisée (secours actuel uniquement).');
                 } else if (type === 'LOCAL_STORAGE') {
                     if (!window.confirm('🚨 VIDER TOUT LE STORAGE\n\nCette action va supprimer TOUS les secours enregistrés dans ce navigateur !\n\nÊtes-vous ABSOLUMENT certain ?')) {
@@ -1232,19 +1216,21 @@
                         return;
                     }
                     storageClear();
-                    setMasterSauveteursList([]);
-                    setActiveSauveteurIds([]);
-                    setSauveteurPermanentNumbers({});
-                    setNextPermanentNumber(1);
-                    setTeams([]);
-                    setUsedTeamNumbers([]);
-                    setPointsPhone([{ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 }]);
-                    setSecretaires(['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
-                    setEvents([]);
-                    setNextEventNumber(1);
-                    setPlanning({});
-                    setStartHour(getDefaultStartHour());
-                    setTotalDays(DEFAULT_TOTAL_DAYS);
+                    actions.reinitialiserDossier({
+                        masterSauveteursList: [],
+                        activeSauveteurIds: [],
+                        sauveteurPermanentNumbers: {},
+                        nextPermanentNumber: 1,
+                        teams: [],
+                        usedTeamNumbers: [],
+                        pointsPhone: [{ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 }],
+                        secretaires: ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3'],
+                        events: [],
+                        nextEventNumber: 1,
+                        planning: {},
+                        startHour: Math.max(0, new Date().getHours() - 1),
+                        totalDays: DEFAULT_TOTAL_DAYS,
+                    });
                     alert('✅ Tout le stockage du navigateur a été vidé.\n\nTous les secours ont été supprimés.');
                 }
             };
@@ -1261,18 +1247,20 @@
                 const key = getLocalStorageKey(currentRescueId);
                 storageRemove(key);
 
-                setMasterSauveteursList([]);
-                setActiveSauveteurIds([]);
-                setSauveteurPermanentNumbers({});
-                setNextPermanentNumber(1);
-                setTeams([]);
-                setUsedTeamNumbers([]); // Réinitialiser l'historique des numéros d'équipe
-                setSecretaires(['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
-                setEvents([]);
-                setNextEventNumber(1);
-                setPlanning({});
-                setStartHour(0);
-                setTotalDays(DEFAULT_TOTAL_DAYS);
+                actions.reinitialiserDossier({
+                    masterSauveteursList: [],
+                    activeSauveteurIds: [],
+                    sauveteurPermanentNumbers: {},
+                    nextPermanentNumber: 1,
+                    teams: [],
+                    usedTeamNumbers: [], // Réinitialiser l'historique des numéros d'équipe
+                    secretaires: ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3'],
+                    events: [],
+                    nextEventNumber: 1,
+                    planning: {},
+                    startHour: 0,
+                    totalDays: DEFAULT_TOTAL_DAYS,
+                });
                 
                 alert('✅ Toutes les données ont été effacées (Remise à Blanc).');
             };
@@ -1748,10 +1736,8 @@
                                     <MainCouranteTab 
                                         events={events}
                                         actions={actions}
-                                        setEvents={setEvents}
                                         nextEventNumber={nextEventNumber}
                                         reserverNumerosMC={reserverNumerosMC}
-                                        setNextEventNumber={setNextEventNumber}
                                         secretaires={secretaires}
                                         sauveteursSurSiteNoms={sauveteursSurSiteNoms}
                                         teams={teams}
@@ -1761,7 +1747,6 @@
                                         mcMode={mcMode}
                                         mcIdentifiant={mcIdentifiant}
                                         pointsPhone={pointsPhone}
-                                        setPointsPhone={setPointsPhone}
                                         masterSauveteursList={masterSauveteursList}
                                         categories={categories}
                                         currentSecretaire={currentSecretaire}
@@ -1779,7 +1764,6 @@
                                         showGestionPointsPhone={showGestionPointsPhone}
                                         setShowGestionPointsPhone={setShowGestionPointsPhone}
                                          planning={planning}
-                                         setPlanning={setPlanning}
                                          startHour={startHour}
                                          totalDays={totalDays}
                                          activeSauveteurIds={activeSauveteurIds}
@@ -1792,12 +1776,9 @@
                                         activeSauveteurIds={activeSauveteurIds}
                                         sauveteurPermanentNumbers={sauveteurPermanentNumbers}
                                         planning={planning}
-                                        setPlanning={setPlanning}
                                         teams={teams}
                                         startHour={startHour}
-                                        setStartHour={setStartHour}
                                         totalDays={totalDays}
-                                        setTotalDays={setTotalDays}
                                         selectedActivityId={selectedActivityId}
                                         setSelectedActivityId={setSelectedActivityId}
                                         selectedCells={selectedCells}
@@ -1813,10 +1794,8 @@
                                         fillPreviewCells={fillPreviewCells}
                                         setFillPreviewCells={setFillPreviewCells}
                                         events={events}
-                                        setEvents={setEvents}
                                         nextEventNumber={nextEventNumber}
                                         reserverNumerosMC={reserverNumerosMC}
-                                        setNextEventNumber={setNextEventNumber}
                                         mcMode={mcMode}
                                         mcIdentifiant={mcIdentifiant}
                                         setActiveTab={setActiveTab}
@@ -1893,16 +1872,11 @@
                                 <GestionPlanningModal
                                     masterSauveteursList={masterSauveteursList}
                                     activeSauveteurIds={activeSauveteurIdsPresents}
-                                    setActiveSauveteurIds={setActiveSauveteurIds}
                                     teams={teams}
-                                    setTeams={setTeams}
                                     events={events}
-                                    setEvents={setEvents}
                                     nextEventNumber={nextEventNumber}
                                     reserverNumerosMC={reserverNumerosMC}
-                                    setNextEventNumber={setNextEventNumber}
                                     planning={planning}
-                                    setPlanning={setPlanning}
                                     totalDays={totalDays}
                                     onClose={() => setShowGestionPlanning(false)}
                                     actions={actions}
@@ -1919,23 +1893,18 @@
                                 <GestionEquipesModal
                                     actions={actions}
                                     teams={teams}
-                                    setTeams={setTeams}
                                     usedTeamNumbers={usedTeamNumbers}
-                                    setUsedTeamNumbers={setUsedTeamNumbers}
                                     masterSauveteursList={masterSauveteursList}
                                     activeSauveteurIds={activeSauveteurIds}
                                     events={events}
-                                    setEvents={setEvents}
                                     nextEventNumber={nextEventNumber}
                                     reserverNumerosMC={reserverNumerosMC}
-                                    setNextEventNumber={setNextEventNumber}
                                     onClose={() => setShowGestionEquipes(false)}
                                     mcMode={mcMode}
                                     mcIdentifiant={mcIdentifiant}
                                     startHour={startHour}
                                     totalDays={totalDays}
                                     planning={planning}
-                                    setPlanning={setPlanning}
                                      verifierEtPropagerAvantAction={verifierEtPropagerAvantAction}
                                      pointsPhone={pointsPhone}
                                      sauveursAyantQuitte={sauveursAyantQuitte}
@@ -2050,12 +2019,11 @@
                             <ModalErrorBoundary onClose={() => mcConfigured && setShowMcConfigModal(false)}>
                                 <McConfigModal
                                     mcMode={mcMode}
-                                    setMcMode={setMcMode}
                                     mcIdentifiant={mcIdentifiant}
-                                    setMcIdentifiant={setMcIdentifiant}
+                                    actions={actions}
                                     onConfirm={() => {
                                         try {
-                                            setMcConfigured(true);
+                                            // mode et identifiant enregistrés par la fenêtre (actions.configurerMC)
                                         } finally {
                                             setShowMcConfigModal(false);
                                         }
@@ -2079,7 +2047,7 @@
                                         // (rawData = copie complète du dossier) : ne garder que les infos
                                         // du secours, désormais enregistrées avec le dossier.
                                         const { rouvrir, rescueId, localStorageKey, rawData, ...infosSecours } = info;
-                                        setMissionInfo(infosSecours);
+                                        actions.definirInfosSecours(infosSecours);
                                         if (info.rouvrir) {
                                             setCurrentRescueId(info.rescueId);
                                             setTempRescueIdInput(info.rescueId);
@@ -2087,28 +2055,30 @@
                                             if (info.rawData) {
                                                 try {
                                                     const data = JSON.parse(info.rawData);
-                                                    setMasterSauveteursList(data.masterSauveteursList || []);
-                                                    setActiveSauveteurIds(data.activeSauveteurIds || []);
-                                                    setSauveteurPermanentNumbers(data.sauveteurPermanentNumbers || {});
-                                                    setNextPermanentNumber(data.nextPermanentNumber || 1);
-                                                    setTeams(data.teams || []);
-                                                    setUsedTeamNumbers(data.usedTeamNumbers || []);
-                                                    setSecretaires(data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3']);
                                                     const loadedPP = data.pointsPhone || [];
                                                     if (!loadedPP.find(pp => (typeof pp === 'object' ? pp.lettre : pp) === 'PC')) {
                                                         loadedPP.unshift({ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 });
                                                     }
-                                                    setPointsPhone(loadedPP);
-                                                    if (data.missionInfo) setMissionInfo(data.missionInfo);
-                                                    if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                                                    setEvents(garantirIdsUniques(data.events || []));
-                                                    setNextEventNumber(data.nextEventNumber || 1);
-                                                    setPlanning(data.planning || {});
-                                                    setStartHour(data.startHour || 0);
-                                                    setTotalDays(data.totalDays || DEFAULT_TOTAL_DAYS);
-                                                    setMcMode(data.mcMode || 'principale');
-                                                    setMcIdentifiant(data.mcIdentifiant || '');
-                                                    setMcConfigured(data.mcConfigured || false);
+                                                    actions.chargerDossier({
+                                                        masterSauveteursList: data.masterSauveteursList || [],
+                                                        activeSauveteurIds: data.activeSauveteurIds || [],
+                                                        sauveteurPermanentNumbers: data.sauveteurPermanentNumbers || {},
+                                                        nextPermanentNumber: data.nextPermanentNumber || 1,
+                                                        teams: data.teams || [],
+                                                        usedTeamNumbers: data.usedTeamNumbers || [],
+                                                        secretaires: data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3'],
+                                                        pointsPhone: loadedPP,
+                                                        ...(data.missionInfo ? { missionInfo: data.missionInfo } : {}),
+                                                        ...(data.clotureInfo ? { clotureInfo: data.clotureInfo } : {}),
+                                                        events: data.events || [],
+                                                        nextEventNumber: data.nextEventNumber || 1,
+                                                        planning: data.planning || {},
+                                                        startHour: data.startHour || 0,
+                                                        totalDays: data.totalDays || DEFAULT_TOTAL_DAYS,
+                                                        mcMode: data.mcMode || 'principale',
+                                                        mcIdentifiant: data.mcIdentifiant || '',
+                                                        mcConfigured: data.mcConfigured || false,
+                                                    });
                                                 } catch(e) {
                                                     console.error('Erreur chargement dossier:', e);
                                                 }
@@ -2143,9 +2113,7 @@
                             <ModeSelectionModal
                                 onConfirm={(mode, id) => {
                                     try {
-                                        setMcMode(mode);
-                                        setMcIdentifiant(id);
-                                        setMcConfigured(true);
+                                        actions.configurerMC(mode, id);
                                         setStandaloneMode(mode === 'principale' ? 'terrain' : 'base');
 
                                         // Sauvegarder dans localStorage
@@ -2273,10 +2241,8 @@
                                 <ImportMcModal
                                     events={events}
                                     actions={actions}
-                                    setEvents={setEvents}
                                     nextEventNumber={nextEventNumber}
                                     reserverNumerosMC={reserverNumerosMC}
-                                    setNextEventNumber={setNextEventNumber}
                                     onClose={() => setShowImportMcModal(false)}
                                 />
                             </ModalErrorBoundary>

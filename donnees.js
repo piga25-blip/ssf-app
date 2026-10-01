@@ -310,6 +310,13 @@ const ACTIONS_DONNEES = {
 
     // ===== Main courante =====
 
+    // Numéros réservés par le distributeur reserverNumerosMC() (index.html) : le prochain
+    // numéro passe au moins à « jusqua »
+    'MC/RESERVER_NUMEROS'(etat, { jusqua }) {
+        return jusqua > etat.nextEventNumber ? { ...etat, nextEventNumber: jusqua } : etat;
+    },
+
+
     // Ligne saisie (ou créée par un écran) : construite entièrement par l'appelant
     'MC/AJOUTER'(etat, { evenement }) {
         return { ...etat, events: [...etat.events, evenement] };
@@ -569,7 +576,34 @@ const ACTIONS_DONNEES = {
         return { ...etat, teams, events: [...etat.events, ...evenements] };
     },
 
+    // ===== Dossier =====
+
+    // Chargement d'un dossier (ouverture, réouverture, import complet, restauration d'une
+    // sauvegarde) : les données fournies remplacent celles en cours, les autres sont gardées
+    'DOSSIER/CHARGER'(etat, { valeurs }) {
+        const nouveau = { ...etat };
+        Object.keys(valeurs).forEach(cle => {
+            if (!CLES_DONNEES.includes(cle)) throw new Error(`Donnée inconnue : ${cle}`);
+            nouveau[cle] = valeurs[cle];
+        });
+        return nouveau;
+    },
+
+    // Remise à zéro (maintenance, remise à blanc) : valeurs vides fournies par l'appelant
+    'DOSSIER/REINITIALISER'(etat, { valeurs }) {
+        return ACTIONS_DONNEES['DOSSIER/CHARGER'](etat, { valeurs });
+    },
+
     // ===== Secours =====
+
+    'SECOURS/DEFINIR_INFOS'(etat, { missionInfo }) {
+        return { ...etat, missionInfo };
+    },
+
+    // Mode de la main courante (principale / secondaire et son identifiant)
+    'SECOURS/CONFIGURER_MC'(etat, { mode, identifiant }) {
+        return { ...etat, mcMode: mode, mcIdentifiant: identifiant, mcConfigured: true };
+    },
 
     'SECOURS/CLOTURER'(etat, { horodatageCloture, evenement }) {
         return {
@@ -593,13 +627,6 @@ const ACTIONS_DONNEES = {
         return { ...etat, sauveteurPermanentNumbers, nextPermanentNumber: n };
     },
 
-    // Compatibilité pendant la transition : remplace une donnée (valeur ou fonction de mise à
-    // jour, comme un setter React). À supprimer quand toutes les modifications seront nommées.
-    REMPLACER(etat, { cle, valeur }) {
-        if (!CLES_DONNEES.includes(cle)) throw new Error(`Donnée inconnue : ${cle}`);
-        const nouvelle = typeof valeur === 'function' ? valeur(etat[cle]) : valeur;
-        return nouvelle === etat[cle] ? etat : { ...etat, [cle]: nouvelle };
-    },
 };
 
 const reducteurDonnees = (etat, action) => {
@@ -660,7 +687,12 @@ const creerActionsDonnees = (dispatch, reserverNumerosMC) => {
         deplacerMembre: (idOrigine, idDestination, idMembre, horodatage, evenement) => dispatch({ type: 'EQUIPES/DEPLACER_MEMBRE', idOrigine, idDestination, idMembre, horodatage, evenement }),
         reordonnerMembres: (id, membres, changementChef, horodatage, evenement) => dispatch({ type: 'EQUIPES/REORDONNER_MEMBRES', id, membres, changementChef, horodatage, evenement }),
         scinderEquipe: (idSource, nouvelleEquipe, evenements) => dispatch({ type: 'EQUIPES/SCINDER', idSource, nouvelleEquipe, evenements }),
+        // Dossier (les lignes de main courante chargées reçoivent des identifiants uniques)
+        chargerDossier: (valeurs) => dispatch({ type: 'DOSSIER/CHARGER', valeurs: valeurs.events ? { ...valeurs, events: garantirIdsUniques(valeurs.events) } : valeurs }),
+        reinitialiserDossier: (valeurs) => dispatch({ type: 'DOSSIER/REINITIALISER', valeurs }),
         // Secours
+        definirInfosSecours: (missionInfo) => dispatch({ type: 'SECOURS/DEFINIR_INFOS', missionInfo }),
+        configurerMC: (mode, identifiant) => dispatch({ type: 'SECOURS/CONFIGURER_MC', mode, identifiant }),
         cloturerSecours: (horodatageCloture, evenement) => dispatch({ type: 'SECOURS/CLOTURER', horodatageCloture, evenement }),
         rouvrirSecours: () => dispatch({ type: 'SECOURS/ROUVRIR' }),
         // Secrétaires

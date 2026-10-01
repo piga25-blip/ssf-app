@@ -459,11 +459,29 @@ comportent différemment sur tablette (iPad notamment). À ajouter aux tests.
 
 | Lot | Contenu |
 |---|---|
-| **0 – Préparation** (rien de réseau) | ✅ scénario de référence (A4, fait le 01/10/2026 : `tests/SCENARIO_REFERENCE.md`), ✅ identifiants uniques (A2, fait le 01/10/2026 : `nouvelId()` / `garantirIdsUniques()` dans `utils.js`), ✅ copies périmées corrigées (A3, fait le 01/10/2026 : mises à jour à partir de l'état le plus récent + distributeur de numéros `reserverNumerosMC()` dans `index.html`), **modifications regroupées en actions nommées (B1)** |
+| **0 – Préparation** (rien de réseau) | ✅ scénario de référence (A4, fait le 01/10/2026 : `tests/SCENARIO_REFERENCE.md`), ✅ identifiants uniques (A2, fait le 01/10/2026 : `nouvelId()` / `garantirIdsUniques()` dans `utils.js`), ✅ copies périmées corrigées (A3, fait le 01/10/2026 : mises à jour à partir de l'état le plus récent + distributeur de numéros `reserverNumerosMC()` dans `index.html`), ✅ **modifications regroupées en actions nommées (B1, fait le 01/10/2026 : `donnees.js`, voir « Architecture des données » ci-dessous)** |
 | **1** | stockage en fichiers découpés + journal + serveur, postes **en consultation seule** ; modifications automatiques faites par le serveur (A1) ; blocage des mises à jour pendant le mode réseau (B3) |
 | **2** | saisie de la **main courante** et des **passages aux points phones** sur plusieurs postes (numéros et heure donnés par le serveur) |
 | **3** | inscription des sauveteurs, missions, équipes, planning sur plusieurs postes (étape A puis B) ; avertissement de modification simultanée dans les fenêtres |
 | **4** | code de session, rôles, imports réservés à l'administrateur (B5), reprise après panne, saisie hors connexion |
+
+---
+
+## 6 bis. Architecture des données après le lot 0
+
+- **`donnees.js`** contient toutes les données partagées d'un secours (sauveteurs, équipes,
+  points phones, secrétaires, main courante, planning, infos et clôture du secours, mode de main
+  courante) et **46 actions nommées** (`SAUVETEURS/ARRIVEE`, `EQUIPES/SCINDER`,
+  `MC/VALIDER_RAPPEL`…), traitées par une seule fonction **pure** : `reducteurDonnees(etat, action)`.
+- Aucune donnée partagée n'est modifiée ailleurs : les écrans appellent `actions.xxx(...)`
+  (`creerActionsDonnees`), qui ajoute l'heure, l'identifiant et le numéro de main courante, puis
+  envoie l'action.
+- Une action applique **en une seule fois** tous ses effets (ex. une fin de mission : équipe,
+  planning et ligne de main courante).
+- **Pour le réseau (lot 1 et suivants)** : le poste n'appliquera plus l'action lui-même, il
+  l'enverra au serveur, qui exécutera la même fonction `reducteurDonnees` (vérifié : elle tourne
+  dans Node.js, test `tests/verif-actions.js`), attribuera les numéros et diffusera l'action.
+- Reste local à chaque poste : secrétaire courant, affichage, sélection dans le planning.
 
 ---
 

@@ -2,9 +2,9 @@
 // MODAL - ÉQUIPES
 // ============================================
 let GestionEquipesModal = ({
-    teams, setTeams, usedTeamNumbers, setUsedTeamNumbers, masterSauveteursList, activeSauveteurIds,
-    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, actions, onClose, mcMode, mcIdentifiant,
-    startHour, totalDays, planning, setPlanning, verifierEtPropagerAvantAction, pointsPhone, sauveursAyantQuitte
+    teams, usedTeamNumbers, masterSauveteursList, activeSauveteurIds,
+    events, nextEventNumber, reserverNumerosMC, actions, onClose, mcMode, mcIdentifiant,
+    startHour, totalDays, planning, verifierEtPropagerAvantAction, pointsPhone, sauveursAyantQuitte
 }) => {
     const [nouvelleEquipe, setNouvelleEquipe] = useState({ numero: '', mission: '', ordreMission: '' });
     const [selectedMembres, setSelectedMembres] = useState([]);

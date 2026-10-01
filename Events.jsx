@@ -396,15 +396,15 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
 // COMPOSANT MAIN COURANTE
 // ============================================
 let MainCouranteTab = ({
-    events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC, actions,
+    events, nextEventNumber, reserverNumerosMC, actions,
     secretaires, sauveteursSurSiteNoms, teams, sauveteursSurSite,
     showSearchModal, setShowSearchModal, mcMode, mcIdentifiant,
-    pointsPhone, setPointsPhone, masterSauveteursList, categories,
+    pointsPhone, masterSauveteursList, categories,
     currentSecretaire, setCurrentSecretaire, showSecretaireModal, setShowSecretaireModal,
     showAlertsModal, setShowAlertsModal, alertModalPosition, setAlertModalPosition,
     isDraggingAlert, setIsDraggingAlert, dragStartPos, setDragStartPos,
     showGestionPointsPhone, setShowGestionPointsPhone,
-    planning, setPlanning, startHour, totalDays, activeSauveteurIds,
+    planning, startHour, totalDays, activeSauveteurIds,
     modalRepos, setModalRepos
 }) => {
     const [formData, setFormData] = useState({

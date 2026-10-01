@@ -78,9 +78,9 @@ GestionSecretairesModal = React.memo(GestionSecretairesModal);
 // MODAL - ENREGISTREMENT DES SAUVETEURS
 // ============================================
 const GestionPlanningModal = ({ 
-    masterSauveteursList, activeSauveteurIds, setActiveSauveteurIds,
-    teams, setTeams, events, setEvents, nextEventNumber, setNextEventNumber, reserverNumerosMC,
-    planning, setPlanning, totalDays, onClose, actions, verifierEtPropagerAvantAction, mcMode, mcIdentifiant, startHour
+    masterSauveteursList, activeSauveteurIds, 
+    teams, events, nextEventNumber, reserverNumerosMC,
+    planning, totalDays, onClose, actions, verifierEtPropagerAvantAction, mcMode, mcIdentifiant, startHour
 }) => {
     const [selectedSauveteurs, setSelectedSauveteurs] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -214,7 +214,7 @@ const GestionPlanningModal = ({
 // MODAUX MC SECONDAIRES
 // ============================================
 // Modal de configuration initiale MC
-const McConfigModal = ({ mcMode, setMcMode, mcIdentifiant, setMcIdentifiant, onConfirm, onClose }) => {
+const McConfigModal = ({ mcMode, mcIdentifiant, actions, onConfirm, onClose }) => {
     const [localMode, setLocalMode] = React.useState(mcMode || 'principale');
     const [localId, setLocalId] = React.useState(mcIdentifiant || '');
     useCloseOnEscape(onClose);
@@ -225,8 +225,7 @@ if (localMode === 'secondaire' && !localId.trim()) {
     return;
 }
 try {
-    setMcMode(localMode);
-    setMcIdentifiant(localMode === 'secondaire' ? localId.trim().toUpperCase() : '');
+    actions.configurerMC(localMode, localMode === 'secondaire' ? localId.trim().toUpperCase() : '');
 } catch (error) {
     console.error('Erreur configuration Main Courante :', error);
     alert('⚠️ Une erreur est survenue, mais la fenêtre va se fermer.');
