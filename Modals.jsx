@@ -433,7 +433,7 @@ SecretaireModal = React.memo(SecretaireModal);
 // ============================================
 // MODAL - INFORMATIONS DE MISSION (démarrage)
 // ============================================
-const MissionInfoModal = ({ onConfirm, onSkip, initialMissionInfo }) => {
+const MissionInfoModal = ({ onConfirm, onSkip, initialMissionInfo, connexion }) => {
     const [onglet, setOnglet] = React.useState('nouveau'); // 'nouveau' | 'rouvrir'
     // Onglet Nouveau dossier — pré-rempli si initialMissionInfo fourni
     const [typeSecours, setTypeSecours] = React.useState(initialMissionInfo?.typeSecours || 'secours');
@@ -447,34 +447,23 @@ initialMissionInfo?.delaiAlerteOccupation ? Math.round(initialMissionInfo.delaiA
     const [dossiersExistants, setDossiersExistants] = React.useState([]);
     const [dossierSelectionne, setDossierSelectionne] = React.useState(null);
 
-    // Charger les dossiers existants depuis le localStorage au montage
+    // Dossiers enregistrés : liste demandée au serveur à l'ouverture de la fenêtre
+    const ongletChoisi = React.useRef(false);
+    React.useEffect(() => { connexion.envoyer({ type: 'lister' }); }, []);
     React.useEffect(() => {
-const prefix = 'SSF_UNIFIED_STATE_';
-const dossiers = [];
-for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(prefix)) {
-        try {
-            const raw = localStorage.getItem(key);
-            const data = JSON.parse(raw);
-            // Reconstruire l'ID lisible depuis la clé
-            // Clé: SSF_UNIFIED_STATE_secours---creux-serre---21-04-2026_V13
-            const withoutPrefix = key.replace(prefix, '').replace(/_V\d+$/, '');
-            // Tenter de lire le rescueId sauvegardé dans la donnée si dispo
-            const rescueId = data.rescueId || withoutPrefix.replace(/-+/g, match => match.length > 1 ? ' - ' : '-');
-            const nbEvents = (data.events || []).length;
-            const nbSauveteurs = (data.activeSauveteurIds || []).length;
-            const timestamp = data.timestamp ? new Date(data.timestamp).toLocaleString('fr-FR') : '—';
-            dossiers.push({ key, rescueId, nbEvents, nbSauveteurs, timestamp, raw });
-        } catch(e) {}
-    }
-}
+if (!connexion.dossiers) return;
+const dossiers = connexion.dossiers.map(d => ({
+    key: d.rescueId,
+    rescueId: d.rescueId,
+    nbEvents: d.nbEvenements || 0,
+    timestamp: d.majLe ? new Date(d.majLe).toLocaleString('fr-FR') : '—',
+}));
 // Trier par timestamp décroissant (plus récent en premier)
 dossiers.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 setDossiersExistants(dossiers);
-// Si des dossiers existent, ouvrir directement l'onglet "rouvrir"
-if (dossiers.length > 0) setOnglet('rouvrir');
-    }, []);
+// Si des dossiers existent, ouvrir directement l'onglet "rouvrir" (à la première liste reçue)
+if (!ongletChoisi.current) { ongletChoisi.current = true; if (dossiers.length > 0) setOnglet('rouvrir'); }
+    }, [connexion.dossiers]);
 
     const handleConfirmNouveau = () => {
 if (!nomCavite.trim()) { alert('⚠️ Veuillez saisir le nom de la cavité'); return; }
@@ -486,13 +475,13 @@ onConfirm({ typeSecours, nomCavite: nomCavite.trim(), commune: commune.trim(), d
     const handleRouvrir = () => {
 if (!dossierSelectionne) { alert('⚠️ Veuillez sélectionner un dossier'); return; }
 // Passer la clé exacte + les données brutes pour un chargement fiable
-onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupation: 6, rouvrir: true, rescueId: dossierSelectionne.rescueId, localStorageKey: dossierSelectionne.key, rawData: dossierSelectionne.raw });
+onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupation: 6, rouvrir: true, rescueId: dossierSelectionne.rescueId });
     };
 
     const handleSupprimerDossier = (e, d) => {
         e.stopPropagation();
         if (!window.confirm(`⚠️ Supprimer définitivement le dossier "${d.rescueId}" ?\n\nCette action est irréversible.`)) return;
-        storageRemove(d.key);
+        connexion.envoyer({ type: 'supprimer', rescueId: d.rescueId });
         setDossiersExistants(prev => prev.filter(x => x.key !== d.key));
         if (dossierSelectionne && dossierSelectionne.key === d.key) setDossierSelectionne(null);
     };

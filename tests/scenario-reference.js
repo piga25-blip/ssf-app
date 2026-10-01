@@ -103,13 +103,9 @@ const decrireEcran = async (nom) => {
     console.log(`📸 Écran « ${nom} » décrit dans tests/sortie/${nom}.json et .png`);
 };
 
-// Lit l'état enregistré du secours dans la mémoire du navigateur
-const lireEtat = () => page.evaluate(() => {
-    const cles = Object.keys(localStorage).filter(k => k.startsWith('SSF_UNIFIED_STATE_'));
-    const etats = {};
-    cles.forEach(k => { etats[k] = JSON.parse(localStorage.getItem(k)); });
-    return etats;
-});
+// Lit les secours enregistrés par le serveur (fichiers du dossier de données jetable)
+const { attendreEcriture, lireSecours } = require('./outils-fichiers');
+const lireEtat = async (dossierDonnees) => { await attendreEcriture(); return lireSecours(dossierDonnees); };
 
 // ---------- Normalisation et comparaison ----------
 
@@ -408,7 +404,7 @@ const ETAPES = [
         await attendre(2); // laisse partir la sauvegarde différée
 
         dialogues.push(...await page.evaluate(() => window.__dialogues));
-        const resultat = normaliser({ etat: await lireEtat(), dialogues });
+        const resultat = normaliser({ etat: await lireEtat(dossierDonnees), dialogues });
         fs.mkdirSync(DOSSIER_SORTIE, { recursive: true });
         fs.writeFileSync(path.join(DOSSIER_SORTIE, 'etat-final.json'), JSON.stringify(resultat, null, 1));
 

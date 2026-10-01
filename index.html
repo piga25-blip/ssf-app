@@ -581,6 +581,7 @@
     <script type="text/babel" src="Modals.jsx"></script>
     <script type="text/babel" src="hooks/useAlerts.js"></script>
     <script type="text/babel" src="hooks/usePlanning.js"></script>
+    <script type="text/babel" src="hooks/useConnexion.js"></script>
 
     <script type="text/babel">
         const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -622,6 +623,31 @@
 
             // Données Main Courante
 
+            // ===== CONNEXION AU SERVEUR INTÉGRÉ (lot 1) =====
+            // Le serveur enregistre le secours (fichiers + journal) et le transmet aux autres postes.
+            // Poste principal : chaque action est appliquée ici tout de suite ET envoyée au serveur.
+            // Poste en consultation : il reçoit l'état puis les actions, et ne peut rien modifier.
+            const [notification, setNotification] = useState(null);
+            const donneesRef = useRef(donnees);
+            donneesRef.current = donnees;
+            const connexion = useConnexion({
+                surEtat: (e) => {
+                    dispatchDonnees({ type: 'DOSSIER/CHARGER', valeurs: e.donnees });
+                    if (!EST_POSTE_PRINCIPAL && e.rescueId) { setCurrentRescueId(e.rescueId); setTempRescueIdInput(e.rescueId); }
+                },
+                surAction: (action) => dispatchDonnees(action),
+                surRefus: (raison) => { setNotification('⛔ ' + raison); setTimeout(() => setNotification(null), 4000); },
+            });
+            const envoyerAction = useCallback((action) => {
+                if (!EST_POSTE_PRINCIPAL) {
+                    setNotification('⛔ Poste en consultation seule : modification impossible.');
+                    setTimeout(() => setNotification(null), 4000);
+                    return;
+                }
+                dispatchDonnees(action);
+                connexion.envoyer({ type: 'action', action });
+            }, []);
+
             // Distributeur de numéros de main courante (lot 0, A3).
             // Calculer le numéro depuis nextEventNumber connu au moment du clic pouvait donner
             // deux fois le même numéro (deux créations avant le rendu suivant, ou une donnée
@@ -633,14 +659,14 @@
             const reserverNumerosMC = useCallback((nombre = 1) => {
                 const premier = numeroMCRef.current;
                 numeroMCRef.current = premier + nombre;
-                dispatchDonnees({ type: 'MC/RESERVER_NUMEROS', jusqua: premier + nombre });
+                envoyerAction({ type: 'MC/RESERVER_NUMEROS', jusqua: premier + nombre });
                 return premier;
             }, []);
             // Point d'entrée réservé aux tests automatiques (tests/verif-copies-perimees.js) :
             // simule une donnée arrivée d'ailleurs pendant une action. Inactif en utilisation
             // normale (window.__SSF_TEST__ n'existe que si un test l'a créé).
             // Actions nommées (donnees.js) : seule façon de modifier les données partagées
-            const actions = React.useMemo(() => creerActionsDonnees(dispatchDonnees, reserverNumerosMC), [reserverNumerosMC]);
+            const actions = React.useMemo(() => creerActionsDonnees(envoyerAction, reserverNumerosMC), [reserverNumerosMC]);
             if (window.__SSF_TEST__) Object.assign(window.__SSF_TEST__, { actions, reserverNumerosMC });
 
             // Configuration MC Secondaire
@@ -706,7 +732,6 @@
 
             // ===== POSTES CONNECTÉS (remplacé par la connexion au serveur intégré, lot 1) =====
             const connectedUsers = [];
-            const [notification, setNotification] = useState(null);
             const userName = '', pcName = '', userMode = '';
 
             // ===== VERSION STANDALONE - PAS DE WEBSOCKET =====
@@ -752,91 +777,18 @@
 
             const isRenaming = useRef(false); // true = changement d'ID sans rechargement
 
-            // Chargement initial
+            // Ouverture du secours sur le serveur (poste principal) ; le serveur renvoie son état. Un
+            // secours qui n'existe pas encore est créé avec les données en cours (comme avant).
             useEffect(() => {
+                if (!EST_POSTE_PRINCIPAL) return;
                 if (isRenaming.current) {
                     isRenaming.current = false;
                     return; // Ne pas recharger — on vient juste de renommer
                 }
-                const key = getLocalStorageKey(currentRescueId);
-                const savedData = storageGet(key);
-                
-                if (savedData) {
-                    try {
-                        const data = JSON.parse(savedData);
-                        const loadedPP = data.pointsPhone || [];
-                        if (!loadedPP.find(function(pp) { return (typeof pp === 'object' ? pp.lettre : pp) === 'PC'; })) {
-                            loadedPP.unshift({ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 });
-                        }
-                        actions.chargerDossier({
-                            masterSauveteursList: data.masterSauveteursList || [],
-                            activeSauveteurIds: data.activeSauveteurIds || [],
-                            sauveteurPermanentNumbers: data.sauveteurPermanentNumbers || {},
-                            nextPermanentNumber: data.nextPermanentNumber || 1,
-                            teams: data.teams || [],
-                            usedTeamNumbers: data.usedTeamNumbers || [],
-                            secretaires: data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3'],
-                            pointsPhone: loadedPP,
-                            ...(data.missionInfo ? { missionInfo: data.missionInfo } : {}),
-                            ...(data.clotureInfo ? { clotureInfo: data.clotureInfo } : {}),
-                            events: data.events || [],
-                            nextEventNumber: data.nextEventNumber || 1,
-                            planning: data.planning || {},
-                            startHour: data.startHour || 0,
-                            totalDays: data.totalDays || DEFAULT_TOTAL_DAYS,
-                            mcMode: data.mcMode || 'principale',
-                            mcIdentifiant: data.mcIdentifiant || '',
-                            mcConfigured: data.mcConfigured || false,
-                        });
-                    } catch (error) {
-                        console.error('Erreur chargement:', error);
-                    }
-                }
+                connexion.envoyer({ type: 'ouvrir', rescueId: currentRescueId, donneesSiNouveau: donneesRef.current });
             }, [currentRescueId]);
 
-            // Sauvegarde automatique (débouncée : une frappe/action déclenche un timer,
-            // seule la dernière modification dans une fenêtre de 600ms est réellement
-            // écrite, pour éviter un JSON.stringify + localStorage.setItem complets du
-            // dossier sur le thread principal à chaque changement d'état)
-            const saveTimeoutRef = useRef(null);
-            useEffect(() => {
-                if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                saveTimeoutRef.current = setTimeout(() => {
-                    const dataToSave = {
-                        version: APP_VERSION,
-                        timestamp: new Date().toISOString(),
-                        rescueId: currentRescueId,
-                        masterSauveteursList,
-                        activeSauveteurIds,
-                        sauveteurPermanentNumbers,
-                        nextPermanentNumber,
-                        teams,
-                        usedTeamNumbers,
-                        secretaires,
-                        pointsPhone,
-                        missionInfo,
-                        clotureInfo,
-                        events,
-                        nextEventNumber,
-                        planning,
-                        startHour,
-                        totalDays,
-                        mcMode,
-                        mcIdentifiant,
-                        mcConfigured
-                    };
-                    const key = getLocalStorageKey(currentRescueId);
-                    storageSetJSON(key, dataToSave);
-
-                    // Filet de sécurité : resynchronise le focus clavier côté Electron
-                    // après l'écriture localStorage (contourne un bug connu du renderer
-                    // qui peut rester bloqué en état "flou" après ce type d'opération).
-                    window.electronAPI?.refocusWindow?.();
-
-                }, 600);
-
-                return () => clearTimeout(saveTimeoutRef.current);
-            }, [masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber, teams, usedTeamNumbers, secretaires, pointsPhone, missionInfo, clotureInfo, events, nextEventNumber, planning, startHour, totalDays, mcMode, mcIdentifiant, mcConfigured, currentRescueId]);
+            // Enregistrement : fait par le serveur à chaque action (fichiers + journal), plus ici.
 
             // Attribuer un n° permanent aux sauveteurs actifs qui n'en ont pas (anciens dossiers)
             useEffect(() => {
@@ -1209,6 +1161,7 @@
                         return;
                     }
                     storageClear();
+                    connexion.envoyer({ type: 'toutSupprimer' });
                     actions.reinitialiserDossier({
                         masterSauveteursList: [],
                         activeSauveteurIds: [],
@@ -1236,9 +1189,6 @@
                 if (!window.confirm('🚨 Êtes-vous VRAIMENT sûr ? Toutes les données seront perdues définitivement !')) {
                     return;
                 }
-
-                const key = getLocalStorageKey(currentRescueId);
-                storageRemove(key);
 
                 actions.reinitialiserDossier({
                     masterSauveteursList: [],
@@ -1466,10 +1416,8 @@
                                         <button
                                             onClick={() => {
                                                 const newId = tempRescueIdInput.trim();
-                                                // Copier les données actuelles vers la nouvelle clé
-                                                const oldKey = getLocalStorageKey(currentRescueId);
-                                                const newKey = getLocalStorageKey(newId);
-                                                storageRenameKey(oldKey, newKey);
+                                                // Le serveur renomme le dossier du secours
+                                                connexion.envoyer({ type: 'renommer', ancien: currentRescueId, nouveau: newId });
                                                 isRenaming.current = true;
                                                 setCurrentRescueId(newId);
                                             }}
@@ -2031,6 +1979,7 @@
                             <ModalErrorBoundary>
                             <MissionInfoModal
                                 initialMissionInfo={missionInfo}
+                                connexion={connexion}
                                 onSkip={() => {
                                     setShowMissionInfoModal(false);
                                     setShowModeSelectionModal(true);
@@ -2041,42 +1990,10 @@
                                         // (rawData = copie complète du dossier) : ne garder que les infos
                                         // du secours, désormais enregistrées avec le dossier.
                                         const { rouvrir, rescueId, localStorageKey, rawData, ...infosSecours } = info;
-                                        actions.definirInfosSecours(infosSecours);
                                         if (info.rouvrir) {
+                                            // Le serveur renvoie l'état du secours rouvert
                                             setCurrentRescueId(info.rescueId);
                                             setTempRescueIdInput(info.rescueId);
-                                            // Charger directement depuis les données brutes passées
-                                            if (info.rawData) {
-                                                try {
-                                                    const data = JSON.parse(info.rawData);
-                                                    const loadedPP = data.pointsPhone || [];
-                                                    if (!loadedPP.find(pp => (typeof pp === 'object' ? pp.lettre : pp) === 'PC')) {
-                                                        loadedPP.unshift({ lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 });
-                                                    }
-                                                    actions.chargerDossier({
-                                                        masterSauveteursList: data.masterSauveteursList || [],
-                                                        activeSauveteurIds: data.activeSauveteurIds || [],
-                                                        sauveteurPermanentNumbers: data.sauveteurPermanentNumbers || {},
-                                                        nextPermanentNumber: data.nextPermanentNumber || 1,
-                                                        teams: data.teams || [],
-                                                        usedTeamNumbers: data.usedTeamNumbers || [],
-                                                        secretaires: data.secretaires || ['Secrétaire 1', 'Secrétaire 2', 'Secrétaire 3'],
-                                                        pointsPhone: loadedPP,
-                                                        ...(data.missionInfo ? { missionInfo: data.missionInfo } : {}),
-                                                        ...(data.clotureInfo ? { clotureInfo: data.clotureInfo } : {}),
-                                                        events: data.events || [],
-                                                        nextEventNumber: data.nextEventNumber || 1,
-                                                        planning: data.planning || {},
-                                                        startHour: data.startHour || 0,
-                                                        totalDays: data.totalDays || DEFAULT_TOTAL_DAYS,
-                                                        mcMode: data.mcMode || 'principale',
-                                                        mcIdentifiant: data.mcIdentifiant || '',
-                                                        mcConfigured: data.mcConfigured || false,
-                                                    });
-                                                } catch(e) {
-                                                    console.error('Erreur chargement dossier:', e);
-                                                }
-                                            }
                                         } else {
                                             // Nouveau dossier : générer l'ID
                                             const today = new Date();
@@ -2085,6 +2002,13 @@
                                                             today.getFullYear();
                                             const typeLabel = info.typeSecours === 'exercice' ? 'EXERCICE' : 'SECOURS';
                                             const generatedId = `${typeLabel} - ${info.nomCavite} - ${dateStr}`;
+                                            if (generatedId === currentRescueId) {
+                                                actions.definirInfosSecours(infosSecours);
+                                            } else {
+                                                // Nouveau dossier : créé par le serveur avec les données en cours,
+                                                // infos du secours comprises (appliquées ici seulement)
+                                                dispatchDonnees({ type: 'SECOURS/DEFINIR_INFOS', missionInfo: infosSecours });
+                                            }
                                             setCurrentRescueId(generatedId);
                                             setTempRescueIdInput(generatedId);
                                         }

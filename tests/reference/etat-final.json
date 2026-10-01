@@ -19,7 +19,7 @@
   "confirm: Mise a jour automatique - 10:15\n\n4 sauveteur(s), 15 min max.\nActivi: souterre, disponible\n\nConfirmer ?"
  ],
  "etat": {
-  "SSF_UNIFIED_STATE_exercice---gouffre-du-test---14-03-2026_V13": {
+  "EXERCICE - Gouffre du Test - 14-03-2026": {
    "activeSauveteurIds": [
     "EXT-001",
     "EXT-002",
@@ -2199,7 +2199,6 @@
      "typePP": "souterre"
     }
    ],
-   "rescueId": "EXERCICE - Gouffre du Test - 14-03-2026",
    "sauveteurPermanentNumbers": {
     "EXT-001": 1,
     "EXT-002": 2,
@@ -2299,7 +2298,6 @@
      "typeMission": "Reconnaissance"
     }
    ],
-   "timestamp": "2026-03-14T09:29:17.400Z",
    "totalDays": 3,
    "usedTeamNumbers": [
     {
@@ -2311,45 +2309,6 @@
      "numero": "T2"
     }
    ]
-  },
-  "SSF_UNIFIED_STATE_secours-courant_V13": {
-   "activeSauveteurIds": [],
-   "clotureInfo": null,
-   "events": [],
-   "masterSauveteursList": [],
-   "mcConfigured": false,
-   "mcIdentifiant": "",
-   "mcMode": "principale",
-   "missionInfo": {
-    "commune": "",
-    "delaiAlerteOccupation": 6,
-    "nomCavite": "",
-    "typeSecours": "secours"
-   },
-   "nextEventNumber": 1,
-   "nextPermanentNumber": 1,
-   "planning": {},
-   "pointsPhone": [
-    {
-     "lettre": "PC",
-     "nom": "Poste de Commandement",
-     "ordre": 0,
-     "sousTerre": false,
-     "typePP": "surface"
-    }
-   ],
-   "rescueId": "secours-courant",
-   "sauveteurPermanentNumbers": {},
-   "secretaires": [
-    "Secrétaire 1",
-    "Secrétaire 2",
-    "Secrétaire 3"
-   ],
-   "startHour": 7,
-   "teams": [],
-   "timestamp": "2026-03-14T07:01:00.000Z",
-   "totalDays": 3,
-   "usedTeamNumbers": []
   }
  }
 }

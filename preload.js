@@ -2,9 +2,12 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // Lue de façon synchrone : disponible dès que constants.js s'exécute
 const _appVersion = ipcRenderer.sendSync('get-app-version-sync');
+// Jeton du poste principal (donné par main.js à la seule fenêtre de ce poste)
+const _jetonPrincipal = ipcRenderer.sendSync('get-jeton-sync');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   appVersion: _appVersion,
+  jetonPrincipal: _jetonPrincipal,
   getVersion: () => ipcRenderer.invoke('get-app-version'),
   onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, version) => cb(version)),
   onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, percent) => cb(percent)),

@@ -13,7 +13,8 @@
     "test": "node tests/verif-actions.js && node tests/verif-serveur.js && node tests/scenario-reference.js && node tests/verif-reouverture.js && node tests/verif-export-import.js && node tests/verif-identifiants.js && node tests/verif-copies-perimees.js"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.3.9",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "electron": "^33.0.0",

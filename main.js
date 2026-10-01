@@ -8,10 +8,17 @@ if (process.env.SSF_TEST_USER_DATA) {
   app.setPath('userData', process.env.SSF_TEST_USER_DATA);
 }
 
+const crypto = require('crypto');
 const { demarrerServeur } = require('./serveur/serveur');
+const { creerMoteur } = require('./serveur/moteur');
+const { creerCanal } = require('./serveur/canal');
 
 let mainWindow;
 let serveurSSF = null; // { serveur, port, hote }
+let moteurSSF = null;  // données des secours (fichiers, journal)
+let canalSSF = null;   // canal temps réel avec les postes
+// Jeton secret transmis à la seule fenêtre de ce poste (preload.js) : il en fait le poste principal
+const JETON_PRINCIPAL = crypto.randomBytes(24).toString('hex');
 
 // La fenêtre du poste principal charge l'application servie par le serveur intégré
 // (http://localhost:port), exactement comme le feront les autres postes en réseau.
@@ -37,6 +44,9 @@ app.whenReady().then(async () => {
   // Port : 8080 par défaut (les suivants s'il est pris) ; SSF_PORT=0 pour les tests (au hasard)
   const port = process.env.SSF_PORT !== undefined ? parseInt(process.env.SSF_PORT, 10) : 8080;
   serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: '127.0.0.1' });
+  moteurSSF = creerMoteur({ racineApp: __dirname, racineDonnees: app.getPath('userData') });
+  canalSSF = creerCanal({ serveurHttp: serveurSSF.serveur, moteur: moteurSSF, jetonPrincipal: JETON_PRINCIPAL,
+    versionApp: app.getVersion(), journalConsole: (m) => console.log(m) });
   console.log(`Serveur SSF : http://localhost:${serveurSSF.port}`);
   createWindow();
 
@@ -51,6 +61,11 @@ app.whenReady().then(async () => {
       });
     }
   });
+});
+
+app.on('before-quit', () => {
+  // Données en attente écrites avant de quitter
+  if (moteurSSF) moteurSSF.fermer();
 });
 
 app.on('window-all-closed', () => {
@@ -106,6 +121,11 @@ ipcMain.on('unstick-window', () => {
     mainWindow.focus();
     mainWindow.webContents.focus();
   }, 30);
+});
+
+// Jeton du poste principal, pour preload.js (uniquement la fenêtre de ce poste)
+ipcMain.on('get-jeton-sync', (event) => {
+  event.returnValue = (mainWindow && event.sender === mainWindow.webContents) ? JETON_PRINCIPAL : null;
 });
 
 // Version synchrone pour preload.js (disponible avant le chargement de la page)
