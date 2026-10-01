@@ -37,6 +37,8 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
         }
         
         // Générer automatiquement l'ID si vide, sinon utiliser celui saisi
+        // Identifiant automatique : si un autre poste vient de le prendre, le suivant libre est attribué
+        const idAuto = !nouveauSauveteur.id.trim();
         const id = nouveauSauveteur.id.trim() || genererProchainId();
         const name = `${nouveauSauveteur.nom.toUpperCase()} ${nouveauSauveteur.prenom}`;
         
@@ -49,7 +51,8 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
             id: id,
             name: name,
             role: nouveauSauveteur.role || 'Secouriste',
-            SSF: nouveauSauveteur.ssf || '00'
+            SSF: nouveauSauveteur.ssf || '00',
+            ...(idAuto ? { idAuto: true } : {}),
         };
 
         actions.ajouterSauveteurListe(newSauv);

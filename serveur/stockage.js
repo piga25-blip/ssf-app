@@ -90,7 +90,9 @@ const creerStockage = (racineDonnees) => {
             if (journal.length > 0 && appliquer) {
                 let etat = { ...donnees };
                 for (const entree of journal) {
-                    const suivant = appliquer(etat, entree.action);
+                    // Action refusée au rattrapage : les parties qu'elle concerne la contiennent déjà
+                    let suivant;
+                    try { suivant = appliquer(etat, entree.action); } catch (e) { if (e.refus) { version = Math.max(version, entree.version); continue; } throw e; }
                     // Une partie déjà à jour garde son contenu ; les parties en retard reçoivent l'action
                     for (const [fichier, cles] of Object.entries(PARTIES)) {
                         if (parties[fichier] < entree.version) cles.forEach(c => { if (c in suivant) etat[c] = suivant[c]; });

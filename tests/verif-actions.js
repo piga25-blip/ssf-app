@@ -42,6 +42,11 @@ const appliquer = (etat, action) => {
     verifier(`${action.type} : état d'origine inchangé`, JSON.stringify(etat) === avant);
     return apres;
 };
+// L'action doit être refusée (aucun changement) avec un message contenant « motif »
+const refusee = (etat, action, motif) => {
+    actionsTestees.add(action.type);
+    try { reducteurDonnees(etat, action); return false; } catch (e) { return !!e.refus && e.message.includes(motif); }
+};
 const iso = (h, m = 0) => new Date(2026, 2, 14, h, m, 0).toISOString();   // samedi 14 mars 2026, heure locale
 const ligne = (id, numero, extra = {}) => ({ id, numero, isoTimestamp: iso(8), dateHeure: '14/03/2026 08:00:00', evenement: 'Ligne ' + numero, fait: false, ...extra });
 
@@ -58,7 +63,10 @@ const base = () => {
 {
     let e = base();
     verifier('Liste : 3 sauveteurs', e.masterSauveteursList.length === 3);
-    e = appliquer(e, { type: 'SAUVETEURS/LISTE_AJOUTER', sauveteur: { id: 'S1', name: 'DOUBLON' } });
+    verifier('Liste : identifiant saisi déjà pris → refusé', refusee(e, { type: 'SAUVETEURS/LISTE_AJOUTER', sauveteur: { id: 'S1', name: 'DOUBLON' } }, 'déjà utilisé'));
+    let x = appliquer(e, { type: 'SAUVETEURS/LISTE_AJOUTER', sauveteur: { id: 'EXT-002', name: 'EXTERNE Un', idAuto: true } });
+    x = appliquer(x, { type: 'SAUVETEURS/LISTE_AJOUTER', sauveteur: { id: 'EXT-002', name: 'EXTERNE Deux', idAuto: true } });
+    verifier('Liste : identifiant automatique pris entre-temps → suivant libre attribué', x.masterSauveteursList.slice(-2).map(s => s.id + ':' + s.name).join('|') === 'EXT-002:EXTERNE Un|EXT-003:EXTERNE Deux' && !('idAuto' in x.masterSauveteursList[3]), x.masterSauveteursList.slice(-2));
     verifier('Liste : identifiant déjà présent ignoré', e.masterSauveteursList.length === 3 && e.masterSauveteursList[0].name === 'ALPHA Anne');
     e = appliquer(e, { type: 'SAUVETEURS/LISTE_MODIFIER', id: 'S2', name: 'BRAVO Robert', role: 'Médecin', SSF: '30' });
     verifier('Liste : modification', e.masterSauveteursList[1].name === 'BRAVO Robert' && e.masterSauveteursList[1].SSF === '30');
@@ -113,8 +121,8 @@ const base = () => {
     let e = base();
     e = appliquer(e, { type: 'POINTS_PHONE/AJOUTER', lettre: 'A', nom: 'Entrée', typePP: 'entree', ordreSaisi: '' });
     e = appliquer(e, { type: 'POINTS_PHONE/AJOUTER', lettre: 'B', nom: 'Puits', typePP: 'souterre', ordreSaisi: '2.5' });
-    e = appliquer(e, { type: 'POINTS_PHONE/AJOUTER', lettre: 'A', nom: 'Doublon', typePP: 'surface', ordreSaisi: '' });
-    verifier('Points phones : ajout (lettre déjà prise ignorée)', e.pointsPhone.map(p => p.lettre).join('|') === 'PC|A|B');
+    verifier('Points phones : lettre déjà prise → refusée', refusee(e, { type: 'POINTS_PHONE/AJOUTER', lettre: 'A', nom: 'Doublon', typePP: 'surface', ordreSaisi: '' }, 'existe déjà'));
+    verifier('Points phones : ajout', e.pointsPhone.map(p => p.lettre).join('|') === 'PC|A|B');
     verifier('Points phones : ordre automatique et saisi', e.pointsPhone[1].ordre === 1 && e.pointsPhone[2].ordre === 2.5 && e.pointsPhone[1].estEntree === true && e.pointsPhone[2].sousTerre === true);
     e = { ...e, events: [ligne('e1', '001', { pointPhone: 'B - Puits' }), ligne('e2', '002', { pointPhone: 'B' }), ligne('e3', '003', { pointPhone: 'A - Entrée' })] };
     e = appliquer(e, { type: 'POINTS_PHONE/MODIFIER', ancienneLettre: 'B', lettre: 'C', nom: 'Salle', typePP: 'souterre' });
@@ -122,6 +130,8 @@ const base = () => {
     verifier('Points phones : lignes de main courante mises à jour', e.events.map(v => v.pointPhone).join('|') === 'C - Salle|C - Salle|A - Entrée');
     e = appliquer(e, { type: 'POINTS_PHONE/CHANGER_ORDRE', lettre: 'A', ordre: 7 });
     verifier('Points phones : changement d\'ordre', e.pointsPhone[1].ordre === 7);
+    verifier('Points phones : renommer vers une lettre prise → refusé', refusee(e, { type: 'POINTS_PHONE/MODIFIER', ancienneLettre: 'A', lettre: 'C', nom: 'X', typePP: 'surface' }, 'existe déjà'));
+    verifier('Points phones : modifier un point supprimé → refusé', refusee(e, { type: 'POINTS_PHONE/MODIFIER', ancienneLettre: 'Z', lettre: 'Z', nom: 'X', typePP: 'surface' }, "n'existe plus"));
     e = appliquer(e, { type: 'POINTS_PHONE/SUPPRIMER', lettre: 'A' });
     verifier('Points phones : suppression', e.pointsPhone.map(p => p.lettre).join('|') === 'PC|C');
     e = appliquer(e, { type: 'POINTS_PHONE/VIDER' });
@@ -213,6 +223,8 @@ const base = () => {
     e = appliquer(e, { type: 'EQUIPES/CREER', equipe: equipe('T1', ['S1', 'S2']), horodatage: iso(9), evenements: [ligne('c1', '002'), ligne('c2', '003')] });
     verifier('Équipes : création (+ numéro mémorisé, « engage », 2 lignes)', e.teams.length === 1 && e.usedTeamNumbers[0].numero === 'T1' && e.planning.S1[4] === 'engage' && e.events.length === 3);
     e = appliquer(e, { type: 'EQUIPES/CREER', equipe: equipe('T2', ['S2', 'S3'], 'Gestion PC'), horodatage: iso(9, 15), evenements: [] });
+    verifier('Équipes : numéro déjà pris (créée sur un autre poste) → refusée', refusee(e, { type: 'EQUIPES/CREER', equipe: equipe('T1', ['S3']), horodatage: iso(9, 20), evenements: [] }, 'existe déjà'));
+    verifier('Équipes : scission vers un nom existant → refusée', refusee(e, { type: 'EQUIPES/SCINDER', idSource: 'T1', nouvelleEquipe: equipe('T2', ['S1']), evenements: [] }, 'existe déjà'));
     verifier('Équipes : un membre quitte son ancienne équipe ; « gestion »', JSON.stringify(e.teams[0].members) === '["S1"]' && e.planning.S2[5] === 'gestion');
     e = appliquer(e, { type: 'EQUIPES/MODIFIER', id: 'T1', champs: { mission: 'Brancardage', ordreMission: 'Sortir la victime', typeMission: 'Brancardage', lieu: 'souterre' }, horodatage: iso(9, 30), ancienneMission: 'Reconnaissance', evenement: null });
     verifier('Équipes : modification + historique', e.teams[0].mission === 'Brancardage' && e.teams[0].history[0].details.ancienne_mission === 'Reconnaissance' && e.events.length === 3);
@@ -229,6 +241,7 @@ const base = () => {
     e = appliquer(e, { type: 'EQUIPES/SCINDER', idSource: 'T1', nouvelleEquipe: equipe('T1B', ['S2']), evenements: [ligne('s', '007')] });
     verifier('Équipes : scission', JSON.stringify(e.teams[0].members) === '["S1"]' && e.teams[1].id === 'T1B');
     e = appliquer(e, { type: 'EQUIPES/DISSOUDRE', id: 'T1', horodatage: iso(11), evenement: null });
+    verifier('Équipes : ajout de membres à une équipe terminée → refusé', refusee({ ...e, teams: e.teams.map(t => t.id === 'T1' ? { ...t, status: 'dissolved' } : t) }, { type: 'EQUIPES/AJOUTER_MEMBRES', id: 'T1', membres: ['S2'], horodatage: iso(11), evenement: ligne('z', '009') }, 'terminé sa mission'));
     verifier('Équipes : fin de mission (conservée, « disponible »)', e.teams[0].status === 'dissolved' && e.teams[0].dissolvedAt === iso(11) && e.planning.S1[12] === 'disponible');
     e = appliquer(e, { type: 'EQUIPES/REACTIVER', id: 'T1', horodatage: iso(11, 15), evenement: ligne('ra', '008') });
     verifier('Équipes : réactivation (« engage »)', e.teams[0].status === 'active' && e.teams[0].dissolvedAt === null && e.planning.S1[13] === 'engage');

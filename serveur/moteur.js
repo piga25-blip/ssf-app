@@ -54,20 +54,33 @@ const creerMoteur = ({ racineApp, racineDonnees, delaiEcritureMs = 300, interval
         actif: () => actif,
         ACTIONS_SAISIE_DISTANTE,
 
-        // Action venue d'un poste de saisie : l'heure des lignes et le créneau du planning sont ceux
-        // du serveur (les horloges des postes peuvent être décalées) ; la ligne garde le nom du poste
+        // Action venue d'un poste de saisie : l'heure est celle du serveur (les horloges des postes
+        // peuvent être décalées). Toutes les heures de l'action sont décalées d'autant, ce qui garde
+        // les écarts voulus entre elles ; la ligne garde le nom du poste.
         horodaterActionDistante(action, nomPoste) {
             const maintenant = new Date().toISOString();
-            const ligne = (ev) => ev ? { ...ev, isoTimestamp: maintenant, dateHeure: dateHeureFr(maintenant), poste: nomPoste } : ev;
-            switch (action.type) {
-                case 'MC/AJOUTER': return { ...action, evenement: ligne(action.evenement) };
-                case 'MC/VALIDER_RAPPEL': return { ...action, evenementValidation: ligne(action.evenementValidation) };
-                case 'PLANNING/AFFECTER_DEPUIS_MC':
-                    return { ...action, evenement: ligne(action.evenement), slot: actif ? indexCreneau(actif.donnees, maintenant) : action.slot };
-                case 'MC/INSERER': return { ...action, evenement: { ...action.evenement, poste: nomPoste } };
-                case 'MC/MODIFIER': return { ...action, horodatage: maintenant, par: action.par ? `${action.par} (${nomPoste})` : nomPoste };
-                default: return action;
-            }
+            const reference = action.horodatage || (action.evenement && action.evenement.isoTimestamp)
+                || (action.evenements && action.evenements[0] && action.evenements[0].isoTimestamp)
+                || (action.evenementValidation && action.evenementValidation.isoTimestamp);
+            const ecart = reference && !isNaN(Date.parse(reference)) ? Date.parse(maintenant) - Date.parse(reference) : 0;
+            const decaler = (iso) => (iso && !isNaN(Date.parse(iso))) ? new Date(Date.parse(iso) + ecart).toISOString() : iso;
+            const ligne = (ev) => {
+                if (!ev) return ev;
+                const iso = decaler(ev.isoTimestamp) || maintenant;
+                return { ...ev, isoTimestamp: iso, dateHeure: dateHeureFr(iso), poste: nomPoste };
+            };
+            const a = { ...action };
+            if (a.horodatage !== undefined) a.horodatage = decaler(a.horodatage);
+            if (a.type === 'MC/INSERER') a.evenement = { ...a.evenement, poste: nomPoste };   // heure choisie entre deux lignes
+            else if (a.evenement) a.evenement = ligne(a.evenement);
+            if (Array.isArray(a.evenements)) a.evenements = a.evenements.map(ligne);
+            if (a.evenementValidation) a.evenementValidation = ligne(a.evenementValidation);
+            if (a.type === 'PLANNING/AFFECTER_DEPUIS_MC' && actif) a.slot = indexCreneau(actif.donnees, maintenant);
+            if (a.type === 'MC/MODIFIER') { a.horodatage = maintenant; a.par = a.par ? `${a.par} (${nomPoste})` : nomPoste; }
+            const equipe = (eq) => eq && { ...eq, createdAt: decaler(eq.createdAt), history: (eq.history || []).map(h => ({ ...h, timestamp: decaler(h.timestamp) })) };
+            if (a.equipe) a.equipe = equipe(a.equipe);
+            if (a.nouvelleEquipe) a.nouvelleEquipe = equipe(a.nouvelleEquipe);
+            return a;
         },
         lister: () => stockage.lister(),
 

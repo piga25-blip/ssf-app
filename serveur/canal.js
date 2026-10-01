@@ -5,7 +5,8 @@
 // - « principal » : la fenêtre de l'application sur ce poste (jeton secret transmis par preload.js) ;
 //   elle ouvre les secours et envoie toutes les actions nommées ;
 // - « saisie » : autre poste, quand le poste principal autorise la saisie (lot 2) ; il peut envoyer
-//   les seules actions de main courante et de points phones (ACTIONS_SAISIE_DISTANTE), horodatées
+//   les actions de saisie (ACTIONS_SAISIE_DISTANTE : main courante, points phones, inscriptions,
+//   équipes, planning), horodatées
 //   par le serveur ;
 // - « consultation » : autre poste sinon ; il reçoit l'état et les actions, ne peut rien modifier.
 // Toute action acceptée est renvoyée à TOUS les postes, dans l'ordre où le serveur l'a appliquée.
@@ -52,10 +53,10 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                         envoyer(ws, { type: 'dossiers', liste: moteur.lister() });
                         return;
                 }
-                // Poste de saisie : actions de main courante et de points phones seulement
+                // Poste de saisie : actions de saisie seulement (ACTIONS_SAISIE_DISTANTE)
                 if (msg.type === 'action' && poste.role === 'saisie') {
                     if (!msg.action || !moteur.ACTIONS_SAISIE_DISTANTE.includes(msg.action.type)) {
-                        refuser('Poste de saisie : seules la main courante et les points phones peuvent être modifiés ici.');
+                        refuser('Poste de saisie : cette action est réservée au poste principal.');
                         return;
                     }
                     const action = moteur.horodaterActionDistante(msg.action, poste.nom);

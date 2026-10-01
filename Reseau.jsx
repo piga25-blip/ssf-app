@@ -70,7 +70,7 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                     onChange={(e) => connexion.envoyer({ type: 'saisieDistante', actif: e.target.checked })} />
                                 <span>
                                     <span className="font-semibold">Autoriser la saisie sur les autres postes</span>
-                                    <span className="block text-sm text-gray-600">Main courante et passages aux points phones uniquement (numéro et heure donnés par ce poste). Le reste reste réservé à ce poste.</span>
+                                    <span className="block text-sm text-gray-600">Main courante, points phones, inscriptions, équipes et planning (numéros et heure donnés par ce poste). Restent réservés à ce poste : infos et clôture du secours, imports, remises à zéro, secrétaires, réglages du planning.</span>
                                 </span>
                             </label>
 
@@ -106,7 +106,7 @@ let BandeauConsultation = ({ connexion, rescueId }) => (
     <div style={{ position: 'sticky', top: 0, zIndex: 40, marginBottom: '12px' }}>
         <div style={{ background: connexion.connecte ? '#1e3a8a' : '#b91c1c', color: 'white', padding: '8px 16px', borderRadius: '8px',
             fontWeight: 600, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-            <span>{connexion.role === 'saisie' ? '✍️ Poste de saisie (main courante et points phones)' : '👁 Poste en consultation seule'}{rescueId ? ' — ' + rescueId : ''}</span>
+            <span>{connexion.role === 'saisie' ? '✍️ Poste de saisie' : '👁 Poste en consultation seule'}{rescueId ? ' — ' + rescueId : ''}</span>
             <span>{connexion.connecte ? '🟢 Connecté au poste principal' : '🔴 Connexion perdue — reconnexion en cours…'}</span>
         </div>
         {connexion.versionChangee && (

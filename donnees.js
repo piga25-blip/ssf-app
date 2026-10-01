@@ -23,10 +23,22 @@ const CLES_DONNEES = [
 ];
 
 // Actions permises aux postes de saisie (autres postes du réseau, quand le poste principal autorise
-// la saisie) : main courante et passages aux points phones. Le serveur refuse toutes les autres.
+// la saisie) — rôle « Saisie » de la décision 2 : main courante, points phones (lot 2), inscriptions,
+// équipes et planning (lot 3). Restent au poste principal : dossier, infos et clôture du secours,
+// imports, remises à zéro, secrétaires, réglages du planning, suppressions en masse.
 const ACTIONS_SAISIE_DISTANTE = [
-    'MC/AJOUTER', 'MC/MODIFIER', 'MC/INSERER', 'MC/VALIDER_RAPPEL', 'MC/REPORTER_RAPPEL',
+    // Main courante et points phones (lot 2)
+    'MC/AJOUTER', 'MC/AJOUTER_PLUSIEURS', 'MC/MODIFIER', 'MC/INSERER', 'MC/VALIDER_RAPPEL', 'MC/REPORTER_RAPPEL',
     'MC/AJOUTER_PRESENTS_POINT_PHONE', 'PLANNING/AFFECTER_DEPUIS_MC',
+    // Inscriptions (lot 3)
+    'SAUVETEURS/LISTE_AJOUTER', 'SAUVETEURS/LISTE_MODIFIER', 'SAUVETEURS/LISTE_SUPPRIMER', 'SAUVETEURS/ARRIVEE', 'SAUVETEURS/DEPART',
+    // Points phones (lot 3)
+    'POINTS_PHONE/AJOUTER', 'POINTS_PHONE/MODIFIER', 'POINTS_PHONE/CHANGER_ORDRE', 'POINTS_PHONE/SUPPRIMER',
+    // Équipes (lot 3)
+    'EQUIPES/CREER', 'EQUIPES/MODIFIER', 'EQUIPES/DISSOUDRE', 'EQUIPES/REACTIVER', 'EQUIPES/AJOUTER_MEMBRES',
+    'EQUIPES/LIBERER_MEMBRE', 'EQUIPES/DEPLACER_MEMBRE', 'EQUIPES/REORDONNER_MEMBRES', 'EQUIPES/SCINDER',
+    // Planning (lot 3)
+    'PLANNING/AFFECTER', 'PLANNING/RECOPIER', 'PLANNING/COMBLER_CRENEAUX',
 ];
 
 const POINT_PHONE_PC = { lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 };
@@ -60,6 +72,11 @@ const etatInitialDonnees = (startHour) => ({
 // appliquant les actions dans l'ordre fixé par le serveur, ils obtiennent les mêmes numéros.
 const NUMERO_AUTO = '#AUTO';                        // avec le préfixe de la MC secondaire (B-012)
 const NUMERO_AUTO_SANS_PREFIXE = '#AUTO-SANS-PREFIXE'; // sans préfixe (certaines lignes système)
+
+// ---------- Refus (lot 3) ----------
+// Une action incompatible avec l'état actuel (ex. deux postes créent « Équipe 3 » au même instant)
+// est refusée : le serveur ne l'applique pas et renvoie ce message au poste qui l'a envoyée.
+const refuser = (message) => { const e = new Error(message); e.refus = true; throw e; };
 
 // ---------- Outils internes (purs) ----------
 
@@ -171,6 +188,12 @@ const idsUniques = (events) => {
     });
 };
 
+// Prochain identifiant libre « EXT-nnn » de la liste préfectorale
+const prochainIdExterne = (etat) => {
+    const nums = etat.masterSauveteursList.map(s => (String(s.id).match(/^EXT-(\d{1,4})$/) || [])[1]).filter(Boolean).map(Number);
+    return `EXT-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
+};
+
 // Lettre d'un point phone (anciennes données : simple chaîne ; actuelles : objet)
 const lettrePointPhone = (pp) => (typeof pp === 'object' ? pp.lettre : pp);
 
@@ -185,9 +208,16 @@ const ACTIONS_DONNEES = {
 
     // ===== Sauveteurs : liste préfectorale =====
 
+    // idAuto : identifiant EXT-nnn proposé par le poste ; s'il vient d'être pris par un autre poste,
+    // le suivant libre est attribué. Identifiant saisi à la main et déjà pris : refus.
     'SAUVETEURS/LISTE_AJOUTER'(etat, { sauveteur }) {
-        if (etat.masterSauveteursList.some(s => s.id === sauveteur.id)) return etat;
-        return { ...etat, masterSauveteursList: [...etat.masterSauveteursList, sauveteur] };
+        const { idAuto, ...s } = sauveteur;
+        const existant = etat.masterSauveteursList.find(x => x.id === s.id);
+        if (existant) {
+            if (!idAuto) refuser(`L'identifiant ${s.id} est déjà utilisé (« ${existant.name} »).`);
+            s.id = prochainIdExterne(etat);
+        }
+        return { ...etat, masterSauveteursList: [...etat.masterSauveteursList, s] };
     },
 
     'SAUVETEURS/LISTE_MODIFIER'(etat, { id, name, role, SSF }) {
@@ -277,7 +307,7 @@ const ACTIONS_DONNEES = {
 
     // ordreSaisi : position saisie (texte) ; vide ou invalide → après le dernier
     'POINTS_PHONE/AJOUTER'(etat, { lettre, nom, typePP, ordreSaisi }) {
-        if (etat.pointsPhone.some(pp => lettrePointPhone(pp) === lettre)) return etat;
+        if (etat.pointsPhone.some(pp => lettrePointPhone(pp) === lettre)) refuser(`Le point phone « ${lettre} » existe déjà (ajouté sur un autre poste ?).`);
         const maxOrdre = etat.pointsPhone.reduce((max, pp) => {
             const o = typeof pp === 'object' && pp.ordre !== undefined ? parseFloat(pp.ordre) : 0;
             return Math.max(max, isNaN(o) ? 0 : o);
@@ -297,7 +327,8 @@ const ACTIONS_DONNEES = {
     // Modifie un point phone ; les lignes de main courante qui le citaient sont mises à jour
     'POINTS_PHONE/MODIFIER'(etat, { ancienneLettre, lettre, nom, typePP }) {
         const position = etat.pointsPhone.findIndex(pp => lettrePointPhone(pp) === ancienneLettre);
-        if (position < 0) return etat;
+        if (position < 0) refuser(`Le point phone « ${ancienneLettre} » n'existe plus (supprimé sur un autre poste ?).`);
+        if (lettre !== ancienneLettre && etat.pointsPhone.some(pp => lettrePointPhone(pp) === lettre)) refuser(`Le point phone « ${lettre} » existe déjà.`);
         const ancien = etat.pointsPhone[position];
         const ancienAffichage = typeof ancien === 'object' ? `${ancien.lettre} - ${ancien.nom}` : ancien;
         const nouveau = {
@@ -484,6 +515,8 @@ const ACTIONS_DONNEES = {
     // Création : les membres quittent leur ancienne équipe ; numéro mémorisé ; activité
     // « Engagé » (ou « Gestion » si la mission contient « gestion ») au créneau actuel
     'EQUIPES/CREER'(etat, { equipe, horodatage, evenements }) {
+        if (etat.teams.some(t => t.id === equipe.id)) refuser(`L'équipe « ${equipe.name} » existe déjà (créée sur un autre poste ?) : choisissez un autre numéro.`);
+        if (etat.usedTeamNumbers.some(u => u.numero === equipe.id)) refuser(`Le numéro de « ${equipe.name} » a déjà été utilisé : choisissez un autre numéro.`);
         const teams = etat.teams
             .map(t => t.members.some(id => equipe.members.includes(id)) ? { ...t, members: t.members.filter(id => !equipe.members.includes(id)) } : t)
             .concat([equipe]);
@@ -540,6 +573,7 @@ const ACTIONS_DONNEES = {
     // Ajout de membres : ils quittent leur ancienne équipe ; « Engagé » (ou « Gestion ») au créneau actuel
     'EQUIPES/AJOUTER_MEMBRES'(etat, { id, membres, horodatage, evenement }) {
         const equipe = etat.teams.find(t => t.id === id);
+        if (!equipe || equipe.status === 'dissolved') refuser("Cette équipe n'existe plus ou a terminé sa mission (modifiée sur un autre poste ?).");
         const teams = etat.teams.map(t => {
             if (t.id === id) {
                 return {
@@ -576,7 +610,7 @@ const ACTIONS_DONNEES = {
         const nom = nomsSauveteurs(etat, [idMembre])[0];
         const origine = etat.teams.find(t => t.id === idOrigine);
         const destination = etat.teams.find(t => t.id === idDestination);
-        if (!origine || !destination) return etat;
+        if (!origine || !destination) refuser("L'équipe d'origine ou de destination n'existe plus (modifiée sur un autre poste ?).");
         const teams = etat.teams.map(t => {
             if (t.id === idOrigine) return {
                 ...t, members: t.members.filter(m => m !== idMembre),
@@ -610,6 +644,8 @@ const ACTIONS_DONNEES = {
 
     // Scission : les membres détachés forment la nouvelle équipe
     'EQUIPES/SCINDER'(etat, { idSource, nouvelleEquipe, evenements }) {
+        if (!etat.teams.some(t => t.id === idSource)) refuser("L'équipe à scinder n'existe plus (modifiée sur un autre poste ?).");
+        if (etat.teams.some(t => t.id === nouvelleEquipe.id || t.name === nouvelleEquipe.name)) refuser(`« ${nouvelleEquipe.name} » existe déjà (créée sur un autre poste ?).`);
         const teams = etat.teams
             .map(t => t.id === idSource ? { ...t, members: t.members.filter(m => !nouvelleEquipe.members.includes(m)) } : t)
             .concat([nouvelleEquipe]);
@@ -667,6 +703,13 @@ const ACTIONS_DONNEES = {
         return { ...etat, sauveteurPermanentNumbers, nextPermanentNumber: n };
     },
 
+};
+
+// Version utilisée par l'écran d'un poste : une action renvoyée par le serveur a déjà été acceptée
+// et s'applique sans erreur ; par sécurité, une erreur imprévue laisse l'écran intact.
+const reducteurDonneesPoste = (etat, action) => {
+    try { return reducteurDonnees(etat, action); }
+    catch (e) { console.error('[donnees] action non appliquée sur ce poste :', action && action.type, e.message); return etat; }
 };
 
 const reducteurDonnees = (etat, action) => {

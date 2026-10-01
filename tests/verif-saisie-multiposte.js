@@ -5,7 +5,8 @@
 // 1. saisie autorisée → les deux autres postes passent en « saisie » ;
 // 2. trois lignes saisies EN MÊME TEMPS sur les trois postes → numéros uniques et consécutifs,
 //    identiques sur tous les postes ; heure et poste de saisie donnés par le serveur ;
-// 3. action interdite sur un poste de saisie (liste préfectorale) → refusée, rien d'enregistré ;
+// 3. inscription autorisée sur un poste de saisie (lot 3) ; action réservée au poste principal
+//    (clôture du secours) → refusée, rien d'enregistré ;
 // 4. correction d'une ligne depuis un poste de saisie → historique visible sur le poste principal ;
 // 5. rappel dépassé validé en même temps sur deux postes → une seule validation ;
 // 6. passage d'une équipe à un point phone saisi sur un poste de saisie → planning mis à jour.
@@ -109,18 +110,21 @@ const ID_SECOURS = /Gouffre Multiposte/;
         }));
         controler('2. Mêmes numéros affichés sur les postes de saisie', memesNumeros.every(Boolean));
 
-        // ===== 3. Action interdite
-        await postes[0].evaluate(() => {});
+        // ===== 3. Inscription autorisée (lot 3) ; clôture réservée au poste principal
         await b(postes[0], 'Liste Préfectorale').click();
-        await postes[0].locator('input[placeholder="NOM"]:visible').fill('INTRUS');
-        await postes[0].locator('input[placeholder="Prénom"]:visible').fill('Ivan');
+        await postes[0].locator('input[placeholder="NOM"]:visible').fill('CHARLIE');
+        await postes[0].locator('input[placeholder="Prénom"]:visible').fill('Carl');
         await b(postes[0], '+ Ajouter').click();
         await postes[0].waitForTimeout(1000);
-        const tInterdit = await texte(postes[0]);
         await b(postes[0], /^Fermer$/).last().click();
+        await b(postes[0], 'Clôturer le secours').click();
+        await b(postes[0], 'Heure actuelle').click();
+        await postes[0].waitForTimeout(1000);
+        const tInterdit = await texte(postes[0]);
         s = await secours();
-        controler('3. Liste préfectorale depuis un poste de saisie : refusée avec message, rien d\'enregistré',
-            tInterdit.includes('seules la main courante et les points phones') && !s.masterSauveteursList.some(x => x.name.includes('INTRUS')));
+        controler('3. Liste préfectorale depuis un poste de saisie : sauveteur ajouté', s.masterSauveteursList.some(x => x.name === 'CHARLIE Carl'));
+        controler('3. Clôture depuis un poste de saisie : refusée avec message, rien d\'enregistré',
+            tInterdit.includes('réservée au poste principal') && !s.clotureInfo && !s.events.some(e => (e.evenement || '').includes('CLÔTURE')));
 
         // ===== 4. Correction depuis un poste de saisie
         const ligneP = postes[0].locator('tr:visible', { hasText: 'Ligne du poste principal' }).first();

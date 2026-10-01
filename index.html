@@ -600,7 +600,7 @@
             // ===== DONNÉES PARTAGÉES DU SECOURS (lot 0, B1) =====
             // Toutes les données partagées sont dans un seul état, modifié uniquement par des
             // actions nommées (donnees.js). Par défaut, le planning commence 1 h avant l'heure actuelle.
-            const [donnees, dispatchDonnees] = React.useReducer(reducteurDonnees, null,
+            const [donnees, dispatchDonnees] = React.useReducer(reducteurDonneesPoste, null,
                 () => etatInitialDonnees(Math.max(0, new Date().getHours() - 1)));
             const {
                 masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber,
@@ -638,7 +638,7 @@
                     if (!EST_POSTE_PRINCIPAL && e.rescueId) { setCurrentRescueId(e.rescueId); setTempRescueIdInput(e.rescueId); }
                 },
                 surAction: (action) => dispatchDonnees(action),
-                surRefus: (raison) => { setNotification('⛔ ' + raison); setTimeout(() => setNotification(null), 4000); },
+                surRefus: (raison) => { setNotification('⛔ ' + raison); setTimeout(() => setNotification(null), 8000); },
             });
             // Rôle de ce poste (principal, saisie, consultation), à jour même dans les fonctions mémorisées
             const roleRef = useRef(connexion.role);
@@ -651,7 +651,7 @@
                     return;
                 }
                 setNotification(role === 'saisie'
-                    ? '⛔ Poste de saisie : seules la main courante et les points phones peuvent être modifiés ici.'
+                    ? '⛔ Poste de saisie : cette action est réservée au poste principal.'
                     : '⛔ Poste en consultation seule : modification impossible.');
                 setTimeout(() => setNotification(null), 4000);
             }, []);
