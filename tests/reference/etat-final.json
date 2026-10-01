@@ -60,6 +60,7 @@
      "evenement": "👔 Activité \"Engage\" affectée à : MARTIN Alice, BERNARD Bruno, DUBOIS Chloé",
      "fait": false,
      "id": "ID_3",
+     "isoTimestamp": "2026-03-14T07:01:31.000Z",
      "messageImportant": false,
      "numero": "003",
      "secretaire": "Système"
@@ -188,6 +189,7 @@
      "evenement": "👔 Activité \"Engage\" affectée à : THOMAS David, ROBERT Emma",
      "fait": false,
      "id": "ID_12",
+     "isoTimestamp": "2026-03-14T07:50:43.800Z",
      "messageImportant": false,
      "numero": "012",
      "secretaire": "Système"

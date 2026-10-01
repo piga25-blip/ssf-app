@@ -783,7 +783,7 @@
                         setPointsPhone(loadedPP);
                         if (data.missionInfo) setMissionInfo(data.missionInfo);
                         if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                        setEvents(data.events || []);
+                        setEvents(garantirIdsUniques(data.events || []));
                         setNextEventNumber(data.nextEventNumber || 1);
                         setPlanning(data.planning || {});
                         setStartHour(data.startHour || 0);
@@ -1048,7 +1048,7 @@
                     setActiveSauveteurIds(data.activeSauveteurIds || []);
                     setTeams(data.teams || []);
                     setSecretaires(data.secretaires || []);
-                    setEvents(data.events || []);
+                    setEvents(garantirIdsUniques(data.events || []));
                     setNextEventNumber(data.nextEventNumber || 1);
                     setPlanning(data.planning || {});
                     setStartHour(data.startHour !== undefined ? data.startHour : 9);
@@ -1185,7 +1185,7 @@
                         setPointsPhone(loadedPP);
                         if (data.missionInfo) setMissionInfo(data.missionInfo);
                         if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                        setEvents(data.events || []);
+                        setEvents(garantirIdsUniques(data.events || []));
                         setNextEventNumber(data.nextEventNumber || 1);
                         setPlanning(data.planning || {});
                         setStartHour(data.startHour || 0);
@@ -1355,7 +1355,7 @@
                                 const ts = Date.parse(event.isoTimestamp);
                                 if (!isNaN(ts)) return ts;
                             }
-                            // Priorité 2 : id numérique (Date.now() à la création)
+                            // Priorité 2 : id numérique (Date.now() à la création, anciennes versions)
                             if (typeof event.id === 'number' && event.id > 1000000000000) {
                                 return event.id;
                             }
@@ -1375,7 +1375,7 @@
                         // Fusion des événements importés
                         const importedEvents = data.events.map(event => ({
                             ...event,
-                            id: Date.now() + Math.random(),
+                            id: nouvelId(),
                             importedFrom: data.mcIdentifiant || 'MC Secondaire',
                             importedAt: new Date().toISOString()
                         }));
@@ -1391,7 +1391,7 @@
                             return 0;
                         });
 
-                        setEvents(mergedEvents);
+                        setEvents(garantirIdsUniques(mergedEvents));
 
                         // Résumé du résultat
                         const plusAncien = mergedEvents[0]?.dateHeure || '?';
@@ -1556,7 +1556,7 @@
                                         onConfirm={(clotureDate) => {
                                             const numCloture = (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3,'0')}` : nextEventNumber.toString().padStart(3,'0');
                                             setClotureInfo({ dateHeure: clotureDate.toLocaleString('fr-FR'), isoTimestamp: clotureDate.toISOString() });
-                                            setEvents(prev => [...prev, { id: Date.now(), isoTimestamp: clotureDate.toISOString(), secretaire: 'Système', dateHeure: clotureDate.toLocaleString('fr-FR'), messageImportant: true, categorie: 'secours', evenement: `🔒 CLÔTURE DU SECOURS — ${missionInfo.nomCavite || currentRescueId}\nDate et heure de clôture : ${clotureDate.toLocaleString('fr-FR')}`, numero: numCloture, fait: false }]);
+                                            setEvents(prev => [...prev, { id: nouvelId(), isoTimestamp: clotureDate.toISOString(), secretaire: 'Système', dateHeure: clotureDate.toLocaleString('fr-FR'), messageImportant: true, categorie: 'secours', evenement: `🔒 CLÔTURE DU SECOURS — ${missionInfo.nomCavite || currentRescueId}\nDate et heure de clôture : ${clotureDate.toLocaleString('fr-FR')}`, numero: numCloture, fait: false }]);
                                             setNextEventNumber(n => n + 1);
                                             setShowClotureModal(false);
                                         }}
@@ -1968,11 +1968,11 @@
                                     let num = modalRepos.eventBase.nextNum;
                                     if (selectionnes.length > 0) {
                                         const nomsAvec = tous.filter(s => selectionnes.includes(s.id)).map(s => s.name).join(', ');
-                                        newEvents.push({ id: Date.now(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${nomsAvec}\nDurée : ${dureeH}h — Fin prévue : ${finStr}${avecRappel ? `\n⏰ Rappel ${preavMin}min avant (${rappelStr})` : ''}`, numero: mkNumero(num++), dateRappel, heureRappel, fait: false });
+                                        newEvents.push({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${nomsAvec}\nDurée : ${dureeH}h — Fin prévue : ${finStr}${avecRappel ? `\n⏰ Rappel ${preavMin}min avant (${rappelStr})` : ''}`, numero: mkNumero(num++), dateRappel, heureRappel, fait: false });
                                     }
                                     const nonSel = tous.filter(s => !selectionnes.includes(s.id));
                                     if (nonSel.length > 0) {
-                                        newEvents.push({ id: Date.now() + 1, isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${nonSel.map(s=>s.name).join(', ')}`, numero: mkNumero(num++), fait: false });
+                                        newEvents.push({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${nonSel.map(s=>s.name).join(', ')}`, numero: mkNumero(num++), fait: false });
                                     }
                                     setEvents(prev => [...prev, ...newEvents]);
                                     setActiveTab('maincourante');
@@ -1980,7 +1980,7 @@
                                 };
 
                                 const handleSansDuree = () => {
-                                    setEvents(prev => [...prev, { id: Date.now(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${modalRepos.sauveteurs}`, numero: mkNumero(modalRepos.eventBase.nextNum), fait: false }]);
+                                    setEvents(prev => [...prev, { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${modalRepos.sauveteurs}`, numero: mkNumero(modalRepos.eventBase.nextNum), fait: false }]);
                                     setActiveTab('maincourante');
                                     setModalRepos(null);
                                 };
@@ -2095,7 +2095,7 @@
                                                     setPointsPhone(loadedPP);
                                                     if (data.missionInfo) setMissionInfo(data.missionInfo);
                                                     if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                                                    setEvents(data.events || []);
+                                                    setEvents(garantirIdsUniques(data.events || []));
                                                     setNextEventNumber(data.nextEventNumber || 1);
                                                     setPlanning(data.planning || {});
                                                     setStartHour(data.startHour || 0);

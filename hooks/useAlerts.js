@@ -19,7 +19,7 @@ const useAlerts = ({ events, setEvents, nextEventNumber, setNextEventNumber }) =
     const handleValidateAlertGlobal = (event) => {
         const updatedEvents = events.map(e => e.id === event.id ? { ...e, fait: true } : e);
         const validationEvent = {
-            id: Date.now(),
+            id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
             secretaire: 'Système',
             dateHeure: new Date().toLocaleString('fr-FR'),

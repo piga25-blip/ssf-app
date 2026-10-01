@@ -9,7 +9,8 @@
     "build": "set NODE_TLS_REJECT_UNAUTHORIZED=0 && electron-builder build --win",
     "build:dir": "set NODE_TLS_REJECT_UNAUTHORIZED=0 && electron-builder build --win --dir",
     "test:scenario": "node tests/scenario-reference.js",
-    "test:scenario:maj": "node tests/scenario-reference.js --maj-reference"
+    "test:scenario:maj": "node tests/scenario-reference.js --maj-reference",
+    "test": "node tests/scenario-reference.js && node tests/verif-reouverture.js && node tests/verif-export-import.js && node tests/verif-identifiants.js"
   },
   "dependencies": {
     "electron-updater": "^6.3.9"

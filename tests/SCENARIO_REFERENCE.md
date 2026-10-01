@@ -11,6 +11,7 @@ Depuis `C:\Projets\SSF-Reseau` :
 
 | Commande | Effet |
 |---|---|
+| **`npm test`** | **Lance tout** : le scénario puis les vérifications complémentaires (environ 3 min) — à faire après chaque modification |
 | `npm run test:scenario` | Rejoue le scénario et le compare à la référence → ✅ SUCCÈS ou ❌ ÉCHEC avec la liste des différences |
 | `npm run test:scenario:maj` | Rejoue le scénario et **remplace** la référence (uniquement après un changement voulu et vérifié) |
 | `node tests/scenario-reference.js --jusqua=12` | S'arrête après l'étape 12 et enregistre une capture et la description de l'écran dans `tests/sortie/` |
@@ -88,12 +89,13 @@ Tests ciblés, ajoutés lors de la correction de défauts de la version officiel
 |---|---|
 | `node tests/verif-reouverture.js` | Un dossier clôturé, rouvert après redémarrage, reste clôturé avec sa cavité et sa commune ; un ancien dossier rouvert n'enregistre pas de champs techniques |
 | `node tests/verif-export-import.js` | « Exporter Tout » contient infos du secours, clôture, n° permanents et n° d'équipe ; « Importer Tout » les reprend du fichier |
+| `node tests/verif-identifiants.js` | Identifiants d'événements uniques (lot 0, A2) : 10 000 tirages sans doublon, y compris sans `crypto.randomUUID` (postes en `http://`) ; un ancien dossier avec doublons est réparé et valider un rappel ne touche plus que l'événement concerné |
 
 ## Fichiers
 
 | Fichier | Rôle |
 |---|---|
 | `tests/scenario-reference.js` | Le scénario et l'outil de comparaison |
-| `tests/verif-reouverture.js`, `tests/verif-export-import.js` | Vérifications complémentaires |
+| `tests/verif-*.js` | Vérifications complémentaires |
 | `tests/reference/etat-final.json` | La référence (versionnée dans git) |
 | `tests/sortie/` | Résultats de la dernière exécution : état obtenu, captures (non versionné) |

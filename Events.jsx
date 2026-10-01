@@ -674,7 +674,7 @@ let MainCouranteTab = ({
 
         // Créer un événement de validation
         const validationEvent = {
-            id: Date.now(),
+            id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
             secretaire: formData.secretaire || 'Système',
             dateHeure: new Date().toLocaleString('fr-FR'),
@@ -1075,7 +1075,7 @@ let MainCouranteTab = ({
         }
 
         const newEvent = {
-            id: Date.now(),
+            id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
             secretaire: formData.secretaire,
             dateHeure: new Date().toLocaleString('fr-FR'),
@@ -1387,7 +1387,7 @@ let MainCouranteTab = ({
         }
 
         const newEvent = {
-            id: Date.now(),
+            id: nouvelId(),
             isoTimestamp: eventIsoTimestamp,
             secretaire: insertFormData.secretaire,
             dateHeure: eventDateHeure,
@@ -2136,7 +2136,7 @@ let MainCouranteTab = ({
                             ? mcIdentifiant + '-' + nextEventNumber.toString().padStart(3,'0')
                             : nextEventNumber.toString().padStart(3,'0');
                         var newMcEvent = {
-                            id: Date.now(),
+                            id: nouvelId(),
                             isoTimestamp: new Date().toISOString(),
                             secretaire: 'Système',
                             dateHeure: new Date().toLocaleString('fr-FR'),

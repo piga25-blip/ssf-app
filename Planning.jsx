@@ -996,7 +996,7 @@ const PaletteActivites = ({
                 }
                 
                 const newEvent = {
-                    id: Date.now(),
+                    id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
                     secretaire: 'Système',
                     dateHeure: new Date().toLocaleString('fr-FR'),

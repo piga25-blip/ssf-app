@@ -119,7 +119,7 @@ const GestionPlanningModal = ({
             : `Arrivée de : ${nomsArrivants}`;
 
         const newEvent = {
-            id: Date.now(),
+            id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
             secretaire: 'Système',
             dateHeure: new Date().toLocaleString('fr-FR'),
@@ -191,7 +191,7 @@ const GestionPlanningModal = ({
         // NE PAS retirer de activeSauveteurIds : la personne reste visible dans le planning
 
         const newEvent = {
-            id: Date.now(),
+            id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
             secretaire: 'Système',
             dateHeure: new Date().toLocaleString('fr-FR'),
@@ -1027,7 +1027,7 @@ if (!importedData) return;
 
 try {
     // Mettre à jour les événements
-    setEvents(mergePreview);
+    setEvents(garantirIdsUniques(mergePreview));
 
     // Mettre à jour le prochain numéro si nécessaire
     const importedEvents = importedData.events || [];

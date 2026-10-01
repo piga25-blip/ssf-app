@@ -105,8 +105,8 @@ const usePlanning = ({
             if (slotIndex >= 0 && slotIndex < totalSlots) {
                 newPlanning[slotIndex] = 'disponible';
                 if (sauv) {
-                    const arriveeEvent = { id: Date.now(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `Arrivée de : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : nextEventNumber.toString().padStart(3, '0'), fait: false };
-                    const disponibleEvent = { id: Date.now() + 1, isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `🧑‍⚕️ Activité "Disponible" affectée à : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${(nextEventNumber + 1).toString().padStart(3, '0')}` : (nextEventNumber + 1).toString().padStart(3, '0'), fait: false };
+                    const arriveeEvent = { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `Arrivée de : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : nextEventNumber.toString().padStart(3, '0'), fait: false };
+                    const disponibleEvent = { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `🧑‍⚕️ Activité "Disponible" affectée à : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${(nextEventNumber + 1).toString().padStart(3, '0')}` : (nextEventNumber + 1).toString().padStart(3, '0'), fait: false };
                     setEvents(prev => [...prev, arriveeEvent, disponibleEvent]);
                     eventNumberIncrement = 2;
                 }
@@ -124,8 +124,8 @@ const usePlanning = ({
                     return { ...prev, [sauveteurId]: existingRow };
                 });
                 if (sauv) {
-                    const arriveeEvent = { id: Date.now(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `Arrivée de : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : nextEventNumber.toString().padStart(3, '0'), fait: false };
-                    const disponibleEvent = { id: Date.now() + 1, isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `🧑‍⚕️ Retour sur site — Activité "Disponible" affectée à : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${(nextEventNumber + 1).toString().padStart(3, '0')}` : (nextEventNumber + 1).toString().padStart(3, '0'), fait: false };
+                    const arriveeEvent = { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `Arrivée de : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nextEventNumber.toString().padStart(3, '0')}` : nextEventNumber.toString().padStart(3, '0'), fait: false };
+                    const disponibleEvent = { id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: 'personnel', evenement: `🧑‍⚕️ Retour sur site — Activité "Disponible" affectée à : ${sauv.name}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${(nextEventNumber + 1).toString().padStart(3, '0')}` : (nextEventNumber + 1).toString().padStart(3, '0'), fait: false };
                     setEvents(prev => [...prev, arriveeEvent, disponibleEvent]);
                     eventNumberIncrement = 2;
                 }

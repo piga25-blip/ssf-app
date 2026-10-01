@@ -221,7 +221,7 @@ let GestionEquipesModal = ({
             : `Création Équipe ${nouvelleEquipe.numero}\nChef: ${chefNom}\nMission: ${nouvelleEquipe.mission}\nMembres: ${membresNomsString}`;
 
         const newEvent = {
-            id: Date.now(),
+            id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
             secretaire: 'Système',
             dateHeure: new Date().toLocaleString('fr-FR'),
@@ -292,7 +292,8 @@ let GestionEquipesModal = ({
             
             // Créer un événement MC pour l'affectation
             const engageEvent = {
-                id: Date.now() + 1,
+                id: nouvelId(),
+                isoTimestamp: new Date().toISOString(),
                 secretaire: 'Système',
                 dateHeure: new Date().toLocaleString('fr-FR'),
                 messageImportant: false,
@@ -384,7 +385,7 @@ let GestionEquipesModal = ({
         // Événement MC pour modification de mission
         if (!mcMode || mcMode === 'principale') {
             const newEvent = {
-                id: Date.now(),
+                id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
                 secretaire: 'Système',
                 dateHeure: new Date().toLocaleString('fr-FR'),
@@ -462,7 +463,7 @@ let GestionEquipesModal = ({
             // Événement MC uniquement si MC Principale
             if (!mcMode || mcMode === 'principale') {
                 const newEvent = {
-                    id: Date.now(),
+                    id: nouvelId(),
                     isoTimestamp: new Date().toISOString(),
                     secretaire: 'Système',
                     dateHeure: new Date().toLocaleString('fr-FR'),
@@ -556,7 +557,7 @@ let GestionEquipesModal = ({
         }
 
         const newEvent = {
-            id: Date.now(),
+            id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
             secretaire: 'Système',
             dateHeure: new Date().toLocaleString('fr-FR'),
@@ -645,7 +646,7 @@ let GestionEquipesModal = ({
             // Événement MC uniquement si MC Principale
             if (!mcMode || mcMode === 'principale') {
                 const newEvent = {
-                    id: Date.now(),
+                    id: nouvelId(),
                     isoTimestamp: new Date().toISOString(),
                     secretaire: 'Système',
                     dateHeure: new Date().toLocaleString('fr-FR'),
@@ -719,7 +720,7 @@ let GestionEquipesModal = ({
             // Événement MC uniquement si MC Principale
             if (!mcMode || mcMode === 'principale') {
                 const newEvent = {
-                    id: Date.now(),
+                    id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
                     secretaire: 'Système',
                     dateHeure: new Date().toLocaleString('fr-FR'),
@@ -780,7 +781,7 @@ let GestionEquipesModal = ({
         // Événement MC
         const membresNoms = team.members.map(id => { const s = masterSauveteursList.find(s => s.id === id); return s ? s.name : id; }).join(', ');
         const newEvent = {
-            id: Date.now(),
+            id: nouvelId(),
             isoTimestamp: now,
             secretaire: 'Système',
             dateHeure: new Date().toLocaleString('fr-FR'),
@@ -980,7 +981,7 @@ let GestionEquipesModal = ({
             
             if (nouveauChef && ancienChef) {
                 const newEvent = {
-                    id: Date.now(),
+                    id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
                     secretaire: 'Système',
                     dateHeure: new Date().toLocaleString('fr-FR'),
@@ -1765,7 +1766,7 @@ let GestionEquipesModal = ({
                         // Horodatage légèrement avant la scission pour que ce soit le "premier" point de la nouvelle équipe
                         const tsLocalisation = new Date(now.getTime() - 30000); // 30s avant
                         const newEvents = [{
-                            id: Date.now(),
+                            id: nouvelId(),
                             isoTimestamp: now.toISOString(),
                             secretaire: 'Système',
                             dateHeure: now.toLocaleString('fr-FR'),
@@ -1777,7 +1778,7 @@ let GestionEquipesModal = ({
                         }];
                         if (dernierPP) {
                             newEvents.push({
-                                id: Date.now() + 1,
+                                id: nouvelId(),
                                 isoTimestamp: tsLocalisation.toISOString(),
                                 secretaire: 'Système',
                                 dateHeure: tsLocalisation.toLocaleString('fr-FR'),
