@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche essai terrain</title>
+<style>
+  :root { --encre: #1f2937; --pale: #6b7280; --trait: #cbd5e1; --fond: #ffffff; --accent: #1d4ed8; --attention: #b45309; --zone: #f1f5f9; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --encre: #e5e7eb; --pale: #9ca3af; --trait: #475569; --fond: #111827; --accent: #93c5fd; --attention: #fbbf24; --zone: #1f2937; } }
+  :root[data-theme="dark"] { --encre: #e5e7eb; --pale: #9ca3af; --trait: #475569; --fond: #111827; --accent: #93c5fd; --attention: #fbbf24; --zone: #1f2937; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fond); color: var(--encre); font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 28px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--accent); color: var(--accent); }
+  h3 { font-size: 15px; margin: 18px 0 6px; }
+  p, li { margin: 4px 0; }
+  ol, ul { padding-left: 22px; }
+  .sous-titre { color: var(--pale); margin: 0 0 16px; }
+  .cadre { border: 1px solid var(--trait); border-radius: 6px; padding: 10px 14px; margin: 10px 0; background: var(--zone); }
+  .attention { border-left: 4px solid var(--attention); }
+  .champs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 24px; }
+  .champ { border-bottom: 1px solid var(--trait); padding: 10px 0 2px; color: var(--pale); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; table-layout: fixed; }
+  th, td { border: 1px solid var(--trait); padding: 6px 8px; vertical-align: top; text-align: left; word-wrap: break-word; }
+  th { background: var(--zone); font-weight: 600; }
+  col.n { width: 42px; } col.ok { width: 78px; } col.rem { width: 26%; }
+  .case { display: inline-block; width: 14px; height: 14px; border: 1.5px solid var(--encre); border-radius: 2px; vertical-align: -2px; margin-right: 6px; }
+  .bouton { font-weight: 600; white-space: nowrap; }
+  .lignes { height: 120px; border: 1px solid var(--trait); border-radius: 6px; margin: 6px 0; }
+  .tableau-defile { overflow-x: auto; }
+  @media (max-width: 600px) { .champs { grid-template-columns: 1fr; } col.rem { width: 30%; } }
+  @media print {
+    body { font-size: 11.5px; background: #fff; color: #000; }
+    main { max-width: none; padding: 0; }
+    h2 { break-after: avoid; color: #000; border-color: #000; }
+    table, .cadre { break-inside: avoid; }
+    tr { break-inside: avoid; }
+    .saut { break-before: page; }
+    .cadre { background: #fff; }
+  }
+  @page { size: A4; margin: 14mm 12mm; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Essai terrain — Application SSF en réseau</h1>
+<p class="sous-titre">Version de test « Application SSF Reseau (test) » 13.42.0 — un PC principal, les autres postes par le navigateur</p>
+
+<div class="champs">
+  <div class="champ">Date :</div>
+  <div class="champ">Lieu :</div>
+  <div class="champ">Responsable de l'essai :</div>
+  <div class="champ">Nombre de postes (PC / tablettes / téléphones) :</div>
+</div>
+
+<div class="cadre attention">
+  <strong>À savoir avant de commencer</strong>
+  <ul>
+    <li>C'est une <strong>version de test</strong>, installée à côté de la version officielle : elle ne touche ni à ses données ni à ses mises à jour.</li>
+    <li>À utiliser pour un <strong>exercice</strong> seulement, pas pour un vrai secours.</li>
+    <li>Seul le <strong>PC principal</strong> reçoit l'installation. Les autres postes utilisent simplement leur navigateur (Chrome, Edge, Firefox ou Safari, à jour).</li>
+    <li>Pas encore prévu : modifier le planning au doigt sur tablette (la consultation fonctionne).</li>
+    <li><strong>Notez tout ce qui surprend</strong>, même un détail : c'est le but de l'essai.</li>
+  </ul>
+</div>
+
+<h2>1. Matériel</h2>
+<ul>
+  <li><span class="case"></span>Un routeur Wi-Fi <strong>avec mot de passe</strong> (internet inutile), sa batterie ou son alimentation</li>
+  <li><span class="case"></span>Le PC principal (Windows), <strong>branché sur secteur</strong> si possible</li>
+  <li><span class="case"></span>Un à trois autres PC, une tablette ou un téléphone</li>
+  <li><span class="case"></span>Une clé USB (récupération des données à la fin)</li>
+  <li><span class="case"></span>Cette fiche imprimée et un stylo</li>
+</ul>
+
+<h2>2. Préparation du PC principal (avant le jour J)</h2>
+<ol>
+  <li>Lancer <strong>« Application SSF Reseau (test) Setup 13.42.0.exe »</strong>.<br>
+      Si Windows affiche « Windows a protégé votre ordinateur » : <span class="bouton">Informations complémentaires</span> puis <span class="bouton">Exécuter quand même</span> (le programme n'est pas signé).</li>
+  <li>Double-cliquer sur <strong>« autoriser-pare-feu.cmd »</strong>, répondre <span class="bouton">Oui</span>. Le message « OK : les autres postes peuvent se connecter à ce PC » doit s'afficher.</li>
+  <li>Ouvrir une première fois « Application SSF Reseau (test) » (icône sur le bureau) pour vérifier qu'elle démarre. Le titre de la fenêtre indique <strong>RÉSEAU (TEST)</strong>.</li>
+  <li>Régler le PC pour qu'il <strong>ne se mette pas en veille quand on ferme le capot</strong> (Paramètres › Système › Alimentation). L'application empêche la mise en veille automatique, mais pas celle du capot fermé.</li>
+</ol>
+
+<h2>3. Mise en place sur le terrain</h2>
+<ol>
+  <li>Allumer le routeur. Connecter <strong>tous les appareils</strong> au même Wi-Fi.</li>
+  <li>PC principal : ouvrir l'application, créer un dossier <strong>EXERCICE</strong>, choisir <strong>PC de Terrain</strong>, indiquer le secrétaire.</li>
+  <li>Cliquer sur <span class="bouton">🌐 Mode réseau</span> puis <span class="bouton">Activer le mode réseau</span>.<br>
+      Si Windows demande l'accès au réseau : cocher <strong>réseaux privés et réseaux publics</strong>, puis <span class="bouton">Autoriser</span>.</li>
+  <li>Recopier ici l'adresse et le code affichés :
+    <div class="champs"><div class="champ">Adresse (http://…:8080) :</div><div class="champ">Code de session :</div></div></li>
+  <li>Cocher <span class="bouton">Autoriser la saisie sur les autres postes</span>.</li>
+</ol>
+
+<h2>4. Connexion des autres postes</h2>
+<ul>
+  <li><strong>PC</strong> : ouvrir le navigateur, taper l'adresse ci-dessus, saisir le code de session, puis donner le nom du secrétaire quand il est demandé.</li>
+  <li><strong>Tablette ou téléphone</strong> : scanner le <strong>code QR</strong> affiché dans « 🌐 Mode réseau » sur le PC principal (le code de session est déjà dedans).</li>
+  <li>Sur le PC principal, la fenêtre <span class="bouton">🌐 Mode réseau</span> liste les postes connectés. Régler chacun en <strong>Saisie</strong> ou <strong>Consultation</strong>.</li>
+  <li>Sur chaque autre poste, le bandeau doit indiquer <strong>« 🟢 Connecté au poste principal »</strong>.</li>
+</ul>
+<table>
+  <colgroup><col><col><col><col class="ok"></colgroup>
+  <tr><th>Poste (nom du secrétaire)</th><th>Appareil et navigateur</th><th>Rôle</th><th>Connecté</th></tr>
+  <tr><td>PC principal</td><td></td><td>Administrateur</td><td><span class="case"></span></td></tr>
+  <tr><td>&nbsp;</td><td></td><td></td><td><span class="case"></span></td></tr>
+  <tr><td>&nbsp;</td><td></td><td></td><td><span class="case"></span></td></tr>
+  <tr><td>&nbsp;</td><td></td><td></td><td><span class="case"></span></td></tr>
+</table>
+
+<h2 class="saut">5. Essais de fonctionnement</h2>
+<p>Pour chaque essai : cocher « OK » si le résultat attendu est obtenu, sinon décrire ce qui s'est passé (et sur quel poste).</p>
+<div class="tableau-defile">
+<table>
+  <colgroup><col class="n"><col><col><col class="ok"><col class="rem"></colgroup>
+  <tr><th>N°</th><th>Essai</th><th>Résultat attendu</th><th>OK</th><th>Remarques</th></tr>
+  <tr><td>A1</td><td>Saisir une ligne de main courante sur un poste de saisie.</td><td>Elle apparaît sur tous les postes en 1 à 2 secondes, avec le nom du poste.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>A2</td><td>Deux postes cliquent sur <em>Enregistrer</em> <strong>au même moment</strong>.</td><td>Deux lignes, deux numéros différents, dans le même ordre partout.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>A3</td><td>Corriger une ligne depuis un autre poste que celui qui l'a saisie.</td><td>« ✏️ Corrigée par … » ; l'ancienne version reste consultable.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>A4</td><td>Ouvrir une ligne en modification sur un poste pendant qu'un autre la corrige.</td><td>Avertissement « modifiée sur un autre poste » dans la fenêtre ouverte.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>B1</td><td>Inscrire des sauveteurs et enregistrer leur arrivée depuis un poste de saisie.</td><td>Liste à jour partout ; ligne d'arrivée dans la main courante.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>B2</td><td>Inscrire deux personnes en même temps sur deux postes (identifiant automatique).</td><td>Deux identifiants différents (EXT-…).</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>C1</td><td>Créer une équipe depuis un poste de saisie.</td><td>Équipe visible partout, ligne dans la main courante.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>C2</td><td>Créer la <strong>même</strong> équipe (même numéro) en même temps sur deux postes.</td><td>Une seule équipe ; l'autre poste reçoit un message clair.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>D1</td><td>Noter le passage d'une équipe à un point phone depuis un poste de saisie.</td><td>Planning mis à jour sur tous les postes.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>D2</td><td>Modifier le planning sur un poste pendant qu'un autre le regarde.</td><td>Message « 📅 Planning modifié sur … » sur l'autre poste.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>E1</td><td>Saisir une ligne avec un rappel dans 2 minutes.</td><td>L'alerte apparaît sur tous les postes.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>E2</td><td>Valider ce rappel sur un poste (puis essayer sur un autre en même temps).</td><td>Validé une seule fois ; l'alerte disparaît partout.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>F1</td><td>Poste en <strong>Consultation</strong> : essayer d'enregistrer une ligne.</td><td>Refusé avec un message ; rien n'est enregistré.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>F2</td><td>Poste de saisie : essayer une action réservée (ex. clôturer, importer).</td><td>Refusé avec le message « réservée au poste principal ».</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>G1</td><td>Tablette : lire la main courante, saisir une ligne.</td><td>Lisible ; ligne enregistrée.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>G2</td><td>S'éloigner avec la tablette jusqu'à perdre le Wi-Fi, puis revenir.</td><td>Distance notée ; reconnexion seule au retour.</td><td><span class="case"></span></td><td>Distance : ……… m</td></tr>
+</table>
+</div>
+
+<h2>6. Essais de pannes</h2>
+<div class="tableau-defile">
+<table>
+  <colgroup><col class="n"><col><col><col class="ok"><col class="rem"></colgroup>
+  <tr><th>N°</th><th>Panne simulée</th><th>Résultat attendu</th><th>OK</th><th>Remarques</th></tr>
+  <tr><td>P1</td><td>Couper le Wi-Fi d'un poste de saisie pendant 1 minute ; essayer de saisir.</td><td>Bandeau rouge « Connexion perdue », saisie refusée, bouton « 💾 Copie de secours ». Au retour du Wi-Fi : reconnexion seule en moins de 10 s.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>P2</td><td>Pendant P1, cliquer sur « 💾 Copie de secours ».</td><td>Un fichier est enregistré sur ce poste.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>P3</td><td>PC principal : <span class="bouton">🌐 Mode réseau</span> › <span class="bouton">Changer le code</span>.</td><td>Les autres postes demandent le nouveau code ; tout revient avec ce code.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>P4</td><td>Fermer l'application du PC principal puis la relancer (comme après un plantage).</td><td>Rien de perdu ; les autres postes se reconnectent seuls.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>P5</td><td>Éteindre le routeur 1 minute, puis le rallumer.</td><td>Les postes se reconnectent. <em>Si l'adresse du PC principal a changé, la noter : il faudra la retaper sur les postes.</em></td><td><span class="case"></span></td><td>Nouvelle adresse :</td></tr>
+  <tr><td>P6</td><td>Laisser tourner au moins 1 heure, PC principal sur batterie.</td><td>Pas de mise en veille ; batterie restante notée.</td><td><span class="case"></span></td><td>Batterie : ……… %</td></tr>
+</table>
+</div>
+
+<h2>7. Fin de l'essai : récupérer les données</h2>
+<ol>
+  <li>PC principal : <span class="bouton">💾 Exporter Tout</span> (fichier à garder).</li>
+  <li><span class="bouton">🌐 Mode réseau</span> › <span class="bouton">Désactiver</span>, puis fermer l'application.</li>
+  <li>Copier sur la clé USB le dossier suivant (taper le chemin dans la barre de l'Explorateur) :<br>
+      <code>%APPDATA%\Application SSF Reseau (test)\secours</code><br>
+      Il contient le journal de toutes les actions (qui, quoi, quand), utile pour analyser l'essai.</li>
+  <li>Transmettre la clé, le fichier exporté et cette fiche remplie.</li>
+</ol>
+
+<h2>8. Impressions générales</h2>
+<table>
+  <colgroup><col><col class="ok"><col class="ok"><col class="ok"><col class="rem"></colgroup>
+  <tr><th>Question</th><th>Oui</th><th>Moyen</th><th>Non</th><th>Pourquoi ?</th></tr>
+  <tr><td>Mise en place rapide (moins de 10 minutes) ?</td><td><span class="case"></span></td><td><span class="case"></span></td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>Connexion des postes facile (adresse, code, QR) ?</td><td><span class="case"></span></td><td><span class="case"></span></td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>Saisie à plusieurs plus efficace qu'à un seul poste ?</td><td><span class="case"></span></td><td><span class="case"></span></td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>Messages compréhensibles (refus, connexion perdue…) ?</td><td><span class="case"></span></td><td><span class="case"></span></td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>Utilisable sur tablette ?</td><td><span class="case"></span></td><td><span class="case"></span></td><td><span class="case"></span></td><td></td></tr>
+</table>
+<p><strong>Ce qui a gêné, ce qui manque, idées :</strong></p>
+<div class="lignes"></div>
+
+<h2>9. Après l'essai</h2>
+<ul>
+  <li>Retirer l'autorisation du pare-feu : double-clic sur <strong>« retirer-pare-feu.cmd »</strong>, puis <span class="bouton">Oui</span>.</li>
+  <li>La version de test peut être désinstallée (Paramètres › Applications › « Application SSF Reseau (test) »). La version officielle n'est pas touchée.</li>
+</ul>
+
+<div class="cadre">
+  <strong>En cas de problème de connexion</strong>
+  <ul>
+    <li>Le poste n'arrive pas à ouvrir l'adresse : vérifier qu'il est sur le <strong>même Wi-Fi</strong> ; relancer « autoriser-pare-feu.cmd » sur le PC principal ; vérifier l'adresse dans <span class="bouton">🌐 Mode réseau</span>.</li>
+    <li>Plusieurs adresses affichées (PC avec câble et Wi-Fi) : essayer celle qui commence comme l'adresse Wi-Fi du poste (souvent 192.168.…).</li>
+    <li>« Code incorrect » : reprendre le code affiché <em>actuellement</em> sur le PC principal (il change avec « Changer le code »).</li>
+  </ul>
+</div>
+
+</main>
+</body>
+</html>

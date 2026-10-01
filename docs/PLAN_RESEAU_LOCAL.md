@@ -555,8 +555,11 @@ autres postes à la fois ; avertissement « modifié entre-temps par X » dans l
 | Données personnelles (B7) | Aucune copie complète gardée sur les autres postes (sauvegardes automatiques faites par le serveur seulement) ; le code de session protège l'accès ; Wi-Fi protégé par mot de passe à prévoir sur le terrain |
 
 **Reste à prévoir avant la mise à jour 14.0 :**
-- essai réel sur le terrain (routeur Wi-Fi, plusieurs PC, tablette) ;
-- installateur : règle de pare-feu Windows pour l'application ;
+- essai réel sur le terrain (routeur Wi-Fi, plusieurs PC, tablette) — kit prêt le 01/10/2026 :
+  `docs/essai-terrain/` (fiche HTML/PDF, scripts pare-feu) + installateur
+  `npm run build` ; le kit assemblé est dans `dist/Kit-essai-terrain` ;
+- installateur : règle de pare-feu Windows pour l'application (pour l'essai : script
+  `docs/essai-terrain/autoriser-pare-feu.cmd`, ports TCP 8080-8089, tous profils réseau) ;
 - planning au toucher (tablettes) ;
 - saisie hors connexion « mise en attente » (option avancée de la décision 1), si le besoin se confirme ;
 - fusion dans `main` : rétablir l'identité de l'application (nom, appId, mise à jour automatique,
