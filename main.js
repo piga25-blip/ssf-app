@@ -9,7 +9,8 @@ if (process.env.SSF_TEST_USER_DATA) {
 }
 
 const crypto = require('crypto');
-const { demarrerServeur } = require('./serveur/serveur');
+const fs = require('fs');
+const { demarrerServeur, adressesReseau } = require('./serveur/serveur');
 const { creerMoteur } = require('./serveur/moteur');
 const { creerCanal } = require('./serveur/canal');
 const { reprendreMemoireNavigateur, reglagesARecopier, marquerReglagesRecopies } = require('./serveur/migration');
@@ -44,13 +45,27 @@ function createWindow() {
 app.whenReady().then(async () => {
   // Port : 8080 par défaut (les suivants s'il est pris) ; SSF_PORT=0 pour les tests (au hasard)
   const port = process.env.SSF_PORT !== undefined ? parseInt(process.env.SSF_PORT, 10) : 8080;
-  serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: '127.0.0.1' });
+  // Mode réseau (réglage conservé) : désactivé par défaut → ce poste seulement
+  const fichierReglages = path.join(app.getPath('userData'), 'reglages-serveur.json');
+  let reglages = { modeReseau: false };
+  try { reglages = { ...reglages, ...JSON.parse(fs.readFileSync(fichierReglages, 'utf8')) }; } catch (e) { /* premier lancement */ }
+  serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: reglages.modeReseau ? '0.0.0.0' : '127.0.0.1' });
+  const reseau = {
+    infos: () => ({ actif: serveurSSF.hote === '0.0.0.0', port: serveurSSF.port, adresses: adressesReseau() }),
+    basculer: async (actif) => {
+      await serveurSSF.changerHote(actif ? '0.0.0.0' : '127.0.0.1');
+      if (!actif && canalSSF) canalSSF.deconnecterDistants();
+      reglages.modeReseau = actif;
+      fs.writeFileSync(fichierReglages, JSON.stringify(reglages, null, 1));
+      return reseau.infos();
+    },
+  };
   moteurSSF = creerMoteur({ racineApp: __dirname, racineDonnees: app.getPath('userData') });
   // Premier lancement de cette version : reprise des secours rangés dans la mémoire du navigateur
   const rapport = await reprendreMemoireNavigateur({ BrowserWindow, ipcMain, racineDonnees: app.getPath('userData'), moteur: moteurSSF });
   if (rapport) console.log(`Reprise des données : ${rapport.secours.length} secours repris, ${rapport.ignores.length} ignoré(s), ${rapport.erreurs.length} erreur(s)`);
   canalSSF = creerCanal({ serveurHttp: serveurSSF.serveur, moteur: moteurSSF, jetonPrincipal: JETON_PRINCIPAL,
-    versionApp: app.getVersion(), journalConsole: (m) => console.log(m) });
+    versionApp: app.getVersion(), reseau, journalConsole: (m) => console.log(m) });
   console.log(`Serveur SSF : http://localhost:${serveurSSF.port}`);
   createWindow();
 

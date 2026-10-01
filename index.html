@@ -579,6 +579,7 @@
     <script type="text/babel" src="GestionPointsPhone.jsx"></script>
     <script type="text/babel" src="GestionListe.jsx"></script>
     <script type="text/babel" src="Modals.jsx"></script>
+    <script type="text/babel" src="Reseau.jsx"></script>
     <script type="text/babel" src="hooks/useAlerts.js"></script>
     <script type="text/babel" src="hooks/usePlanning.js"></script>
     <script type="text/babel" src="hooks/useConnexion.js"></script>
@@ -730,9 +731,7 @@
                 handleValidateAlertGlobal
             } = useAlerts({ events, actions, reserverNumerosMC });
 
-            // ===== POSTES CONNECTÉS (remplacé par la connexion au serveur intégré, lot 1) =====
-            const connectedUsers = [];
-            const userName = '', pcName = '', userMode = '';
+            const [showModeReseau, setShowModeReseau] = useState(false);
 
             // ===== VERSION STANDALONE - PAS DE WEBSOCKET =====
             // Les données sont sauvegardées uniquement en local (localStorage)
@@ -1342,21 +1341,8 @@
                 <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4">
                     <div className="w-full mx-auto">
                     {/* Bandeau utilisateurs connectés */}
-                    {connectedUsers.length > 0 && (
-                        <div style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '12px 20px', borderRadius: '8px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px'}}>
-                            <div style={{fontWeight: 'bold', fontSize: '16px'}}>
-                                👥 Connectés: {connectedUsers.length} | Mode: {userMode.toUpperCase()} | Vous: {userName} ({pcName})
-                            </div>
-                            <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
-                                {connectedUsers.map((u, i) => (
-                                    <span key={i} style={{background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '12px', fontSize: '13px'}}>
-                                        🟢 {u.userName} ({u.pcName}) — {u.role === 'admin' ? 'Admin' : u.role === 'maincourante' ? 'Main Courante' : u.role === 'planning' ? 'Planning' : 'Lecture'}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {/* Notification mise à jour par un autre utilisateur */}
+                    {!EST_POSTE_PRINCIPAL && <BandeauConsultation connexion={connexion} rescueId={currentRescueId} />}
+                    {/* Notification (modification refusée…) */}
                     {notification && (
                         <div style={{position: 'fixed', top: '20px', right: '20px', background: 'white', padding: '16px 24px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 10000, fontWeight: '600', borderLeft: '4px solid #667eea'}}>
                             🔔 {notification}
@@ -1630,6 +1616,24 @@
                                     </button>
                                 )}
                                 
+                                {EST_POSTE_PRINCIPAL && (
+                                
+                                    <button
+                                
+                                        onClick={() => setShowModeReseau(true)}
+                                
+                                        className={`${connexion.reseau && connexion.reseau.actif ? 'bg-green-700 hover:bg-green-800' : 'bg-slate-600 hover:bg-slate-700'} text-white px-4 py-2 rounded-lg font-semibold text-sm`}
+                                
+                                        title="Ouvrir l'application aux autres postes du réseau local"
+                                
+                                    >
+                                
+                                        🌐 Mode réseau{connexion.reseau && connexion.reseau.actif ? ` (${Math.max(0, (connexion.postes || []).length - 1)} poste(s))` : ''}
+                                
+                                    </button>
+                                
+                                )}
+                                
                                 <button 
                                     onClick={toggleFullscreen}
                                     className="bg-slate-600 text-white px-4 py-2 rounded-lg hover:bg-slate-700 font-semibold text-sm"
@@ -1784,6 +1788,12 @@
                                     actions={actions}
                                     onClose={() => setShowGestionSecretaires(false)}
                                 />
+                            </ModalErrorBoundary>
+                        )}
+
+                        {showModeReseau && (
+                            <ModalErrorBoundary onClose={() => setShowModeReseau(false)}>
+                                <ModeReseauModal connexion={connexion} onClose={() => setShowModeReseau(false)} />
                             </ModalErrorBoundary>
                         )}
 

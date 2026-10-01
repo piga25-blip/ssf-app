@@ -6,12 +6,13 @@
 //   elle ouvre les secours et envoie les actions nommées ;
 // - « consultation » : tout autre poste ; il reçoit l'état et les actions, ne peut rien modifier.
 //
-// Messages poste → serveur : bonjour, ouvrir, action, lister, supprimer, toutSupprimer, renommer
-// Messages serveur → poste : bienvenue, etat, action, accepte, refus, postes, dossiers
+// Messages poste → serveur : bonjour, ouvrir, action, lister, supprimer, toutSupprimer, renommer, modeReseau
+// Messages serveur → poste : bienvenue, etat, action, accepte, refus, postes, dossiers, reseau
 
 const { WebSocketServer } = require('ws');
 
-const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, journalConsole = () => {} }) => {
+// reseau (facultatif) : { infos() → { actif, port, adresses }, basculer(actif) → Promise<infos> }
+const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = null, journalConsole = () => {} }) => {
     const wss = new WebSocketServer({ server: serveurHttp, path: '/canal', maxPayload: 20 * 1024 * 1024 });
     const postes = new Map();   // socket → { nom, role, adresse, depuis }
 
@@ -27,6 +28,7 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, journalCo
         const adresse = (req.socket.remoteAddress || '').replace('::ffff:', '');
         postes.set(ws, { nom: role === 'principal' ? 'Poste principal' : 'Poste ' + adresse, role, adresse, depuis: new Date().toISOString() });
         envoyer(ws, { type: 'bienvenue', role, versionApp, actif: etatActif() });
+        if (role === 'principal' && reseau) envoyer(ws, { type: 'reseau', ...reseau.infos() });
         diffuserPostes();
 
         ws.on('message', (brut) => {
@@ -68,6 +70,13 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, journalCo
                         envoyer(ws, { type: 'dossiers', liste: moteur.lister() });
                         return;
                     }
+                    case 'modeReseau': {
+                        if (!reseau) { refuser('Mode réseau indisponible'); return; }
+                        reseau.basculer(!!msg.actif)
+                            .then(infos => { for (const [s, p] of postes) if (p.role === 'principal') envoyer(s, { type: 'reseau', ...infos }); })
+                            .catch(e => refuser('Mode réseau : ' + e.message));
+                        return;
+                    }
                     case 'supprimer': {
                         moteur.supprimer(String(msg.rescueId));
                         envoyer(ws, { type: 'dossiers', liste: moteur.lister() });
@@ -85,7 +94,11 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, journalCo
         ws.on('close', () => { postes.delete(ws); diffuserPostes(); });
     });
 
-    return { wss, postes: listePostes, fermer: () => { for (const ws of postes.keys()) ws.terminate(); wss.close(); } };
+    // Mode réseau désactivé : les postes connectés depuis le réseau sont déconnectés
+    const estLocale = (a) => a === '127.0.0.1' || a === '::1' || a === 'localhost';
+    const deconnecterDistants = () => { for (const [ws, p] of postes) if (!estLocale(p.adresse)) ws.terminate(); };
+
+    return { wss, postes: listePostes, deconnecterDistants, fermer: () => { for (const ws of postes.keys()) ws.terminate(); wss.close(); } };
 };
 
 module.exports = { creerCanal };

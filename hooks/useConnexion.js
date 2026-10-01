@@ -17,6 +17,7 @@ const useConnexion = ({ surEtat, surAction, surRefus }) => {
     const [postes, setPostes] = useState([]);
     const [dossiers, setDossiers] = useState(null);       // null = pas encore reçue
     const [versionServeur, setVersionServeur] = useState(null);
+    const [reseau, setReseau] = useState(null);           // { actif, port, adresses } (poste principal)
     const wsRef = useRef(null);
     const enAttente = useRef([]);
     const rappels = useRef({});
@@ -47,6 +48,7 @@ const useConnexion = ({ surEtat, surAction, surRefus }) => {
                     case 'action': if (r.surAction) r.surAction(msg.action, msg.version); break;
                     case 'postes': setPostes(msg.liste || []); break;
                     case 'dossiers': setDossiers(msg.liste || []); break;
+                    case 'reseau': setReseau({ actif: msg.actif, port: msg.port, adresses: msg.adresses || [] }); break;
                     case 'refus': if (r.surRefus) r.surRefus(msg.raison); break;
                     default: break;
                 }
@@ -68,5 +70,5 @@ const useConnexion = ({ surEtat, surAction, surRefus }) => {
         else enAttente.current.push(message);
     }, []);
 
-    return { connecte, role, postes, dossiers, versionServeur, envoyer, estPrincipal: role === 'principal' };
+    return { connecte, role, postes, dossiers, versionServeur, reseau, envoyer, estPrincipal: role === 'principal' };
 };

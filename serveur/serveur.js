@@ -65,8 +65,32 @@ const demarrerServeur = ({ racine, port = 8080, hote = '127.0.0.1', essais = 20 
         if (err.code === 'EADDRINUSE' && port !== 0 && tentative < essais) { tentative++; ecouter(port + tentative); return; }
         rejeter(err);
     });
-    serveur.on('listening', () => resoudre({ serveur, port: serveur.address().port, hote }));
+    serveur.once('listening', () => {
+        serveur.removeAllListeners('error');
+        serveur.on('error', (e) => console.error('Serveur SSF :', e.message));
+        const etat = { serveur, port: serveur.address().port, hote };
+        // Mode réseau : écoute sur ce poste seulement (127.0.0.1) ou sur le réseau local (0.0.0.0),
+        // même port, sans couper l'application (les postes connectés se reconnectent seuls)
+        etat.changerHote = (nouvelHote) => new Promise((ok, ko) => {
+            if (nouvelHote === etat.hote) { ok(etat); return; }
+            serveur.close();
+            serveur.once('error', ko);
+            serveur.listen(etat.port, nouvelHote, () => { serveur.removeListener('error', ko); etat.hote = nouvelHote; ok(etat); });
+        });
+        resoudre(etat);
+    });
     ecouter(port);
 });
 
-module.exports = { demarrerServeur, fichierAutorise };
+// Adresses IPv4 de ce poste sur le réseau local (pour les autres postes)
+const adressesReseau = () => {
+    const resultat = [];
+    for (const [nom, liste] of Object.entries(require('os').networkInterfaces())) {
+        for (const i of liste || []) {
+            if (i.family === 'IPv4' && !i.internal) resultat.push({ interface: nom, adresse: i.address });
+        }
+    }
+    return resultat;
+};
+
+module.exports = { demarrerServeur, fichierAutorise, adressesReseau };
