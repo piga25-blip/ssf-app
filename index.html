@@ -631,16 +631,27 @@
             // même résultat (mêmes numéros de main courante). Poste en consultation : aucune modification.
             const [notification, setNotification] = useState(null);
             const donneesRef = useRef(donnees);
+            const monNomRef = useRef(null);
+            const activeTabRef = useRef(null);
             donneesRef.current = donnees;
             const connexion = useConnexion({
                 surEtat: (e) => {
                     dispatchDonnees({ type: 'DOSSIER/CHARGER', valeurs: e.donnees });
                     if (!EST_POSTE_PRINCIPAL && e.rescueId) { setCurrentRescueId(e.rescueId); setTempRescueIdInput(e.rescueId); }
                 },
-                surAction: (action) => dispatchDonnees(action),
+                surAction: (action, version, emetteur) => {
+                    dispatchDonnees(action);
+                    // Planning modifié sur un autre poste : la dernière saisie l'emporte, on prévient (décision 3)
+                    if (emetteur && emetteur !== monNomRef.current && activeTabRef.current === 'planning' && ['PLANNING/', 'EQUIPES/', 'SAUVETEURS/'].some(p => action.type.startsWith(p))) {
+                        setNotification(`📅 Planning modifié sur « ${emetteur} »`);
+                        setTimeout(() => setNotification(null), 5000);
+                    }
+                },
                 surRefus: (raison) => { setNotification('⛔ ' + raison); setTimeout(() => setNotification(null), 8000); },
             });
             // Rôle de ce poste (principal, saisie, consultation), à jour même dans les fonctions mémorisées
+            monNomRef.current = connexion.monNom;
+            activeTabRef.current = activeTab;
             const roleRef = useRef(connexion.role);
             roleRef.current = connexion.role;
             const posteDeSaisie = connexion.role === 'principal' || connexion.role === 'saisie';

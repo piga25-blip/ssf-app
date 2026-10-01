@@ -21,6 +21,7 @@ const useConnexion = ({ surEtat, surAction, surRefus }) => {
     const [reseau, setReseau] = useState(null);           // { actif, port, adresses } (poste principal)
     const [versionChangee, setVersionChangee] = useState(false); // poste principal mis à jour depuis le chargement de la page
     const versionInitiale = useRef(null);
+    const [monNom, setMonNom] = useState(null);          // nom de ce poste pour le serveur
     const wsRef = useRef(null);
     const enAttente = useRef([]);
     const rappels = useRef({});
@@ -44,13 +45,13 @@ const useConnexion = ({ surEtat, surAction, surRefus }) => {
                 const r = rappels.current;
                 switch (msg.type) {
                     case 'bienvenue':
-                        setRole(msg.role); setVersionServeur(msg.versionApp);
+                        setRole(msg.role); setVersionServeur(msg.versionApp); setMonNom(msg.nom || null);
                         if (versionInitiale.current === null) versionInitiale.current = msg.versionApp;
                         else if (msg.versionApp !== versionInitiale.current) setVersionChangee(true);
                         if (msg.actif && msg.role !== 'principal' && r.surEtat) r.surEtat(msg.actif);
                         break;
                     case 'etat': if (r.surEtat) r.surEtat(msg); break;
-                    case 'action': if (r.surAction) r.surAction(msg.action, msg.version); break;
+                    case 'action': if (r.surAction) r.surAction(msg.action, msg.version, msg.emetteur); break;
                     case 'postes': setPostes(msg.liste || []); break;
                     case 'dossiers': setDossiers(msg.liste || []); break;
                     case 'reseau': setReseau({ actif: msg.actif, port: msg.port, adresses: msg.adresses || [], saisieDistante: !!msg.saisieDistante }); break;
@@ -76,5 +77,5 @@ const useConnexion = ({ surEtat, surAction, surRefus }) => {
         else enAttente.current.push(message);
     }, []);
 
-    return { connecte, role, postes, dossiers, versionServeur, versionChangee, reseau, envoyer, estPrincipal: role === 'principal' };
+    return { connecte, role, monNom, postes, dossiers, versionServeur, versionChangee, reseau, envoyer, estPrincipal: role === 'principal' };
 };

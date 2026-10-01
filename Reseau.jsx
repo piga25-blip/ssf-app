@@ -118,3 +118,20 @@ let BandeauConsultation = ({ connexion, rescueId }) => (
         )}
     </div>
 );
+
+// « Modifié entre-temps » (lot 3) : dans une fenêtre de modification, prévient si l'élément a été
+// modifié ou supprimé sur un autre poste depuis l'ouverture de la fenêtre.
+// avant : l'élément tel qu'il était à l'ouverture ; actuel : l'élément dans les données à jour.
+let AvertissementModifieAilleurs = ({ avant, actuel, quoi }) => {
+    if (!avant) return null;
+    const style = { padding: '8px 12px', borderRadius: '8px', fontWeight: 600, fontSize: '13px', margin: '8px 0' };
+    if (!actuel) {
+        return <div style={{ ...style, background: '#fee2e2', color: '#991b1b', border: '2px solid #ef4444' }}>
+            ⚠️ {quoi} a été supprimé(e) sur un autre poste pendant votre modification.
+        </div>;
+    }
+    if (JSON.stringify(actuel) === JSON.stringify(avant)) return null;
+    return <div style={{ ...style, background: '#fef3c7', color: '#92400e', border: '2px solid #f59e0b' }}>
+        ⚠️ {quoi} a été modifié(e) sur un autre poste pendant votre modification : en enregistrant, vos changements remplaceront les siens.
+    </div>;
+};

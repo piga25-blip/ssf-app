@@ -57,7 +57,9 @@ let GestionPointsPhoneModal = ({ pointsPhone, events, actions, onClose }) => {
         }
     };
 
+    const [editAvant, setEditAvant] = useState(null); // point phone tel qu'à l'ouverture (« modifié entre-temps »)
     const commencerModification = (index, pp) => {
+        setEditAvant(pp);
         setEditingIndex(index);
         if (typeof pp === 'object') { setEditLettre(pp.lettre); setEditNom(pp.nom); setEditTypePP(pp.typePP || (pp.sousTerre ? 'souterre' : pp.estEntree ? 'entree' : '')); }
         else { setEditLettre(pp); setEditNom(''); setEditTypePP(''); }
@@ -165,6 +167,7 @@ let GestionPointsPhoneModal = ({ pointsPhone, events, actions, onClose }) => {
                         <div className="bg-gray-50 p-4 rounded-lg">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-bold text-lg">Liste ({pointsPhone.length})</h3>
+                                {editingIndex !== null && <AvertissementModifieAilleurs avant={editAvant} actuel={pointsPhone.find(p => lettrePP(p) === lettrePP(editAvant))} quoi="Ce point phone" />}
                                 <div className="flex items-center gap-3">
                                     <span className="text-xs text-gray-400 italic">Cliquez sur "Pos." pour réordonner dans le diagramme</span>
                                     {pointsPhone.length > 0 && (

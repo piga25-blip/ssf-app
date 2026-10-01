@@ -931,6 +931,7 @@ let GestionEquipesModal = ({
                                         ))
                                     )}
                                 </div>
+                                <AvertissementModifieAilleurs avant={editingTeam} actuel={editingTeam && teams.find(t => t.id === editingTeam.id)} quoi="Cette équipe" />
                                 <button
                                     onClick={editingTeam ? sauvegarderEditionEquipe : creerEquipe}
                                     className={`w-full ${editingTeam ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-600 hover:bg-amber-700'} text-white px-4 py-3 rounded-lg font-semibold`}

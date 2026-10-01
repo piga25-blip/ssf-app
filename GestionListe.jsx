@@ -87,7 +87,9 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
         }
     };
 
+    const [editAvant, setEditAvant] = useState(null); // sauveteur tel qu'à l'ouverture (« modifié entre-temps »)
     const startEdit = (sauveteur) => {
+        setEditAvant(sauveteur);
         setEditingId(sauveteur.id);
         setEditData({
             id: sauveteur.id,
@@ -230,6 +232,7 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
                         <div className="flex justify-between items-center mb-3">
                             <div className="flex items-center gap-3">
                                 <h3 className="font-bold">Liste complète ({masterSauveteursList.length})</h3>
+                                {editingId && <AvertissementModifieAilleurs avant={editAvant} actuel={masterSauveteursList.find(s => s.id === editingId)} quoi="Ce sauveteur" />}
                                 <button
                                     onClick={supprimerTousLesSauveteurs}
                                     className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 text-xs font-semibold"

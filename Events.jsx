@@ -2631,6 +2631,7 @@ let MainCouranteTab = ({
                                     </div>
                                 )}
 
+                                <AvertissementModifieAilleurs avant={editingEvent} actuel={editingEvent && events.find(e => e.id === editingEvent.id)} quoi="Cette ligne" />
                                 <div className="flex justify-end gap-3 pt-4 border-t">
                                     <button
                                         onClick={handleCancelEdit}

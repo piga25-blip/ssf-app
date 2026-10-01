@@ -34,7 +34,7 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
         const role = jetonPrincipal && url.searchParams.get('jeton') === jetonPrincipal ? 'principal' : roleDistant();
         const adresse = (req.socket.remoteAddress || '').replace('::ffff:', '');
         postes.set(ws, { nom: role === 'principal' ? 'Poste principal' : 'Poste ' + adresse, role, adresse, depuis: new Date().toISOString() });
-        envoyer(ws, { type: 'bienvenue', role, versionApp, actif: etatActif() });
+        envoyer(ws, { type: 'bienvenue', role, versionApp, actif: etatActif(), nom: postes.get(ws).nom });
         if (role === 'principal' && reseau) envoyer(ws, { type: 'reseau', ...reseau.infos() });
         diffuserPostes();
 
@@ -62,7 +62,7 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                     const action = moteur.horodaterActionDistante(msg.action, poste.nom);
                     const version = moteur.appliquer(action, poste.nom);
                     envoyer(ws, { type: 'accepte', ref: msg.ref, version });
-                    diffuser({ type: 'action', action, version });
+                    diffuser({ type: 'action', action, version, emetteur: poste.nom });
                     return;
                 }
                 // Toute autre modification est réservée au poste principal
@@ -77,7 +77,7 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                         const version = moteur.appliquer(msg.action, poste.nom);
                         envoyer(ws, { type: 'accepte', ref: msg.ref, version });
                         // À tous les postes, celui qui l'a envoyée compris : chacun l'applique dans cet ordre
-                        diffuser({ type: 'action', action: msg.action, version });
+                        diffuser({ type: 'action', action: msg.action, version, emetteur: poste.nom });
                         return;
                     }
                     case 'renommer': {
