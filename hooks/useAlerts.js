@@ -1,4 +1,4 @@
-const useAlerts = ({ events, actions, reserverNumerosMC }) => {
+const useAlerts = ({ events, actions }) => {
     const [showAlertsModal, setShowAlertsModal] = useState(false);
     const [alertModalPosition, setAlertModalPosition] = useState({ x: 0, y: 0 });
     const [isDraggingAlert, setIsDraggingAlert] = useState(false);
@@ -24,7 +24,7 @@ const useAlerts = ({ events, actions, reserverNumerosMC }) => {
             dateHeure: new Date().toLocaleString('fr-FR'),
             messageImportant: false,
             evenement: '✓ Rappel N°' + event.numero + ' traité : ' + event.evenement.substring(0, 50) + '...',
-            numero: reserverNumerosMC().toString().padStart(3, '0'),
+            numero: NUMERO_AUTO_SANS_PREFIXE, // attribué à l'application de l'action
             fait: false,
             categorie: 'autre'
         };

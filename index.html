@@ -626,8 +626,9 @@
 
             // ===== CONNEXION AU SERVEUR INTÉGRÉ (lot 1) =====
             // Le serveur enregistre le secours (fichiers + journal) et le transmet aux autres postes.
-            // Poste principal : chaque action est appliquée ici tout de suite ET envoyée au serveur.
-            // Poste en consultation : il reçoit l'état puis les actions, et ne peut rien modifier.
+            // Toute action est envoyée au serveur, qui l'enregistre puis la renvoie à TOUS les postes (celui-ci
+            // compris) dans un ordre unique : chaque poste l'applique à ce moment-là, et tous obtiennent le
+            // même résultat (mêmes numéros de main courante). Poste en consultation : aucune modification.
             const [notification, setNotification] = useState(null);
             const donneesRef = useRef(donnees);
             donneesRef.current = donnees;
@@ -645,30 +646,17 @@
                     setTimeout(() => setNotification(null), 4000);
                     return;
                 }
-                dispatchDonnees(action);
                 connexion.envoyer({ type: 'action', action });
             }, []);
 
-            // Distributeur de numéros de main courante (lot 0, A3).
-            // Calculer le numéro depuis nextEventNumber connu au moment du clic pouvait donner
-            // deux fois le même numéro (deux créations avant le rendu suivant, ou une donnée
-            // arrivée entre-temps). Le distributeur réserve les numéros immédiatement :
-            //   const n = reserverNumerosMC(2); → n et n+1 sont à moi, le suivant sera n+2.
-            // Il suit nextEventNumber quand celui-ci est remplacé (chargement, import…).
-            const numeroMCRef = useRef(1);
-            useEffect(() => { numeroMCRef.current = nextEventNumber; }, [nextEventNumber]);
-            const reserverNumerosMC = useCallback((nombre = 1) => {
-                const premier = numeroMCRef.current;
-                numeroMCRef.current = premier + nombre;
-                envoyerAction({ type: 'MC/RESERVER_NUMEROS', jusqua: premier + nombre });
-                return premier;
-            }, []);
+            // Numéros de main courante : attribués par donnees.js quand l'action est appliquée, dans
+            // l'ordre fixé par le serveur (lot 2, voir NUMERO_AUTO) — plus de distributeur local.
             // Point d'entrée réservé aux tests automatiques (tests/verif-copies-perimees.js) :
             // simule une donnée arrivée d'ailleurs pendant une action. Inactif en utilisation
             // normale (window.__SSF_TEST__ n'existe que si un test l'a créé).
             // Actions nommées (donnees.js) : seule façon de modifier les données partagées
-            const actions = React.useMemo(() => creerActionsDonnees(envoyerAction, reserverNumerosMC), [reserverNumerosMC]);
-            if (window.__SSF_TEST__) Object.assign(window.__SSF_TEST__, { actions, reserverNumerosMC });
+            const actions = React.useMemo(() => creerActionsDonnees(envoyerAction), []);
+            if (window.__SSF_TEST__) Object.assign(window.__SSF_TEST__, { actions });
 
             // Configuration MC Secondaire
             const [showMcConfigModal, setShowMcConfigModal] = useState(false); // Désactivé par défaut pour STANDALONE
@@ -729,7 +717,7 @@
                 alertSnoozedUntil,
                 getAlertStatusGlobal,
                 handleValidateAlertGlobal
-            } = useAlerts({ events, actions, reserverNumerosMC });
+            } = useAlerts({ events, actions });
 
             const [showModeReseau, setShowModeReseau] = useState(false);
 
@@ -1469,8 +1457,7 @@
                                         dernierEvenement={[...events].filter(e => e.isoTimestamp).sort((a, b) => new Date(b.isoTimestamp) - new Date(a.isoTimestamp))[0] || null}
                                         onCancel={() => setShowClotureModal(false)}
                                         onConfirm={(clotureDate) => {
-                                            const nCloture = reserverNumerosMC();
-                                            const numCloture = (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${nCloture.toString().padStart(3,'0')}` : nCloture.toString().padStart(3,'0');
+                                            const numCloture = NUMERO_AUTO; // attribué à l'application de l'action
                                             // Clôture : état « clôturé » + ligne de main courante
                                             actions.cloturerSecours(clotureDate.toISOString(), { id: nouvelId(), isoTimestamp: clotureDate.toISOString(), secretaire: 'Système', dateHeure: clotureDate.toLocaleString('fr-FR'), messageImportant: true, categorie: 'secours', evenement: `🔒 CLÔTURE DU SECOURS — ${missionInfo.nomCavite || currentRescueId}\nDate et heure de clôture : ${clotureDate.toLocaleString('fr-FR')}`, numero: numCloture, fait: false });
                                             setShowClotureModal(false);
@@ -1682,7 +1669,6 @@
                                         events={events}
                                         actions={actions}
                                         nextEventNumber={nextEventNumber}
-                                        reserverNumerosMC={reserverNumerosMC}
                                         secretaires={secretaires}
                                         sauveteursSurSiteNoms={sauveteursSurSiteNoms}
                                         teams={teams}
@@ -1741,7 +1727,6 @@
                                         setFillPreviewCells={setFillPreviewCells}
                                         events={events}
                                         nextEventNumber={nextEventNumber}
-                                        reserverNumerosMC={reserverNumerosMC}
                                         mcMode={mcMode}
                                         mcIdentifiant={mcIdentifiant}
                                         setActiveTab={setActiveTab}
@@ -1827,7 +1812,6 @@
                                     teams={teams}
                                     events={events}
                                     nextEventNumber={nextEventNumber}
-                                    reserverNumerosMC={reserverNumerosMC}
                                     planning={planning}
                                     totalDays={totalDays}
                                     onClose={() => setShowGestionPlanning(false)}
@@ -1850,7 +1834,6 @@
                                     activeSauveteurIds={activeSauveteurIds}
                                     events={events}
                                     nextEventNumber={nextEventNumber}
-                                    reserverNumerosMC={reserverNumerosMC}
                                     onClose={() => setShowGestionEquipes(false)}
                                     mcMode={mcMode}
                                     mcIdentifiant={mcIdentifiant}
@@ -1884,22 +1867,18 @@
                                 const rappelTs = new Date(finRepos.getTime() - preavMin * 60000);
                                 const finStr = finRepos.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
                                 const rappelStr = rappelTs.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-                                const mkNumero = (n) => (mcMode === 'secondaire' && mcIdentifiant)
-                                    ? `${mcIdentifiant}-${n.toString().padStart(3,'0')}`
-                                    : n.toString().padStart(3,'0');
 
                                 const handleValider = () => {
                                     const dateRappel = avecRappel ? rappelTs.toISOString().split('T')[0] : '';
                                     const heureRappel = avecRappel ? rappelTs.toTimeString().slice(0,5) : '';
                                     const newEvents = [];
-                                    let num = modalRepos.eventBase.nextNum;
                                     if (selectionnes.length > 0) {
                                         const nomsAvec = tous.filter(s => selectionnes.includes(s.id)).map(s => s.name).join(', ');
-                                        newEvents.push({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${nomsAvec}\nDurée : ${dureeH}h — Fin prévue : ${finStr}${avecRappel ? `\n⏰ Rappel ${preavMin}min avant (${rappelStr})` : ''}`, numero: mkNumero(num++), dateRappel, heureRappel, fait: false });
+                                        newEvents.push({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${nomsAvec}\nDurée : ${dureeH}h — Fin prévue : ${finStr}${avecRappel ? `\n⏰ Rappel ${preavMin}min avant (${rappelStr})` : ''}`, numero: NUMERO_AUTO, dateRappel, heureRappel, fait: false });
                                     }
                                     const nonSel = tous.filter(s => !selectionnes.includes(s.id));
                                     if (nonSel.length > 0) {
-                                        newEvents.push({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${nonSel.map(s=>s.name).join(', ')}`, numero: mkNumero(num++), fait: false });
+                                        newEvents.push({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${nonSel.map(s=>s.name).join(', ')}`, numero: NUMERO_AUTO, fait: false });
                                     }
                                     actions.ajouterLignesMC(newEvents);
                                     setActiveTab('maincourante');
@@ -1907,7 +1886,7 @@
                                 };
 
                                 const handleSansDuree = () => {
-                                    actions.ajouterLigneMC({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${modalRepos.sauveteurs}`, numero: mkNumero(modalRepos.eventBase.nextNum), fait: false });
+                                    actions.ajouterLigneMC({ id: nouvelId(), isoTimestamp: new Date().toISOString(), secretaire: 'Système', dateHeure: new Date().toLocaleString('fr-FR'), messageImportant: false, categorie: modalRepos.categorie, evenement: `${modalRepos.icone} Activité "${modalRepos.activityName}" affectée à : ${modalRepos.sauveteurs}`, numero: NUMERO_AUTO, fait: false });
                                     setActiveTab('maincourante');
                                     setModalRepos(null);
                                 };
@@ -2170,7 +2149,6 @@
                                     events={events}
                                     actions={actions}
                                     nextEventNumber={nextEventNumber}
-                                    reserverNumerosMC={reserverNumerosMC}
                                     onClose={() => setShowImportMcModal(false)}
                                 />
                             </ModalErrorBoundary>

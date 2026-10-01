@@ -57,7 +57,8 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                     case 'action': {
                         const version = moteur.appliquer(msg.action, poste.nom);
                         envoyer(ws, { type: 'accepte', ref: msg.ref, version });
-                        diffuser({ type: 'action', action: msg.action, version }, ws);
+                        // À tous les postes, celui qui l'a envoyée compris : chacun l'applique dans cet ordre
+                        diffuser({ type: 'action', action: msg.action, version });
                         return;
                     }
                     case 'renommer': {

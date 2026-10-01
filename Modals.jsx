@@ -79,7 +79,7 @@ GestionSecretairesModal = React.memo(GestionSecretairesModal);
 // ============================================
 const GestionPlanningModal = ({ 
     masterSauveteursList, activeSauveteurIds, 
-    teams, events, nextEventNumber, reserverNumerosMC,
+    teams, events, nextEventNumber,
     planning, totalDays, onClose, actions, verifierEtPropagerAvantAction, mcMode, mcIdentifiant, startHour
 }) => {
     const [selectedSauveteurs, setSelectedSauveteurs] = useState([]);

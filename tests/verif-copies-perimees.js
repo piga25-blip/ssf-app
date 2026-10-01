@@ -89,11 +89,10 @@ const RACINE = path.join(__dirname, '..');
         //    une ligne de main courante et une équipe
         await page.evaluate(() => {
             window.__injection = (api) => {
-                const n = api.reserverNumerosMC();
                 api.actions.ajouterLigneMC({
                     id: 'externe-1', isoTimestamp: new Date().toISOString(), dateHeure: new Date().toLocaleString('fr-FR'),
                     secretaire: 'Autre poste', categorie: 'communication', evenement: 'Message saisi sur un autre poste',
-                    numero: String(n).padStart(3, '0'), fait: false, messageImportant: false,
+                    numero: NUMERO_AUTO, fait: false, messageImportant: false,
                 });
                 api.actions.creerEquipe({ id: 'T9', name: 'Équipe 9', mission: 'Créée sur un autre poste', members: [], status: 'active', history: [] }, new Date().toISOString(), []);
             };

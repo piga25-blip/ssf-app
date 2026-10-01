@@ -92,7 +92,15 @@ const base = () => {
     // Main courante secondaire : préfixe et libellé
     let s = { ...base(), mcMode: 'secondaire', mcIdentifiant: 'B' };
     s = appliquer(s, { type: 'SAUVETEURS/ARRIVEE', ids: ['S3'], horodatage: iso(10), idEvenement: 'x', numero: 7 });
-    verifier('Arrivée en MC secondaire : « Sauveteurs requis », numéro B-007', s.events[0].evenement === 'Sauveteurs requis : CHARLIE Carl' && s.events[0].numero === 'B-007');
+    verifier('Arrivée en MC secondaire : « Sauveteurs requis », numéro B-001 attribué', s.events[0].evenement === 'Sauveteurs requis : CHARLIE Carl' && s.events[0].numero === 'B-001' && s.nextEventNumber === 2);
+
+    // Numérotation à l'application des actions (lot 2) : marqueurs NUMERO_AUTO
+    const { NUMERO_AUTO, NUMERO_AUTO_SANS_PREFIXE } = vm.runInContext('({ NUMERO_AUTO, NUMERO_AUTO_SANS_PREFIXE })', contexte);
+    let q = { ...base(), mcMode: 'secondaire', mcIdentifiant: 'C', nextEventNumber: 5 };
+    q = appliquer(q, { type: 'MC/AJOUTER', evenement: ligne('n1', NUMERO_AUTO) });
+    q = appliquer(q, { type: 'MC/AJOUTER_PLUSIEURS', evenements: [ligne('n2', NUMERO_AUTO_SANS_PREFIXE), ligne('n3', NUMERO_AUTO)] });
+    q = appliquer(q, { type: 'MC/INSERER', evenement: ligne('n4', '005.1'), idReference: 'n1', avant: false });
+    verifier('Numéros attribués dans l\'ordre (préfixe ou non), numéro d\'insertion conservé', q.events.map(e => e.numero).join('|') === 'C-005|005.1|006|C-007' && q.nextEventNumber === 8, q.events.map(e => e.numero));
 
     let n = { ...base(), activeSauveteurIds: ['S1', 'S2'], sauveteurPermanentNumbers: { S1: 4 }, nextPermanentNumber: 5 };
     n = appliquer(n, { type: 'SAUVETEURS/NUMEROTER_MANQUANTS' });

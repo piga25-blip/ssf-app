@@ -9,7 +9,7 @@
 // - fonction PURE : aucun accès à l'horloge, au hasard, au stockage, aux fenêtres
 //   (alert, confirm) ni à l'écran ;
 // - l'action apporte tout ce qui ne se calcule pas : identifiants (nouvelId()), heure
-//   (horodatage ISO), numéros de main courante (reserverNumerosMC()) ;
+//   (horodatage ISO) ; les numéros de main courante sont attribués ici (NUMERO_AUTO) ;
 // - l'état n'est jamais modifié en place : on renvoie un nouvel objet.
 
 // Données partagées (les réglages propres à un poste — secrétaire courant, affichage — n'y sont pas)
@@ -47,6 +47,13 @@ const etatInitialDonnees = (startHour) => ({
     mcConfigured: false,
 });
 
+// ---------- Numéros de main courante (lot 2) ----------
+// Les écrans ne choisissent pas le numéro d'une nouvelle ligne : ils mettent l'un de ces marqueurs,
+// remplacé ici par le prochain numéro au moment où l'action est appliquée. Tous les postes
+// appliquant les actions dans l'ordre fixé par le serveur, ils obtiennent les mêmes numéros.
+const NUMERO_AUTO = '#AUTO';                        // avec le préfixe de la MC secondaire (B-012)
+const NUMERO_AUTO_SANS_PREFIXE = '#AUTO-SANS-PREFIXE'; // sans préfixe (certaines lignes système)
+
 // ---------- Outils internes (purs) ----------
 
 // Numéro affiché d'une ligne de main courante (préfixe en main courante secondaire)
@@ -58,17 +65,28 @@ const formaterNumeroMC = (etat, n, avecPrefixe = true) => {
 // Heure « jj/mm/aaaa hh:mm:ss » affichée dans la main courante, à partir de l'horodatage ISO
 const dateHeureFr = (iso) => new Date(iso).toLocaleString('fr-FR');
 
-// Ligne de main courante créée par le système
+// Ligne de main courante créée par le système (numéro attribué à l'application de l'action)
 const evenementSysteme = (etat, a, champs, avecPrefixe = true) => ({
     id: a.idEvenement,
     isoTimestamp: a.horodatage,
     secretaire: 'Système',
     dateHeure: dateHeureFr(a.horodatage),
     messageImportant: false,
-    numero: formaterNumeroMC(etat, a.numero, avecPrefixe),
+    numero: avecPrefixe ? NUMERO_AUTO : NUMERO_AUTO_SANS_PREFIXE,
     fait: false,
     ...champs,
 });
+
+// Remplace les marqueurs NUMERO_AUTO des lignes par les numéros suivants, dans l'ordre des lignes
+const numeroterLignes = (etat) => {
+    if (!etat.events.some(e => e && (e.numero === NUMERO_AUTO || e.numero === NUMERO_AUTO_SANS_PREFIXE))) return etat;
+    let n = etat.nextEventNumber;
+    const events = etat.events.map(e => {
+        if (!e || (e.numero !== NUMERO_AUTO && e.numero !== NUMERO_AUTO_SANS_PREFIXE)) return e;
+        return { ...e, numero: formaterNumeroMC(etat, n++, e.numero === NUMERO_AUTO) };
+    });
+    return { ...etat, events, nextEventNumber: n };
+};
 
 // Index du créneau de 15 min du planning correspondant à un horodatage (heure locale)
 const indexCreneau = (etat, iso) => {
@@ -310,8 +328,8 @@ const ACTIONS_DONNEES = {
 
     // ===== Main courante =====
 
-    // Numéros réservés par le distributeur reserverNumerosMC() (index.html) : le prochain
-    // numéro passe au moins à « jusqua »
+    // Ancien distributeur de numéros (lot 0, remplacé au lot 2 par NUMERO_AUTO) : conservé pour
+    // relire les journaux écrits avant le lot 2
     'MC/RESERVER_NUMEROS'(etat, { jusqua }) {
         return jusqua > etat.nextEventNumber ? { ...etat, nextEventNumber: jusqua } : etat;
     },
@@ -632,18 +650,19 @@ const ACTIONS_DONNEES = {
 const reducteurDonnees = (etat, action) => {
     const traiter = ACTIONS_DONNEES[action.type];
     if (!traiter) throw new Error(`Action inconnue : ${action.type}`);
-    return traiter(etat, action);
+    // Numéros des nouvelles lignes de main courante attribués ici (voir NUMERO_AUTO)
+    return numeroterLignes(traiter(etat, action));
 };
 
 // ============================================
 // PRÉPARATION DES ACTIONS (côté poste)
 // ============================================
 // Fonctions appelées par les écrans : elles ajoutent à l'action ce qui ne peut pas être
-// calculé par la fonction pure (heure, identifiant, numéro de main courante) puis l'envoient.
+// calculé par la fonction pure (heure, identifiant) puis l'envoient au serveur.
 // En réseau, c'est ici que l'action partira vers le serveur.
-const creerActionsDonnees = (dispatch, reserverNumerosMC) => {
-    // Une ligne de main courante : heure, identifiant et numéro
-    const ligneMC = () => ({ horodatage: new Date().toISOString(), idEvenement: nouvelId(), numero: reserverNumerosMC() });
+const creerActionsDonnees = (dispatch) => {
+    // Une ligne de main courante : heure et identifiant (le numéro est attribué à l'application de l'action)
+    const ligneMC = () => ({ horodatage: new Date().toISOString(), idEvenement: nouvelId() });
     return {
         // Sauveteurs
         ajouterSauveteurListe: (sauveteur) => dispatch({ type: 'SAUVETEURS/LISTE_AJOUTER', sauveteur }),

@@ -7,7 +7,7 @@ let PlanningTab = ({
     lastSelectedCell, setLastSelectedCell, isDragging, setIsDragging,
     isFilling, setIsFilling, fillStartCell, setFillStartCell,
     fillPreviewCells, setFillPreviewCells,
-    events, nextEventNumber, reserverNumerosMC, actions,
+    events, nextEventNumber, actions,
     mcMode, mcIdentifiant, setActiveTab, setModalRepos,
     planningAutoPropagate, setPlanningAutoPropagate
 }) => {
@@ -767,7 +767,6 @@ let PlanningTab = ({
                 totalSlots={totalSlots}
                 events={events}
                 nextEventNumber={nextEventNumber}
-                reserverNumerosMC={reserverNumerosMC}
                 actions={actions}
                 mcMode={mcMode}
                 mcIdentifiant={mcIdentifiant}
@@ -824,7 +823,6 @@ const PaletteActivites = ({
     totalSlots,
     events,
     nextEventNumber,
-    reserverNumerosMC,
     actions,
     mcMode,
     mcIdentifiant,
@@ -920,7 +918,6 @@ const PaletteActivites = ({
                             isoTimestamp: new Date().toISOString(),
                             messageImportant: false,
                             categorie,
-                            nextNum: reserverNumerosMC(sauveursAvecNom.length + 1),
                             fait: false
                         }
                     });
@@ -943,7 +940,6 @@ const PaletteActivites = ({
                     icone = '🚪';
                 }
                 
-                const nActivite = reserverNumerosMC();
                 const newEvent = {
                     id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
@@ -952,9 +948,7 @@ const PaletteActivites = ({
                     messageImportant: false,
                     categorie: categorie,
                     evenement: `${icone} Activité "${activity.name}" affectée à : ${nomsSauveteurs}`,
-                    numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                        `${mcIdentifiant}-${nActivite.toString().padStart(3, '0')}` : 
-                        nActivite.toString().padStart(3, '0'),
+                    numero: NUMERO_AUTO, // attribué à l'application de l'action
                     fait: false
                 };
                 

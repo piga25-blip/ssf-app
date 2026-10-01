@@ -396,7 +396,7 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
 // COMPOSANT MAIN COURANTE
 // ============================================
 let MainCouranteTab = ({
-    events, nextEventNumber, reserverNumerosMC, actions,
+    events, nextEventNumber, actions,
     secretaires, sauveteursSurSiteNoms, teams, sauveteursSurSite,
     showSearchModal, setShowSearchModal, mcMode, mcIdentifiant,
     pointsPhone, masterSauveteursList, categories,
@@ -665,7 +665,6 @@ let MainCouranteTab = ({
     // Valider une alerte
     const handleValidateAlert = (event) => {
         // Créer un événement de validation
-        const nMC = reserverNumerosMC();
         const validationEvent = {
             id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
@@ -673,9 +672,7 @@ let MainCouranteTab = ({
             dateHeure: new Date().toLocaleString('fr-FR'),
             messageImportant: false,
             evenement: `✓ Rappel N°${event.numero} réalisé : ${event.evenement.substring(0, 50)}...`,
-            numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nMC.toString().padStart(3, '0')}` : 
-                nMC.toString().padStart(3, '0'),
+            numero: NUMERO_AUTO, // attribué à l'application de l'action (préfixe en MC secondaire)
             fait: false
         };
         
@@ -1058,7 +1055,6 @@ let MainCouranteTab = ({
             messageComplet = prefix + (messageComplet ? '\n' + messageComplet : '');
         }
 
-        const nMC = reserverNumerosMC();
         const newEvent = {
             id: nouvelId(),
             isoTimestamp: new Date().toISOString(),
@@ -1073,9 +1069,7 @@ let MainCouranteTab = ({
             pointPhone: formData.pointPhone,
             personneConcernee: formData.personneConcernee,
             equipe: formData.equipe,
-            numero: (mcMode === 'secondaire' && mcIdentifiant) ? 
-                `${mcIdentifiant}-${nMC.toString().padStart(3, '0')}` : 
-                nMC.toString().padStart(3, '0'),
+            numero: NUMERO_AUTO, // attribué à l'application de l'action (préfixe en MC secondaire)
             fait: false
         };
 
@@ -2080,10 +2074,7 @@ let MainCouranteTab = ({
                             { id: 'plongee', name: 'Plongée' }
                         ];
                         var actLabel = (ACTIVITES_PLANNING.find(function(a){ return a.id === act; }) || {name: act}).name;
-                        var nPlanning = reserverNumerosMC();
-                        var mcNum = (mcMode === 'secondaire' && mcIdentifiant)
-                            ? mcIdentifiant + '-' + nPlanning.toString().padStart(3,'0')
-                            : nPlanning.toString().padStart(3,'0');
+                        var mcNum = NUMERO_AUTO; // attribué à l'application de l'action
                         var newMcEvent = {
                             id: nouvelId(),
                             isoTimestamp: new Date().toISOString(),

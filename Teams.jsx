@@ -3,7 +3,7 @@
 // ============================================
 let GestionEquipesModal = ({
     teams, usedTeamNumbers, masterSauveteursList, activeSauveteurIds,
-    events, nextEventNumber, reserverNumerosMC, actions, onClose, mcMode, mcIdentifiant,
+    events, nextEventNumber, actions, onClose, mcMode, mcIdentifiant,
     startHour, totalDays, planning, verifierEtPropagerAvantAction, pointsPhone, sauveursAyantQuitte
 }) => {
     const [nouvelleEquipe, setNouvelleEquipe] = useState({ numero: '', mission: '', ordreMission: '' });
@@ -212,14 +212,14 @@ let GestionEquipesModal = ({
             : `Création Équipe ${nouvelleEquipe.numero}\nChef: ${chefNom}\nMission: ${nouvelleEquipe.mission}\nMembres: ${membresNomsString}`;
 
         const horodatage = new Date().toISOString();
-        const evenements = [{ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : reserverNumerosMC().toString().padStart(3, '0'), fait: false }];
+        const evenements = [{ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: NUMERO_AUTO, fait: false }];
 
         // Activité « Engagé » (« Gestion » pour une équipe de gestion) au quart d'heure actuel,
         // si l'heure est dans le planning : appliquée par l'action, avec sa ligne de main courante
         const slotIndex = indexCreneau({ startHour }, horodatage);
         if (slotIndex >= 0 && slotIndex < getTotalSlots(totalDays)) {
             const isGestion = nouvelleEquipe.mission.toLowerCase().includes('gestion');
-            evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Activité "${isGestion ? 'Gestion' : 'Engage'}" affectée à : ${membresNomsString}`, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : reserverNumerosMC().toString().padStart(3, '0'), fait: false });
+            evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Activité "${isGestion ? 'Gestion' : 'Engage'}" affectée à : ${membresNomsString}`, numero: NUMERO_AUTO, fait: false });
         }
 
         // Équipe créée (ses membres quittent leur ancienne équipe), numéro mémorisé, planning, main courante
@@ -274,7 +274,7 @@ let GestionEquipesModal = ({
         // Ligne de main courante pour la modification de mission (MC principale uniquement)
         const horodatage = new Date().toISOString();
         const evenement = (!mcMode || mcMode === 'principale')
-            ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `✏️ Modification ${editingTeam.name}\nNouvelle mission: ${nouvelleEquipe.mission}`, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false }
+            ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `✏️ Modification ${editingTeam.name}\nNouvelle mission: ${nouvelleEquipe.mission}`, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
             : null;
         actions.modifierEquipe(editingTeam.id, {
             mission: nouvelleEquipe.mission,
@@ -300,7 +300,7 @@ let GestionEquipesModal = ({
             // Ligne de main courante uniquement en MC principale
             const pointPhonePC = (function() { try { var pp = (pointsPhone||[]).find(function(pp){return (typeof pp==='object'?pp.lettre:pp)==='PC';}); return pp ? 'PC - '+(pp.nom||'Poste de Commandement') : 'PC - Poste de Commandement'; } catch(e){ return 'PC - Poste de Commandement'; } })();
             const evenement = (!mcMode || mcMode === 'principale')
-                ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔚 Dissolution ${team.name}\nMembres: ${membresNoms}`, pointPhone: pointPhonePC, equipe: team.name, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false }
+                ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔚 Dissolution ${team.name}\nMembres: ${membresNoms}`, pointPhone: pointPhonePC, equipe: team.name, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
                 : null;
             // Équipe marquée dissoute, membres « Disponible » au créneau actuel
             actions.dissoudreEquipe(teamId, horodatage, evenement);
@@ -324,7 +324,7 @@ let GestionEquipesModal = ({
         const evenementMessage = (mcMode === 'secondaire')
             ? `➕ Ajout à ${team.name} (${team.mission}) : ${membresNoms}`
             : `➕ Ajout à ${team.name} : ${membresNoms}`;
-        const evenement = { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: (mcMode === 'secondaire' && mcIdentifiant) ? `${mcIdentifiant}-${reserverNumerosMC().toString().padStart(3, '0')}` : reserverNumerosMC().toString().padStart(3, '0'), fait: false };
+        const evenement = { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: NUMERO_AUTO, fait: false };
 
         // Membres ajoutés (retirés de leur ancienne équipe), « Engagé » au créneau actuel, main courante
         actions.ajouterMembresEquipe(teamId, selectedNewMembres, horodatage, evenement);
@@ -355,7 +355,7 @@ let GestionEquipesModal = ({
             // Ligne de main courante uniquement en MC principale
             const pointPhonePC = (function(){ try { var pp=(pointsPhone||[]).find(function(p){return (typeof p==='object'?p.lettre:p)==='PC';}); return pp?'PC - '+(pp.nom||'Poste de Commandement'):'PC - Poste de Commandement'; }catch(e){return 'PC - Poste de Commandement';} })();
             const evenement = (!mcMode || mcMode === 'principale')
-                ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `↩️ ${membre.name} libéré de ${equipeOrigine.name} vers PC`, pointPhone: pointPhonePC, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false }
+                ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `↩️ ${membre.name} libéré de ${equipeOrigine.name} vers PC`, pointPhone: pointPhonePC, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
                 : null;
             // Retiré de l'équipe (une équipe vidée disparaît), « Disponible » au créneau actuel
             actions.libererMembre(equipeOrigineId, memberId, horodatage, evenement);
@@ -375,7 +375,7 @@ let GestionEquipesModal = ({
             const horodatage = new Date().toISOString();
             // Ligne de main courante uniquement en MC principale
             const evenement = (!mcMode || mcMode === 'principale')
-                ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔄 ${membre.name} : ${equipeOrigine.name} → ${equipeDest.name}`, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false }
+                ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔄 ${membre.name} : ${equipeOrigine.name} → ${equipeDest.name}`, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
                 : null;
             // Une équipe vidée disparaît
             actions.deplacerMembre(equipeOrigineId, teamIdDest, memberId, horodatage, evenement);
@@ -394,7 +394,7 @@ let GestionEquipesModal = ({
         const membresNoms = team.members.map(id => { const s = masterSauveteursList.find(s => s.id === id); return s ? s.name : id; }).join(', ');
         const evenement = { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: true, categorie: 'equipe',
             evenement: '↩️ REACTIVATION ' + team.name + ' - Mission : ' + team.mission + ' - Membres : ' + membresNoms,
-            numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false };
+            numero: NUMERO_AUTO_SANS_PREFIXE, fait: false };
         // Équipe active de nouveau, membres « Engagé » au créneau actuel
         actions.reactiverEquipe(teamId, horodatage, evenement);
 
@@ -554,7 +554,7 @@ let GestionEquipesModal = ({
             const nouveauChef = masterSauveteursList.find(s => s.id === draggedMember);
             const ancienChef = masterSauveteursList.find(s => s.id === team.members[0]);
             if (nouveauChef && ancienChef) {
-                evenement = { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Changement de chef ${team.name}\nAncien chef: ${ancienChef.name}\nNouveau chef: ${nouveauChef.name}`, numero: reserverNumerosMC().toString().padStart(3, '0'), fait: false };
+                evenement = { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Changement de chef ${team.name}\nAncien chef: ${ancienChef.name}\nNouveau chef: ${nouveauChef.name}`, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false };
             }
         }
         actions.reordonnerMembres(teamId, newMembers, isChiefChange, horodatage, evenement);
@@ -1320,9 +1320,9 @@ let GestionEquipesModal = ({
                             .filter(e => e.equipe === team.name && e.pointPhone)
                             .sort((a, b) => new Date(b.isoTimestamp||0) - new Date(a.isoTimestamp||0));
                         const dernierPP = eventsEquipeSource.length > 0 ? eventsEquipeSource[0].pointPhone : null;
-                        const nScission = reserverNumerosMC(dernierPP ? 2 : 1);
-                        const numScission = (mcMode==='secondaire'&&mcIdentifiant)?`${mcIdentifiant}-${nScission.toString().padStart(3,'0')}`:nScission.toString().padStart(3,'0');
-                        const numLocalisation = (mcMode==='secondaire'&&mcIdentifiant)?`${mcIdentifiant}-${(nScission+1).toString().padStart(3,'0')}`:(nScission+1).toString().padStart(3,'0');
+                        // Numéros attribués à l'application de l'action, dans l'ordre des lignes
+                        const numScission = NUMERO_AUTO;
+                        const numLocalisation = NUMERO_AUTO;
                         const now = new Date();
                         // Horodatage légèrement avant la scission pour que ce soit le "premier" point de la nouvelle équipe
                         const tsLocalisation = new Date(now.getTime() - 30000); // 30s avant
