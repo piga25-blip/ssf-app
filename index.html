@@ -783,7 +783,7 @@
                         setPointsPhone(loadedPP);
                         if (data.missionInfo) setMissionInfo(data.missionInfo);
                         if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                        setEvents(data.events || []);
+                        setEvents(garantirIdsUniques(data.events || []));
                         setNextEventNumber(data.nextEventNumber || 1);
                         setPlanning(data.planning || {});
                         setStartHour(data.startHour || 0);
@@ -1048,7 +1048,7 @@
                     setActiveSauveteurIds(data.activeSauveteurIds || []);
                     setTeams(data.teams || []);
                     setSecretaires(data.secretaires || []);
-                    setEvents(data.events || []);
+                    setEvents(garantirIdsUniques(data.events || []));
                     setNextEventNumber(data.nextEventNumber || 1);
                     setPlanning(data.planning || {});
                     setStartHour(data.startHour !== undefined ? data.startHour : 9);
@@ -1185,7 +1185,7 @@
                         setPointsPhone(loadedPP);
                         if (data.missionInfo) setMissionInfo(data.missionInfo);
                         if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                        setEvents(data.events || []);
+                        setEvents(garantirIdsUniques(data.events || []));
                         setNextEventNumber(data.nextEventNumber || 1);
                         setPlanning(data.planning || {});
                         setStartHour(data.startHour || 0);
@@ -1391,7 +1391,7 @@
                             return 0;
                         });
 
-                        setEvents(mergedEvents);
+                        setEvents(garantirIdsUniques(mergedEvents));
 
                         // Résumé du résultat
                         const plusAncien = mergedEvents[0]?.dateHeure || '?';
@@ -2095,7 +2095,7 @@
                                                     setPointsPhone(loadedPP);
                                                     if (data.missionInfo) setMissionInfo(data.missionInfo);
                                                     if (data.clotureInfo) setClotureInfo(data.clotureInfo);
-                                                    setEvents(data.events || []);
+                                                    setEvents(garantirIdsUniques(data.events || []));
                                                     setNextEventNumber(data.nextEventNumber || 1);
                                                     setPlanning(data.planning || {});
                                                     setStartHour(data.startHour || 0);

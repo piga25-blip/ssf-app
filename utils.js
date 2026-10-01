@@ -7,6 +7,32 @@ const getLocalStorageKey = (rescueId) => {
     return `SSF_UNIFIED_STATE_${safeId}_V${vMajor}`;
 };
 
+// Identifiant unique (UUID). crypto.randomUUID n'existe que dans un contexte sécurisé :
+// version de secours équivalente avec crypto.getRandomValues.
+const nouvelId = () => {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    const o = window.crypto.getRandomValues(new Uint8Array(16));
+    o[6] = (o[6] & 0x0f) | 0x40; // UUID version 4
+    o[8] = (o[8] & 0x3f) | 0x80;
+    const h = [...o].map(b => b.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+};
+
+// Répare les identifiants d'événements en double (créés dans la même milliseconde, ou
+// importés deux fois) : le premier garde son identifiant, les suivants en reçoivent un
+// nouveau. Sans cela, modifier ou valider l'un modifiait aussi l'autre.
+const garantirIdsUniques = (events) => {
+    const vus = new Set();
+    let repares = 0;
+    const resultat = (events || []).map(ev => {
+        if (ev && ev.id !== undefined && !vus.has(ev.id)) { vus.add(ev.id); return ev; }
+        repares++;
+        return { ...ev, id: nouvelId() };
+    });
+    if (repares > 0) console.warn(`[ids] ${repares} identifiant(s) d'événement en double ou absent(s) réparé(s)`);
+    return repares > 0 ? resultat : (events || []);
+};
+
 const getContrastColor = (hexColor) => {
     const hex = hexColor.replace('#', '');
     let r, g, b;

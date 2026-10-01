@@ -1027,7 +1027,7 @@ if (!importedData) return;
 
 try {
     // Mettre à jour les événements
-    setEvents(mergePreview);
+    setEvents(garantirIdsUniques(mergePreview));
 
     // Mettre à jour le prochain numéro si nécessaire
     const importedEvents = importedData.events || [];
