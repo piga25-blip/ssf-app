@@ -57,13 +57,14 @@ const NAVIGATEUR = path.join(__dirname, 'aides', 'navigateur');
         await b(p, 'Activer le mode réseau').click();
         await p.waitForTimeout(1500);
         const adresse = await p.locator('span.font-mono.text-xl').first().innerText();
+        const codeSession = await p.locator('span.font-mono.text-2xl').first().innerText();
         // La case se coche à la réponse du serveur
         await p.locator('label', { hasText: 'Autoriser la saisie sur les autres postes' }).locator('input').click();
         await p.waitForFunction(() => [...document.querySelectorAll('label')].some(l => l.innerText.includes('Autoriser la saisie') && l.querySelector('input').checked), null, { timeout: 10000 });
         await p.waitForTimeout(800);
         await b(p, /^Fermer$/).last().click();
 
-        const nav = await electron.launch({ args: [NAVIGATEUR], env: { ...process.env, SSF_TEST_USER_DATA: dossiers[1], SSF_URL: adresse + '/' } });
+        const nav = await electron.launch({ args: [NAVIGATEUR], env: { ...process.env, SSF_TEST_USER_DATA: dossiers[1], SSF_URL: adresse + '/?code=' + codeSession } });
         apps.push(nav);
         const v = await nav.firstWindow();
         await nav.context().addInitScript(stubs);
@@ -126,7 +127,7 @@ const NAVIGATEUR = path.join(__dirname, 'aides', 'navigateur');
         await v.evaluate(() => window.__SSF_TEST__.actions.affecterPlanning([{ id: 'S2', slot: 2 }], 'repas_dejeuner', null));
         await p.waitForTimeout(1000);
         tp = await texte(p);
-        controler('5. Poste principal : « Planning modifié sur « Poste … » »', /Planning modifié sur « Poste /.test(tp));
+        controler('5. Poste principal : « Planning modifié sur « Distant (adresse) » »', /Planning modifié sur « Distant \(\d+\.\d+\.\d+\.\d+\) »/.test(tp));
         s = await secours();
         controler('5. Case modifiée enregistrée', s.planning.S2[2] === 'repas_dejeuner');
     } finally {

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, powerSaveBlocker } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 
@@ -48,20 +48,33 @@ app.whenReady().then(async () => {
   const port = process.env.SSF_PORT !== undefined ? parseInt(process.env.SSF_PORT, 10) : 8080;
   // Mode réseau (réglage conservé) : désactivé par défaut → ce poste seulement
   const fichierReglages = path.join(app.getPath('userData'), 'reglages-serveur.json');
-  let reglages = { modeReseau: false, saisieDistante: false };
+  let reglages = { modeReseau: false, saisieDistante: false, codeSession: null, rolesPostes: {} };
+  const enregistrerReglages = () => fs.writeFileSync(fichierReglages, JSON.stringify(reglages, null, 1));
+  const nouveauCode = () => String(crypto.randomInt(0, 1000000)).padStart(6, '0');
   try { reglages = { ...reglages, ...JSON.parse(fs.readFileSync(fichierReglages, 'utf8')) }; } catch (e) { /* premier lancement */ }
+  if (reglages.modeReseau && !reglages.codeSession) { reglages.codeSession = nouveauCode(); enregistrerReglages(); }
   // Interface précompilée (tablettes) ; SSF_SANS_PRECOMPILATION=1 : transformation dans le navigateur
   const precompilation = process.env.SSF_SANS_PRECOMPILATION ? null
     : creerPrecompilation(__dirname, path.join(app.getPath('userData'), 'cache-interface'));
   serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: reglages.modeReseau ? '0.0.0.0' : '127.0.0.1', precompilation });
+  // Mode réseau actif : ce poste ne doit pas se mettre en veille (les autres postes en dépendent)
+  let blocageVeille = null;
+  const ajusterVeille = (actif) => {
+    if (actif && blocageVeille === null) blocageVeille = powerSaveBlocker.start('prevent-app-suspension');
+    if (!actif && blocageVeille !== null) { powerSaveBlocker.stop(blocageVeille); blocageVeille = null; }
+  };
+  ajusterVeille(!!reglages.modeReseau);
   const reseau = {
-    infos: () => ({ actif: serveurSSF.hote === '0.0.0.0', port: serveurSSF.port, saisieDistante: !!reglages.saisieDistante,
-      adresses: adressesReseau().map(a => ({ ...a, qr: codeQR(`http://${a.adresse}:${serveurSSF.port}/`) })) }),
+    infos: () => ({ actif: serveurSSF.hote === '0.0.0.0', port: serveurSSF.port, saisieDistante: !!reglages.saisieDistante, code: reglages.codeSession,
+      // Le code QR contient le code de session : la tablette se connecte sans le saisir
+      adresses: adressesReseau().map(a => ({ ...a, qr: codeQR(`http://${a.adresse}:${serveurSSF.port}/?code=${reglages.codeSession || ''}`) })) }),
     basculer: async (actif) => {
       await serveurSSF.changerHote(actif ? '0.0.0.0' : '127.0.0.1');
       if (!actif && canalSSF) canalSSF.deconnecterDistants();
+      ajusterVeille(actif);
       reglages.modeReseau = actif;
-      fs.writeFileSync(fichierReglages, JSON.stringify(reglages, null, 1));
+      if (actif && !reglages.codeSession) reglages.codeSession = nouveauCode();
+      enregistrerReglages();
       return reseau.infos();
     },
   };
@@ -74,7 +87,14 @@ app.whenReady().then(async () => {
     // Saisie de la main courante et des points phones sur les autres postes (réglage conservé)
     saisie: {
       active: () => !!reglages.saisieDistante,
-      changer: (actif) => { reglages.saisieDistante = actif; fs.writeFileSync(fichierReglages, JSON.stringify(reglages, null, 1)); },
+      changer: (actif) => { reglages.saisieDistante = actif; enregistrerReglages(); },
+    },
+    // Code de session et rôle de chaque poste (réglages conservés)
+    session: {
+      code: () => reglages.codeSession,
+      changerCode: () => { reglages.codeSession = nouveauCode(); reglages.rolesPostes = {}; enregistrerReglages(); },
+      roleDe: (idPoste) => reglages.rolesPostes[idPoste],
+      definirRole: (idPoste, role) => { reglages.rolesPostes[idPoste] = role; enregistrerReglages(); },
     } });
   console.log(`Serveur SSF : http://localhost:${serveurSSF.port}`);
   createWindow();

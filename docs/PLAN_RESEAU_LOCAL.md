@@ -463,7 +463,7 @@ comportent différemment sur tablette (iPad notamment). À ajouter aux tests.
 | **1** ✅ | stockage en fichiers découpés + journal + serveur, postes **en consultation seule** ; modifications automatiques faites par le serveur (A1) ; blocage des mises à jour pendant le mode réseau (B3) |
 | **2** ✅ | saisie de la **main courante** et des **passages aux points phones** sur plusieurs postes (numéros et heure donnés par le serveur) |
 | **3** ✅ | inscription des sauveteurs, missions, équipes, planning sur plusieurs postes (étape A puis B) ; avertissement de modification simultanée dans les fenêtres |
-| **4** | code de session, rôles, imports réservés à l'administrateur (B5), reprise après panne, saisie hors connexion |
+| **4** ✅ | code de session, rôles, imports réservés à l'administrateur (B5), reprise après panne, saisie hors connexion |
 
 ---
 
@@ -540,6 +540,27 @@ autres postes à la fois ; avertissement « modifié entre-temps par X » dans l
   toucher ; la saisie de la main courante et des points phones fonctionne ;
 - lot 4 : code de session, rôles par poste, imports réservés et confirmés, reprise après panne,
   saisie hors connexion ; nom des postes (secrétaire au lieu de l'adresse IP).
+
+---
+
+## 6 sexies. Lot 4 réalisé (01/10/2026)
+
+| Sujet | Contenu |
+|---|---|
+| Code de session (phase 5) | Code à 6 chiffres créé à l'activation du mode réseau, affiché dans « 🌐 Mode réseau » et contenu dans le code QR ; sans le bon code, un autre poste ne reçoit aucune donnée ; « Changer le code » déconnecte tous les autres postes ; réglage conservé |
+| Rôles (décision 2) | Administrateur = poste principal ; chaque autre poste réglé en Saisie ou Consultation dans la liste des postes connectés (rôle conservé pour ce poste) ; la case « Autoriser la saisie » donne le rôle par défaut ; postes nommés d'après leur secrétaire (« Aline (192.168.1.30) ») |
+| Hors connexion (décision 1) | Autre poste coupé du poste principal : saisie bloquée avec message, rien n'est mis en attente ni envoyé au retour de la connexion |
+| Imports (B5) | Réservés au poste principal (refusés par le serveur pour les autres) ; confirmation qui indique le nombre de postes connectés concernés ; chaque import est noté dans le journal |
+| Reprise après panne (phase 7) | Poste principal relancé → reprise depuis les fichiers et le journal (lot 1) ; autre poste coupé → bouton « 💾 Copie de secours » (dernière version reçue, à importer sur un autre ordinateur avec « Importer Tout ») ; mise en veille du poste principal empêchée pendant le mode réseau |
+| Données personnelles (B7) | Aucune copie complète gardée sur les autres postes (sauvegardes automatiques faites par le serveur seulement) ; le code de session protège l'accès ; Wi-Fi protégé par mot de passe à prévoir sur le terrain |
+
+**Reste à prévoir avant la mise à jour 14.0 :**
+- essai réel sur le terrain (routeur Wi-Fi, plusieurs PC, tablette) ;
+- installateur : règle de pare-feu Windows pour l'application ;
+- planning au toucher (tablettes) ;
+- saisie hors connexion « mise en attente » (option avancée de la décision 1), si le besoin se confirme ;
+- fusion dans `main` : rétablir l'identité de l'application (nom, appId, mise à jour automatique,
+  publication) — voir « Organisation du travail » ; version 14.0 ; notice utilisateur.
 
 ---
 

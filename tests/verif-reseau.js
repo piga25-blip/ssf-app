@@ -48,6 +48,7 @@ const NAVIGATEUR = path.join(__dirname, 'aides', 'navigateur');
         await bouton(page, 'Activer le mode réseau').click();
         await page.waitForTimeout(1500);
         const adresse = await page.locator('span.font-mono.text-xl').first().innerText().catch(() => null);
+        const codeSession = await page.locator('span.font-mono.text-2xl').first().innerText();
         controler(`Mode réseau activé, adresse affichée : ${adresse}`, !!adresse && /^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/.test(adresse));
         controler('Code QR de l\'adresse affiché', (await page.locator('img[alt^="Code QR"]').count()) > 0);
         await page.screenshot({ path: path.join(__dirname, 'sortie', 'mode-reseau.png') });
@@ -55,7 +56,7 @@ const NAVIGATEUR = path.join(__dirname, 'aides', 'navigateur');
         if (!adresse) throw new Error('pas d\'adresse réseau sur ce poste : test impossible');
 
         // 2. Autre poste
-        autre = await electron.launch({ args: [NAVIGATEUR], env: { ...process.env, SSF_TEST_USER_DATA: donneesAutre, SSF_URL: adresse + '/' } });
+        autre = await electron.launch({ args: [NAVIGATEUR], env: { ...process.env, SSF_TEST_USER_DATA: donneesAutre, SSF_URL: adresse + '/?code=' + codeSession } });
         const vue = await autre.firstWindow();
         await vue.waitForFunction(() => document.querySelector('#root')?.children.length > 0, null, { timeout: 60000 });
         await vue.waitForTimeout(2000);

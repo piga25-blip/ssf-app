@@ -655,8 +655,17 @@
             const roleRef = useRef(connexion.role);
             roleRef.current = connexion.role;
             const posteDeSaisie = connexion.role === 'principal' || connexion.role === 'saisie';
+            const connecteRef = useRef(connexion.connecte);
+            connecteRef.current = connexion.connecte;
             const envoyerAction = useCallback((action) => {
                 const role = roleRef.current;
+                // Autre poste coupé du poste principal : saisie bloquée jusqu'au retour de la connexion
+                // (décision 1) ; rien n'est mis en attente
+                if (role !== 'principal' && !connecteRef.current) {
+                    setNotification('🔴 Hors ligne : saisie impossible jusqu\'au retour de la connexion avec le poste principal.');
+                    setTimeout(() => setNotification(null), 6000);
+                    return;
+                }
                 if (role === 'principal' || (role === 'saisie' && ACTIONS_SAISIE_DISTANTE.includes(action.type))) {
                     connexion.envoyer({ type: 'action', action });
                     return;
@@ -941,6 +950,9 @@
             // Lancer l'intervalle de sauvegarde automatique
             React.useEffect(() => {
                 if (autoSaveInterval === 0) return; // 0 = désactivé
+                // Autres postes : aucune copie complète gardée sur l'appareil (données personnelles, B7) ;
+                // les sauvegardes sont faites par le serveur du poste principal
+                if (!EST_POSTE_PRINCIPAL) return;
                 const ms = autoSaveInterval * 60 * 1000;
                 const timer = setInterval(performAutoSave, ms);
                 return () => clearInterval(timer);
@@ -1090,7 +1102,8 @@
                 const file = e.target.files[0];
                 if (!file) return;
 
-                if (!window.confirm('⚠️ L\'importation écrasera toutes les données actuelles. Continuer ?')) {
+                const autresPostes = (connexion.postes || []).filter(p => p.role !== 'principal').length;
+                if (!window.confirm('⚠️ L\'importation écrasera toutes les données actuelles' + (autresPostes ? ` — y compris sur les ${autresPostes} autre(s) poste(s) connecté(s)` : '') + '. Continuer ?')) {
                     e.target.value = null;
                     return;
                 }
@@ -1347,7 +1360,8 @@
                 <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4">
                     <div className="w-full mx-auto">
                     {/* Bandeau utilisateurs connectés */}
-                    {!EST_POSTE_PRINCIPAL && <BandeauConsultation connexion={connexion} rescueId={currentRescueId} />}
+                    {!EST_POSTE_PRINCIPAL && <BandeauConsultation connexion={connexion} rescueId={currentRescueId} surCopie={handleExport} />}
+                    {!EST_POSTE_PRINCIPAL && connexion.codeRequis && <ModalCodeSession connexion={connexion} />}
                     {/* Notification (modification refusée…) */}
                     {notification && (
                         <div style={{position: 'fixed', top: '20px', right: '20px', background: 'white', padding: '16px 24px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 10000, fontWeight: '600', borderLeft: '4px solid #667eea'}}>

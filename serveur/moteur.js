@@ -76,7 +76,8 @@ const creerMoteur = ({ racineApp, racineDonnees, delaiEcritureMs = 300, interval
             if (Array.isArray(a.evenements)) a.evenements = a.evenements.map(ligne);
             if (a.evenementValidation) a.evenementValidation = ligne(a.evenementValidation);
             if (a.type === 'PLANNING/AFFECTER_DEPUIS_MC' && actif) a.slot = indexCreneau(actif.donnees, maintenant);
-            if (a.type === 'MC/MODIFIER') { a.horodatage = maintenant; a.par = a.par ? `${a.par} (${nomPoste})` : nomPoste; }
+            // Auteur d'une correction : le secrétaire et son poste (sans répétition si le poste porte déjà son nom)
+            if (a.type === 'MC/MODIFIER') { a.horodatage = maintenant; a.par = !a.par || String(nomPoste).startsWith(a.par) ? nomPoste : `${a.par} — ${nomPoste}`; }
             const equipe = (eq) => eq && { ...eq, createdAt: decaler(eq.createdAt), history: (eq.history || []).map(h => ({ ...h, timestamp: decaler(h.timestamp) })) };
             if (a.equipe) a.equipe = equipe(a.equipe);
             if (a.nouvelleEquipe) a.nouvelleEquipe = equipe(a.nouvelleEquipe);

@@ -48,6 +48,11 @@ let ModeReseauModal = ({ connexion, onClose }) => {
 
                             {reseau.actif && (
                                 <div className="mb-4">
+                                    <div className="flex items-center justify-between bg-gray-900 text-white rounded-lg px-4 py-3 mb-3">
+                                        <span>🔒 Code de session : <span className="font-mono text-2xl font-bold tracking-widest">{reseau.code}</span></span>
+                                        <button onClick={() => { if (window.confirm('Changer le code de session ? Tous les autres postes seront déconnectés et devront saisir le nouveau code.')) connexion.envoyer({ type: 'changerCode' }); }}
+                                            className="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">Changer le code</button>
+                                    </div>
                                     <p className="font-semibold mb-2">Adresse à saisir dans le navigateur des autres postes :</p>
                                     {reseau.adresses.length === 0 ? (
                                         <p className="text-red-600 text-sm">⚠️ Aucun réseau détecté sur ce poste. Branchez-le au réseau local (câble ou Wi-Fi).</p>
@@ -76,6 +81,7 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                     onChange={(e) => connexion.envoyer({ type: 'saisieDistante', actif: e.target.checked })} />
                                 <span>
                                     <span className="font-semibold">Autoriser la saisie sur les autres postes</span>
+                                    <span className="block text-xs text-gray-500">Rôle par défaut des postes ; chaque poste connecté peut ensuite être réglé dans la liste ci-dessous.</span>
                                     <span className="block text-sm text-gray-600">Main courante, points phones, inscriptions, équipes et planning (numéros et heure donnés par ce poste). Restent réservés à ce poste : infos et clôture du secours, imports, remises à zéro, secrétaires, réglages du planning.</span>
                                 </span>
                             </label>
@@ -89,7 +95,13 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                         <thead><tr className="text-left text-gray-500"><th className="py-1">Poste</th><th>Adresse</th><th>Rôle</th><th>Depuis</th></tr></thead>
                                         <tbody>
                                             {autres.map((p, i) => (
-                                                <tr key={i} className="border-t"><td className="py-1">🟢 {p.nom}</td><td className="font-mono">{p.adresse}</td><td>{p.role === 'saisie' ? '✍️ Saisie' : '👁 Consultation'}</td><td>{heure(p.depuis)}</td></tr>
+                                                <tr key={i} className="border-t"><td className="py-1">🟢 {p.nom}</td><td className="font-mono">{p.adresse}</td><td>
+                                                    <select value={p.role} onChange={(e) => connexion.envoyer({ type: 'roleDuPoste', idPoste: p.idPoste, role: e.target.value })}
+                                                        className="border rounded px-1 py-0.5 text-sm" title="Rôle de ce poste">
+                                                        <option value="saisie">✍️ Saisie</option>
+                                                        <option value="consultation">👁 Consultation</option>
+                                                    </select>
+                                                </td><td>{heure(p.depuis)}</td></tr>
                                             ))}
                                         </tbody>
                                     </table>
@@ -108,13 +120,22 @@ let ModeReseauModal = ({ connexion, onClose }) => {
 };
 
 // Bandeau d'un autre poste du réseau (consultation ou saisie)
-let BandeauConsultation = ({ connexion, rescueId }) => (
+// surCopie : télécharge une copie complète du secours (comme « Exporter Tout »), à importer sur un
+// autre ordinateur si le poste principal est hors service
+let BandeauConsultation = ({ connexion, rescueId, surCopie }) => (
     <div style={{ position: 'sticky', top: 0, zIndex: 40, marginBottom: '12px' }}>
         <div style={{ background: connexion.connecte ? '#1e3a8a' : '#b91c1c', color: 'white', padding: '8px 16px', borderRadius: '8px',
             fontWeight: 600, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
             <span>{connexion.role === 'saisie' ? '✍️ Poste de saisie' : '👁 Poste en consultation seule'}{rescueId ? ' — ' + rescueId : ''}</span>
-            <span>{connexion.connecte ? '🟢 Connecté au poste principal' : '🔴 Connexion perdue — reconnexion en cours…'}</span>
+            <span>{connexion.connecte ? '🟢 Connecté au poste principal' : '🔴 Connexion perdue — reconnexion en cours… (saisie impossible)'}</span>
         </div>
+        {!connexion.connecte && surCopie && (
+            <div style={{ background: '#fee2e2', color: '#991b1b', border: '2px solid #ef4444', padding: '8px 16px', borderRadius: '8px', marginTop: '6px',
+                fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span>Si le poste principal est hors service, téléchargez la dernière version reçue du secours pour l'importer sur un autre ordinateur (« Importer Tout »).</span>
+                <button onClick={surCopie} style={{ background: '#b91c1c', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 14px', fontWeight: 700, cursor: 'pointer' }}>💾 Copie de secours</button>
+            </div>
+        )}
         {connexion.versionChangee && (
             <div style={{ background: '#fef3c7', color: '#92400e', border: '2px solid #f59e0b', padding: '8px 16px', borderRadius: '8px', marginTop: '6px',
                 fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
@@ -140,4 +161,24 @@ let AvertissementModifieAilleurs = ({ avant, actuel, quoi }) => {
     return <div style={{ ...style, background: '#fef3c7', color: '#92400e', border: '2px solid #f59e0b' }}>
         ⚠️ {quoi} a été modifié(e) sur un autre poste pendant votre modification : en enregistrant, vos changements remplaceront les siens.
     </div>;
+};
+
+// Code de session demandé par le serveur (autre poste, lot 4)
+let ModalCodeSession = ({ connexion }) => {
+    const [code, setCode] = React.useState('');
+    const valider = () => { if (code.trim()) connexion.saisirCode(code.trim()); };
+    return (
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ background: 'rgba(30,58,138,0.9)', zIndex: 300 }}>
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full" style={{ maxWidth: '420px' }}>
+                <h2 className="text-2xl font-bold mb-2">🔒 Code de session</h2>
+                <p className="text-gray-600 mb-4">Saisissez le code à 6 chiffres affiché sur le poste principal (fenêtre « 🌐 Mode réseau »), ou photographiez son code QR.</p>
+                {connexion.codeRequis && connexion.codeRequis.erreur && <p className="text-red-600 font-semibold mb-2">⚠️ {connexion.codeRequis.erreur}</p>}
+                <input autoFocus inputMode="numeric" maxLength={6} value={code} placeholder="000000"
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') valider(); }}
+                    className="w-full text-center font-mono text-3xl tracking-widest border-2 border-blue-300 rounded-lg py-3 mb-4" />
+                <button onClick={valider} className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-lg">Se connecter</button>
+            </div>
+        </div>
+    );
 };

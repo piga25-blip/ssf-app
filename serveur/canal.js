@@ -11,29 +11,43 @@
 // - « consultation » : autre poste sinon ; il reçoit l'état et les actions, ne peut rien modifier.
 // Toute action acceptée est renvoyée à TOUS les postes, dans l'ordre où le serveur l'a appliquée.
 //
-// Messages poste → serveur : bonjour, ouvrir, action, lister, supprimer, toutSupprimer, renommer, modeReseau, saisieDistante
-// Messages serveur → poste : bienvenue, etat, action, accepte, refus, postes, dossiers, reseau, role
+// Messages poste → serveur : bonjour, ouvrir, action, lister, supprimer, toutSupprimer, renommer, modeReseau,
+//   saisieDistante, roleDuPoste, changerCode
+// Messages serveur → poste : bienvenue, etat, action, accepte, refus, postes, dossiers, reseau, role, code-requis
 
 const { WebSocketServer } = require('ws');
 
 // reseau (facultatif) : { infos() → { actif, port, adresses }, basculer(actif) → Promise<infos> }
-// saisie (facultatif) : { active() → booléen, changer(actif) } (saisie autorisée sur les autres postes)
-const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = null, saisie = null, journalConsole = () => {} }) => {
+// saisie (facultatif) : { active() → booléen, changer(actif) } (rôle par défaut des autres postes : saisie)
+// session (facultatif, lot 4) : { code() → code à 6 chiffres ou null, changerCode(),
+//   roleDe(idPoste) → rôle choisi pour ce poste ou undefined, definirRole(idPoste, role) }
+const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = null, saisie = null, session = null, journalConsole = () => {} }) => {
     const wss = new WebSocketServer({ server: serveurHttp, path: '/canal', maxPayload: 20 * 1024 * 1024 });
     const postes = new Map();   // socket → { nom, role, adresse, depuis }
 
     const envoyer = (ws, message) => { if (ws.readyState === 1) ws.send(JSON.stringify(message)); };
     const diffuser = (message, sauf = null) => { for (const ws of postes.keys()) if (ws !== sauf) envoyer(ws, message); };
-    const listePostes = () => [...postes.values()].map(p => ({ nom: p.nom, role: p.role, adresse: p.adresse, depuis: p.depuis }));
+    const listePostes = () => [...postes.values()].map(p => ({ nom: p.nom, role: p.role, adresse: p.adresse, idPoste: p.idPoste, depuis: p.depuis }));
+    // Rôle d'un autre poste : celui choisi pour lui sur le poste principal, sinon le rôle par défaut
+    const roleDistant = (idPoste) => (session && idPoste && session.roleDe(idPoste)) || (saisie && saisie.active() ? 'saisie' : 'consultation');
+    const informerPrincipal = () => { if (reseau) for (const [s, p] of postes) if (p.role === 'principal') envoyer(s, { type: 'reseau', ...reseau.infos() }); };
     const diffuserPostes = () => diffuser({ type: 'postes', liste: listePostes() });
     const etatActif = () => { const a = moteur.actif(); return a ? { rescueId: a.rescueId, version: a.version, donnees: a.donnees } : null; };
 
     wss.on('connection', (ws, req) => {
         const url = new URL(req.url, 'http://x');
-        const roleDistant = () => (saisie && saisie.active() ? 'saisie' : 'consultation');
-        const role = jetonPrincipal && url.searchParams.get('jeton') === jetonPrincipal ? 'principal' : roleDistant();
+        const estPrincipal = !!jetonPrincipal && url.searchParams.get('jeton') === jetonPrincipal;
+        const idPoste = String(url.searchParams.get('poste') || '').slice(0, 64) || null;
         const adresse = (req.socket.remoteAddress || '').replace('::ffff:', '');
-        postes.set(ws, { nom: role === 'principal' ? 'Poste principal' : 'Poste ' + adresse, role, adresse, depuis: new Date().toISOString() });
+        // Code de session (lot 4) : sans le bon code, un autre poste ne reçoit rien
+        const codeAttendu = session && session.code();
+        if (!estPrincipal && codeAttendu && url.searchParams.get('code') !== codeAttendu) {
+            envoyer(ws, { type: 'code-requis', erreur: url.searchParams.get('code') ? 'Code incorrect.' : null });
+            ws.close(4001, 'code de session');
+            return;
+        }
+        const role = estPrincipal ? 'principal' : roleDistant(idPoste);
+        postes.set(ws, { nom: estPrincipal ? 'Poste principal' : 'Poste ' + adresse, role, adresse, idPoste, depuis: new Date().toISOString() });
         envoyer(ws, { type: 'bienvenue', role, versionApp, actif: etatActif(), nom: postes.get(ws).nom });
         if (role === 'principal' && reseau) envoyer(ws, { type: 'reseau', ...reseau.infos() });
         diffuserPostes();
@@ -46,7 +60,8 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
             try {
                 switch (msg.type) {
                     case 'bonjour':
-                        if (msg.nom) poste.nom = String(msg.nom).slice(0, 60);
+                        // Nom du poste : celui du secrétaire, avec l'adresse pour les autres postes
+                        if (msg.nom) poste.nom = poste.role === 'principal' ? String(msg.nom).slice(0, 60) : `${String(msg.nom).slice(0, 40)} (${poste.adresse})`;
                         diffuserPostes();
                         return;
                     case 'lister':
@@ -100,14 +115,29 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                     case 'saisieDistante': {
                         if (!saisie) { refuser('Saisie sur les autres postes indisponible'); return; }
                         saisie.changer(!!msg.actif);
-                        const nouveauRole = saisie.active() ? 'saisie' : 'consultation';
+                        // Rôle par défaut : s'applique aux postes sans rôle choisi
                         for (const [s, p] of postes) {
                             if (p.role === 'principal') continue;
-                            p.role = nouveauRole;
-                            envoyer(s, { type: 'role', role: nouveauRole });
+                            const r = roleDistant(p.idPoste);
+                            if (r !== p.role) { p.role = r; envoyer(s, { type: 'role', role: r }); }
                         }
-                        if (reseau) for (const [s, p] of postes) if (p.role === 'principal') envoyer(s, { type: 'reseau', ...reseau.infos() });
+                        informerPrincipal();
                         diffuserPostes();
+                        return;
+                    }
+                    case 'roleDuPoste': {
+                        if (!session || !msg.idPoste || !['saisie', 'consultation'].includes(msg.role)) { refuser('Rôle impossible'); return; }
+                        session.definirRole(String(msg.idPoste), msg.role);
+                        for (const [s, p] of postes) if (p.idPoste === msg.idPoste && p.role !== 'principal') { p.role = msg.role; envoyer(s, { type: 'role', role: msg.role }); }
+                        diffuserPostes();
+                        return;
+                    }
+                    case 'changerCode': {
+                        if (!session) { refuser('Code de session indisponible'); return; }
+                        session.changerCode();
+                        // Tous les autres postes doivent saisir le nouveau code
+                        for (const [s, p] of postes) if (p.role !== 'principal') s.terminate();
+                        informerPrincipal();
                         return;
                     }
                     case 'supprimer': {

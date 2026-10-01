@@ -63,6 +63,7 @@ const ID_SECOURS = /Gouffre Multiposte/;
         await b(p, 'Activer le mode réseau').click();
         await p.waitForTimeout(1500);
         const adresse = await p.locator('span.font-mono.text-xl').first().innerText();
+        const codeSession = await p.locator('span.font-mono.text-2xl').first().innerText();
         // La case se coche à la réponse du serveur
         await p.locator('label', { hasText: 'Autoriser la saisie sur les autres postes' }).locator('input').click();
         await p.waitForFunction(() => [...document.querySelectorAll('label')].some(l => l.innerText.includes('Autoriser la saisie') && l.querySelector('input').checked), null, { timeout: 10000 });
@@ -72,7 +73,7 @@ const ID_SECOURS = /Gouffre Multiposte/;
         // ===== Deux postes de saisie
         const postes = [];
         for (const i of [1, 2]) {
-            const nav = await electron.launch({ args: [NAVIGATEUR], env: { ...process.env, SSF_TEST_USER_DATA: dossiers[i], SSF_URL: adresse + '/' } });
+            const nav = await electron.launch({ args: [NAVIGATEUR], env: { ...process.env, SSF_TEST_USER_DATA: dossiers[i], SSF_URL: adresse + '/?code=' + codeSession } });
             apps.push(nav);
             const v = await nav.firstWindow();
             await v.waitForFunction(() => document.querySelector('#root')?.children.length > 0, null, { timeout: 60000 });
@@ -140,7 +141,7 @@ const ID_SECOURS = /Gouffre Multiposte/;
         const corrigee = s.events.find(e => (e.evenement || '').includes('corrigée sur le poste 1'));
         controler('4. Correction enregistrée avec l\'ancienne version, l\'auteur et le poste',
             corrigee && corrigee.corrections.length === 1 && corrigee.corrections[0].avant.evenement === 'Ligne du poste principal'
-            && corrigee.corrections[0].par.includes('Secrétaire 1') && corrigee.corrections[0].par.includes('Poste'));
+            && /^Secrétaire 1 \(\d+\.\d+\.\d+\.\d+\)$/.test(corrigee.corrections[0].par));
         controler('4. Poste principal : « Corrigée par … » affiché', tCorr.includes('Ligne du poste principal (corrigée sur le poste 1)') && tCorr.includes('Corrigée par Secrétaire 1'));
 
         // ===== 5. Rappel dépassé validé en même temps sur deux postes
