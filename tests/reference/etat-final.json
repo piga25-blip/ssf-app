@@ -68,6 +68,15 @@
     },
     {
      "categorie": "communication",
+     "corrections": [
+      {
+       "avant": {
+        "evenement": " pour Préfecture\nPoint de situation transmis à la préfecture."
+       },
+       "le": "2026-03-14T09:07:04.100Z",
+       "par": "Secrétaire TEST"
+      }
+     ],
      "dateHeure": "14/03/2026 08:02:33",
      "dateRappel": "",
      "departDuPC": false,
@@ -80,7 +89,6 @@
      "heureRappel": "",
      "id": "ID_4",
      "isoTimestamp": "2026-03-14T07:02:33.400Z",
-     "lieuDepart": "souterre",
      "messageImportant": false,
      "numero": "004",
      "personneConcernee": "",

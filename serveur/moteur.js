@@ -22,7 +22,7 @@ const chargerDonneesJS = (racineApp) => {
         const getTotalSlots = (totalDays) => totalDays * SLOTS_PER_DAY;
     `, contexte);
     vm.runInContext(fs.readFileSync(path.join(racineApp, 'donnees.js'), 'utf8'), contexte, { filename: 'donnees.js' });
-    return vm.runInContext('({ reducteurDonnees, etatInitialDonnees, CLES_DONNEES, idsUniques })', contexte);
+    return vm.runInContext('({ reducteurDonnees, etatInitialDonnees, CLES_DONNEES, idsUniques, ACTIONS_SAISIE_DISTANTE, indexCreneau, dateHeureFr })', contexte);
 };
 
 // Secours sans aucune donnée saisie (rien à enregistrer)
@@ -30,7 +30,7 @@ const estVide = (d) => !(d.masterSauveteursList || []).length && !(d.events || [
     && !Object.keys(d.planning || {}).length && !(d.missionInfo && d.missionInfo.nomCavite) && !d.clotureInfo && !d.mcConfigured;
 
 const creerMoteur = ({ racineApp, racineDonnees, delaiEcritureMs = 300, intervalleSauvegardeMs = 30 * 60 * 1000 }) => {
-    const { reducteurDonnees, etatInitialDonnees, CLES_DONNEES, idsUniques } = chargerDonneesJS(racineApp);
+    const { reducteurDonnees, etatInitialDonnees, CLES_DONNEES, idsUniques, ACTIONS_SAISIE_DISTANTE, indexCreneau, dateHeureFr } = chargerDonneesJS(racineApp);
     const stockage = creerStockage(racineDonnees);
     let actif = null;            // { rescueId, version, donnees }
     let partiesAEcrire = new Set();
@@ -52,6 +52,23 @@ const creerMoteur = ({ racineApp, racineDonnees, delaiEcritureMs = 300, interval
     return {
         stockage,
         actif: () => actif,
+        ACTIONS_SAISIE_DISTANTE,
+
+        // Action venue d'un poste de saisie : l'heure des lignes et le créneau du planning sont ceux
+        // du serveur (les horloges des postes peuvent être décalées) ; la ligne garde le nom du poste
+        horodaterActionDistante(action, nomPoste) {
+            const maintenant = new Date().toISOString();
+            const ligne = (ev) => ev ? { ...ev, isoTimestamp: maintenant, dateHeure: dateHeureFr(maintenant), poste: nomPoste } : ev;
+            switch (action.type) {
+                case 'MC/AJOUTER': return { ...action, evenement: ligne(action.evenement) };
+                case 'MC/VALIDER_RAPPEL': return { ...action, evenementValidation: ligne(action.evenementValidation) };
+                case 'PLANNING/AFFECTER_DEPUIS_MC':
+                    return { ...action, evenement: ligne(action.evenement), slot: actif ? indexCreneau(actif.donnees, maintenant) : action.slot };
+                case 'MC/INSERER': return { ...action, evenement: { ...action.evenement, poste: nomPoste } };
+                case 'MC/MODIFIER': return { ...action, horodatage: maintenant, par: action.par ? `${action.par} (${nomPoste})` : nomPoste };
+                default: return action;
+            }
+        },
         lister: () => stockage.lister(),
 
         // Ouvre le secours rescueId et en fait le secours actif. S'il n'existe pas, il est créé avec

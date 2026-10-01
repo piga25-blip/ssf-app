@@ -393,6 +393,52 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
 };
 
 // ============================================
+// HISTORIQUE DES CORRECTIONS D'UNE LIGNE (lot 2, décision 9)
+// ============================================
+// « Corrigée par X à HH:MM » ; un clic affiche les versions précédentes (rien n'est jamais effacé).
+// Une ligne saisie sur un autre poste du réseau indique ce poste.
+const LIBELLES_CHAMPS = {
+    evenement: 'Événement', secretaire: 'Secrétaire', categorie: 'Catégorie', messageImportant: 'Important',
+    dateRappel: 'Date de rappel', heureRappel: 'Heure de rappel', expediteur: 'Message venant de',
+    destinataire: 'Message à destination de', pointPhone: 'Point phone', personneConcernee: 'Personne concernée',
+    equipe: 'Équipe', departDuPC: 'Départ PC', lieuDepart: 'Lieu de départ', sensEntree: 'Sens', fichier: 'Pièce jointe',
+};
+const valeurLisible = (v) => v === null || v === undefined || v === '' ? '(vide)' : v === true ? 'oui' : v === false ? 'non'
+    : (typeof v === 'object' ? (v.nom || JSON.stringify(v)) : String(v));
+const heureCorrection = (iso) => { try { return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+
+let HistoriqueCorrections = ({ event }) => {
+    const [ouvert, setOuvert] = React.useState(false);
+    const corrections = event.corrections || [];
+    if (corrections.length === 0 && !event.poste) return null;
+    const derniere = corrections[corrections.length - 1];
+    return (
+        <div className="mt-1 text-xs">
+            {event.poste && <div className="text-gray-500">📡 Saisie sur {event.poste}</div>}
+            {derniere && (
+                <button type="button" onClick={(e) => { e.stopPropagation(); setOuvert(!ouvert); }}
+                    className="text-amber-700 hover:underline font-semibold" title="Voir les versions précédentes">
+                    ✏️ Corrigée par {derniere.par || '?'} le {heureCorrection(derniere.le)}
+                    {corrections.length > 1 ? ` (${corrections.length} corrections)` : ''} {ouvert ? '▲' : '▼'}
+                </button>
+            )}
+            {ouvert && (
+                <div className="mt-1 border-l-4 border-amber-300 pl-2 space-y-1">
+                    {[...corrections].reverse().map((c, i) => (
+                        <div key={i} className="text-gray-600">
+                            <div className="font-semibold">Avant la correction du {heureCorrection(c.le)} ({c.par || '?'}) :</div>
+                            {Object.entries(c.avant || {}).map(([champ, valeur]) => (
+                                <div key={champ} className="whitespace-pre-line"><span className="italic">{LIBELLES_CHAMPS[champ] || champ}</span> : {valeurLisible(valeur)}</div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ============================================
 // COMPOSANT MAIN COURANTE
 // ============================================
 let MainCouranteTab = ({
@@ -728,9 +774,10 @@ let MainCouranteTab = ({
                     personneConcernee: editFormData.personneConcernee,
                     equipe: editFormData.equipe,
                     departDuPC: editFormData.departDuPC,
-                    lieuDepart: editFormData.lieuDepart,
+                    // « Sous-terre » est la valeur par défaut d'une ligne sans lieu de départ : ce n'est pas une correction
+                    lieuDepart: (!editingEvent.lieuDepart && editFormData.lieuDepart === 'souterre') ? editingEvent.lieuDepart : editFormData.lieuDepart,
                     sensEntree: editFormData.sensEntree
-        });
+        }, formData.secretaire || currentSecretaire || '');
         setEditingEvent(null);
         alert('✅ Événement modifié avec succès !');
     };
@@ -2799,7 +2846,7 @@ let MainCouranteTab = ({
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 whitespace-pre-line max-w-md">{event.evenement}</td>
+                                        <td className="px-4 py-3 whitespace-pre-line max-w-md">{event.evenement}<HistoriqueCorrections event={event} /></td>
                                         <td className="px-4 py-3 text-sm">
                                             <div className="flex flex-col gap-1">
                                                 {event.pointPhone && (

@@ -47,11 +47,11 @@ app.whenReady().then(async () => {
   const port = process.env.SSF_PORT !== undefined ? parseInt(process.env.SSF_PORT, 10) : 8080;
   // Mode réseau (réglage conservé) : désactivé par défaut → ce poste seulement
   const fichierReglages = path.join(app.getPath('userData'), 'reglages-serveur.json');
-  let reglages = { modeReseau: false };
+  let reglages = { modeReseau: false, saisieDistante: false };
   try { reglages = { ...reglages, ...JSON.parse(fs.readFileSync(fichierReglages, 'utf8')) }; } catch (e) { /* premier lancement */ }
   serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: reglages.modeReseau ? '0.0.0.0' : '127.0.0.1' });
   const reseau = {
-    infos: () => ({ actif: serveurSSF.hote === '0.0.0.0', port: serveurSSF.port, adresses: adressesReseau() }),
+    infos: () => ({ actif: serveurSSF.hote === '0.0.0.0', port: serveurSSF.port, adresses: adressesReseau(), saisieDistante: !!reglages.saisieDistante }),
     basculer: async (actif) => {
       await serveurSSF.changerHote(actif ? '0.0.0.0' : '127.0.0.1');
       if (!actif && canalSSF) canalSSF.deconnecterDistants();
@@ -65,7 +65,12 @@ app.whenReady().then(async () => {
   const rapport = await reprendreMemoireNavigateur({ BrowserWindow, ipcMain, racineDonnees: app.getPath('userData'), moteur: moteurSSF });
   if (rapport) console.log(`Reprise des données : ${rapport.secours.length} secours repris, ${rapport.ignores.length} ignoré(s), ${rapport.erreurs.length} erreur(s)`);
   canalSSF = creerCanal({ serveurHttp: serveurSSF.serveur, moteur: moteurSSF, jetonPrincipal: JETON_PRINCIPAL,
-    versionApp: app.getVersion(), reseau, journalConsole: (m) => console.log(m) });
+    versionApp: app.getVersion(), reseau, journalConsole: (m) => console.log(m),
+    // Saisie de la main courante et des points phones sur les autres postes (réglage conservé)
+    saisie: {
+      active: () => !!reglages.saisieDistante,
+      changer: (actif) => { reglages.saisieDistante = actif; fs.writeFileSync(fichierReglages, JSON.stringify(reglages, null, 1)); },
+    } });
   console.log(`Serveur SSF : http://localhost:${serveurSSF.port}`);
   createWindow();
 

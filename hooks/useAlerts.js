@@ -1,4 +1,4 @@
-const useAlerts = ({ events, actions }) => {
+const useAlerts = ({ events, actions, actives = true }) => {
     const [showAlertsModal, setShowAlertsModal] = useState(false);
     const [alertModalPosition, setAlertModalPosition] = useState({ x: 0, y: 0 });
     const [isDraggingAlert, setIsDraggingAlert] = useState(false);
@@ -32,8 +32,9 @@ const useAlerts = ({ events, actions }) => {
     };
 
     useEffect(() => {
-        // Les alertes s'affichent sur le poste principal (un poste en consultation ne peut pas les valider)
-        if (!EST_POSTE_PRINCIPAL) return;
+        // Alertes affichées sur les postes qui saisissent (principal et saisie) ; la première validation
+        // les ferme partout (décision 8). Un poste en consultation ne peut pas les valider.
+        if (!actives) return;
         const checkAlerts = () => {
             const urgentAlerts = events.filter(e => {
                 if (!e.dateRappel || e.fait) return false;
@@ -52,7 +53,7 @@ const useAlerts = ({ events, actions }) => {
         checkAlerts();
         const interval = setInterval(checkAlerts, 30000);
         return () => clearInterval(interval);
-    }, [events, showAlertsModal]);
+    }, [events, showAlertsModal, actives]);
 
     return {
         showAlertsModal, setShowAlertsModal,

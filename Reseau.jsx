@@ -65,6 +65,15 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                 </div>
                             )}
 
+                            <label className={`flex items-start gap-3 p-3 rounded-lg mb-4 border cursor-pointer ${reseau.saisieDistante ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'}`}>
+                                <input type="checkbox" className="w-5 h-5 mt-1" checked={!!reseau.saisieDistante}
+                                    onChange={(e) => connexion.envoyer({ type: 'saisieDistante', actif: e.target.checked })} />
+                                <span>
+                                    <span className="font-semibold">Autoriser la saisie sur les autres postes</span>
+                                    <span className="block text-sm text-gray-600">Main courante et passages aux points phones uniquement (numéro et heure donnés par ce poste). Le reste reste réservé à ce poste.</span>
+                                </span>
+                            </label>
+
                             <div>
                                 <p className="font-semibold mb-2">Postes connectés ({autres.length})</p>
                                 {autres.length === 0 ? (
@@ -74,7 +83,7 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                         <thead><tr className="text-left text-gray-500"><th className="py-1">Poste</th><th>Adresse</th><th>Rôle</th><th>Depuis</th></tr></thead>
                                         <tbody>
                                             {autres.map((p, i) => (
-                                                <tr key={i} className="border-t"><td className="py-1">🟢 {p.nom}</td><td className="font-mono">{p.adresse}</td><td>👁 Consultation</td><td>{heure(p.depuis)}</td></tr>
+                                                <tr key={i} className="border-t"><td className="py-1">🟢 {p.nom}</td><td className="font-mono">{p.adresse}</td><td>{p.role === 'saisie' ? '✍️ Saisie' : '👁 Consultation'}</td><td>{heure(p.depuis)}</td></tr>
                                             ))}
                                         </tbody>
                                     </table>
@@ -92,12 +101,12 @@ let ModeReseauModal = ({ connexion, onClose }) => {
     );
 };
 
-// Bandeau d'un poste en consultation (autre poste du réseau)
+// Bandeau d'un autre poste du réseau (consultation ou saisie)
 let BandeauConsultation = ({ connexion, rescueId }) => (
     <div style={{ position: 'sticky', top: 0, zIndex: 40, marginBottom: '12px' }}>
         <div style={{ background: connexion.connecte ? '#1e3a8a' : '#b91c1c', color: 'white', padding: '8px 16px', borderRadius: '8px',
             fontWeight: 600, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-            <span>👁 Poste en consultation seule{rescueId ? ' — ' + rescueId : ''}</span>
+            <span>{connexion.role === 'saisie' ? '✍️ Poste de saisie (main courante et points phones)' : '👁 Poste en consultation seule'}{rescueId ? ' — ' + rescueId : ''}</span>
             <span>{connexion.connecte ? '🟢 Connecté au poste principal' : '🔴 Connexion perdue — reconnexion en cours…'}</span>
         </div>
         {connexion.versionChangee && (

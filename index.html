@@ -640,13 +640,20 @@
                 surAction: (action) => dispatchDonnees(action),
                 surRefus: (raison) => { setNotification('⛔ ' + raison); setTimeout(() => setNotification(null), 4000); },
             });
+            // Rôle de ce poste (principal, saisie, consultation), à jour même dans les fonctions mémorisées
+            const roleRef = useRef(connexion.role);
+            roleRef.current = connexion.role;
+            const posteDeSaisie = connexion.role === 'principal' || connexion.role === 'saisie';
             const envoyerAction = useCallback((action) => {
-                if (!EST_POSTE_PRINCIPAL) {
-                    setNotification('⛔ Poste en consultation seule : modification impossible.');
-                    setTimeout(() => setNotification(null), 4000);
+                const role = roleRef.current;
+                if (role === 'principal' || (role === 'saisie' && ACTIONS_SAISIE_DISTANTE.includes(action.type))) {
+                    connexion.envoyer({ type: 'action', action });
                     return;
                 }
-                connexion.envoyer({ type: 'action', action });
+                setNotification(role === 'saisie'
+                    ? '⛔ Poste de saisie : seules la main courante et les points phones peuvent être modifiés ici.'
+                    : '⛔ Poste en consultation seule : modification impossible.');
+                setTimeout(() => setNotification(null), 4000);
             }, []);
 
             // Numéros de main courante : attribués par donnees.js quand l'action est appliquée, dans
@@ -717,7 +724,7 @@
                 alertSnoozedUntil,
                 getAlertStatusGlobal,
                 handleValidateAlertGlobal
-            } = useAlerts({ events, actions });
+            } = useAlerts({ events, actions, actives: posteDeSaisie });
 
             const [showModeReseau, setShowModeReseau] = useState(false);
 
@@ -754,13 +761,13 @@
                 } else {
                     // Premier lancement : demander le nom après un court délai
                     const timer = setTimeout(() => {
-                        if (mcConfigured && EST_POSTE_PRINCIPAL) { // Attendre que la config MC soit faite (poste principal)
+                        if (mcConfigured && posteDeSaisie) { // Attendre que la config MC soit faite (poste qui saisit)
                             setShowSecretaireModal(true);
                         }
                     }, 1000);
                     return () => clearTimeout(timer);
                 }
-            }, [mcConfigured]);
+            }, [mcConfigured, posteDeSaisie]);
 
             const isRenaming = useRef(false); // true = changement d'ID sans rechargement
 

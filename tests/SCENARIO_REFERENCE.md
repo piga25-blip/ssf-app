@@ -11,7 +11,7 @@ Depuis `C:\Projets\SSF-Reseau` :
 
 | Commande | Effet |
 |---|---|
-| **`npm test`** | **Lance tout** : 11 tests (environ 6 min) — à faire après chaque modification |
+| **`npm test`** | **Lance tout** : 12 tests (environ 8 min) — à faire après chaque modification |
 | `npm run test:scenario` | Rejoue le scénario et le compare à la référence → ✅ SUCCÈS ou ❌ ÉCHEC avec la liste des différences |
 | `npm run test:scenario:maj` | Rejoue le scénario et **remplace** la référence (uniquement après un changement voulu et vérifié) |
 | `node tests/scenario-reference.js --jusqua=12` | S'arrête après l'étape 12 et enregistre une capture et la description de l'écran dans `tests/sortie/` |
@@ -97,6 +97,7 @@ Tests ciblés, ajoutés lors de la correction de défauts de la version officiel
 | `node tests/verif-stockage.js` | Stockage du serveur (lot 1) : fichiers par partie, journal, **reprise après arrêt brutal** (actions du journal rattrapées sans doublon), renommage, suppression ; canal : rôles (jeton), diffusion des actions, refus des modifications d'un poste en consultation, liste des postes |
 | `node tests/verif-reprise.js` | Reprise des secours des versions précédentes (mémoire du navigateur en `file://`) : secours repris en fichiers (vide ignoré), réglages du poste recopiés, réouverture à l'écran, pas de seconde reprise, ancienne mémoire intacte |
 | `node tests/verif-reseau.js` | Mode réseau de bout en bout : activation, adresse affichée, autre poste (navigateur sans jeton) en consultation, mise à jour en direct, saisie refusée, liste des postes, désactivation → autre poste déconnecté |
+| `node tests/verif-saisie-multiposte.js` | Saisie sur plusieurs postes (lot 2) : un poste principal et deux postes de saisie ; trois lignes saisies en même temps → numéros uniques et consécutifs identiques partout, heure et poste donnés par le serveur ; action interdite refusée ; correction depuis un poste de saisie avec historique ; rappel validé en même temps sur deux postes → une seule validation ; passage d'une équipe à un point phone → planning mis à jour |
 | `node tests/verif-version.js` | Poste principal relancé dans une autre version : l'autre poste se reconnecte seul et demande de recharger la page |
 | `node tests/verif-actions.js` | Les 46 actions nommées de `donnees.js` (lot 0, B1), exécutées **directement dans Node.js** sans l'application : résultat de chaque action et état d'origine jamais modifié (158 contrôles, environ 1 s). Prouve que `donnees.js` pourra tourner sur le serveur |
 | `node tests/verif-copies-perimees.js` | Modifications sur copie périmée (lot 0, A3) : une donnée ajoutée « d'ailleurs » au milieu d'une action (ligne de main courante, équipe, point phone, sauveteur) n'est plus effacée, et les numéros de main courante restent uniques. Vérifié le 01/10/2026 : l'ancien code perdait les 4 données |

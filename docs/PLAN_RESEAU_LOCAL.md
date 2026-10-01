@@ -461,7 +461,7 @@ comportent différemment sur tablette (iPad notamment). À ajouter aux tests.
 |---|---|
 | **0 – Préparation** ✅ (rien de réseau) | ✅ scénario de référence (A4, fait le 01/10/2026 : `tests/SCENARIO_REFERENCE.md`), ✅ identifiants uniques (A2, fait le 01/10/2026 : `nouvelId()` / `garantirIdsUniques()` dans `utils.js`), ✅ copies périmées corrigées (A3, fait le 01/10/2026 : mises à jour à partir de l'état le plus récent + distributeur de numéros `reserverNumerosMC()` dans `index.html`), ✅ **modifications regroupées en actions nommées (B1, fait le 01/10/2026 : `donnees.js`, voir « Architecture des données » ci-dessous)** |
 | **1** ✅ | stockage en fichiers découpés + journal + serveur, postes **en consultation seule** ; modifications automatiques faites par le serveur (A1) ; blocage des mises à jour pendant le mode réseau (B3) |
-| **2** | saisie de la **main courante** et des **passages aux points phones** sur plusieurs postes (numéros et heure donnés par le serveur) |
+| **2** ✅ | saisie de la **main courante** et des **passages aux points phones** sur plusieurs postes (numéros et heure donnés par le serveur) |
 | **3** | inscription des sauveteurs, missions, équipes, planning sur plusieurs postes (étape A puis B) ; avertissement de modification simultanée dans les fenêtres |
 | **4** | code de session, rôles, imports réservés à l'administrateur (B5), reprise après panne, saisie hors connexion |
 
@@ -508,6 +508,21 @@ transmet aux autres postes. Les autres postes (navigateur) reçoivent l'état pu
 - modifications automatiques (recopie du planning, n° permanents, alertes) : faites par le poste
   principal ; à confier au serveur quand plusieurs postes saisiront (A1) ;
 - fusion finale dans `main` : rétablir l'identité de l'application (voir « Organisation du travail »).
+
+---
+
+## 6 quater. Lot 2 réalisé (01/10/2026)
+
+| Étape | Contenu |
+|---|---|
+| 2.1 | **Numéros de main courante attribués dans l'ordre du serveur** : les écrans mettent un marqueur (`NUMERO_AUTO`), `donnees.js` le remplace par le prochain numéro quand l'action est appliquée. Toute action est envoyée au serveur, qui la renvoie à **tous** les postes (l'émetteur compris) dans un ordre unique : tous obtiennent les mêmes numéros. Le poste principal n'applique plus ses actions par avance |
+| 2.2 | **Postes de saisie** : case « Autoriser la saisie sur les autres postes » dans la fenêtre « Mode réseau » (réglage conservé, désactivé par défaut). Actions permises : main courante (ajout, correction, insertion, rappels) et passages aux points phones (`ACTIONS_SAISIE_DISTANTE`) ; toutes les autres sont refusées par le serveur. Heure des lignes et créneau du planning donnés par le serveur ; chaque ligne garde le poste de saisie. Alertes affichées et validables sur les postes de saisie (décision 8), nom du secrétaire demandé |
+| 2.3 | **Historique des corrections** (décision 9) : ancienne version, auteur et heure gardés dans la ligne ; « ✏️ Corrigée par X le … » avec les versions précédentes consultables ; rien n'est effacé. **Rappel validé une seule fois** même si deux postes le valident en même temps |
+| 2.4 | Test `tests/verif-saisie-multiposte.js` (3 postes) |
+
+**Reste à prévoir :** saisie des inscriptions, équipes et planning sur plusieurs postes (lot 3) ;
+code de session et rôles par poste (lot 4) : pour l'instant, la saisie s'autorise pour tous les
+autres postes à la fois ; avertissement « modifié entre-temps par X » dans les fenêtres (lot 3).
 
 ---
 

@@ -149,6 +149,18 @@ const base = () => {
     verifier('MC : report de rappel', e.events[1].heureRappel === '09:05');
     e = appliquer(e, { type: 'MC/VALIDER_RAPPEL', id: 'e1', evenementValidation: ligne('v1', '006') });
     verifier('MC : validation de rappel', e.events[1].fait === true && e.events[e.events.length - 1].id === 'v1');
+    const nbAvant = e.events.length;
+    e = appliquer(e, { type: 'MC/VALIDER_RAPPEL', id: 'e1', evenementValidation: ligne('v2', '007') });
+    verifier('MC : rappel déjà validé → seconde validation ignorée (décision 8)', e.events.length === nbAvant && !e.events.some(x => x.id === 'v2'));
+    // Historique des corrections (décision 9)
+    let h = appliquer(e, { type: 'MC/MODIFIER', id: 'e3', champs: { evenement: 'Texte corrigé', destinataire: '', departDuPC: false }, par: 'Aline', horodatage: iso(10) });
+    h = appliquer(h, { type: 'MC/MODIFIER', id: 'e3', champs: { evenement: 'Texte corrigé 2' }, par: 'Bob', horodatage: iso(11) });
+    const e3 = h.events.find(x => x.id === 'e3');
+    verifier('MC : historique des corrections (anciennes valeurs, auteur, heure ; champs vides ignorés)',
+        e3.evenement === 'Texte corrigé 2' && e3.corrections.length === 2 && e3.corrections[0].avant.evenement === 'Ligne 003'
+        && Object.keys(e3.corrections[0].avant).join() === 'evenement' && e3.corrections[1].par === 'Bob' && e3.corrections[1].le === iso(11), e3.corrections);
+    const sansChangement = appliquer(h, { type: 'MC/MODIFIER', id: 'e3', champs: { evenement: 'Texte corrigé 2' }, par: 'Bob', horodatage: iso(12) });
+    verifier('MC : modification sans changement → pas de nouvelle correction', sansChangement.events.find(x => x.id === 'e3').corrections.length === 2);
     e = appliquer(e, { type: 'MC/AJOUTER_PRESENTS_POINT_PHONE', id: 'e3', mention: 'Toute l\'équipe (Équipe 1)' });
     verifier('MC : présents au point phone', e.events.find(v => v.id === 'e3').evenement === 'Ligne 003\nPrésents au point phone : Toute l\'équipe (Équipe 1)');
     const r = appliquer({ ...e, nextEventNumber: 4 }, { type: 'MC/RESERVER_NUMEROS', jusqua: 9 });

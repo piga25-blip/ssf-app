@@ -3,16 +3,21 @@
 // ============================================
 // WebSocket sur /canal. Rôles :
 // - « principal » : la fenêtre de l'application sur ce poste (jeton secret transmis par preload.js) ;
-//   elle ouvre les secours et envoie les actions nommées ;
-// - « consultation » : tout autre poste ; il reçoit l'état et les actions, ne peut rien modifier.
+//   elle ouvre les secours et envoie toutes les actions nommées ;
+// - « saisie » : autre poste, quand le poste principal autorise la saisie (lot 2) ; il peut envoyer
+//   les seules actions de main courante et de points phones (ACTIONS_SAISIE_DISTANTE), horodatées
+//   par le serveur ;
+// - « consultation » : autre poste sinon ; il reçoit l'état et les actions, ne peut rien modifier.
+// Toute action acceptée est renvoyée à TOUS les postes, dans l'ordre où le serveur l'a appliquée.
 //
-// Messages poste → serveur : bonjour, ouvrir, action, lister, supprimer, toutSupprimer, renommer, modeReseau
-// Messages serveur → poste : bienvenue, etat, action, accepte, refus, postes, dossiers, reseau
+// Messages poste → serveur : bonjour, ouvrir, action, lister, supprimer, toutSupprimer, renommer, modeReseau, saisieDistante
+// Messages serveur → poste : bienvenue, etat, action, accepte, refus, postes, dossiers, reseau, role
 
 const { WebSocketServer } = require('ws');
 
 // reseau (facultatif) : { infos() → { actif, port, adresses }, basculer(actif) → Promise<infos> }
-const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = null, journalConsole = () => {} }) => {
+// saisie (facultatif) : { active() → booléen, changer(actif) } (saisie autorisée sur les autres postes)
+const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = null, saisie = null, journalConsole = () => {} }) => {
     const wss = new WebSocketServer({ server: serveurHttp, path: '/canal', maxPayload: 20 * 1024 * 1024 });
     const postes = new Map();   // socket → { nom, role, adresse, depuis }
 
@@ -24,7 +29,8 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
 
     wss.on('connection', (ws, req) => {
         const url = new URL(req.url, 'http://x');
-        const role = jetonPrincipal && url.searchParams.get('jeton') === jetonPrincipal ? 'principal' : 'consultation';
+        const roleDistant = () => (saisie && saisie.active() ? 'saisie' : 'consultation');
+        const role = jetonPrincipal && url.searchParams.get('jeton') === jetonPrincipal ? 'principal' : roleDistant();
         const adresse = (req.socket.remoteAddress || '').replace('::ffff:', '');
         postes.set(ws, { nom: role === 'principal' ? 'Poste principal' : 'Poste ' + adresse, role, adresse, depuis: new Date().toISOString() });
         envoyer(ws, { type: 'bienvenue', role, versionApp, actif: etatActif() });
@@ -46,7 +52,19 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                         envoyer(ws, { type: 'dossiers', liste: moteur.lister() });
                         return;
                 }
-                // Toute modification est réservée au poste principal
+                // Poste de saisie : actions de main courante et de points phones seulement
+                if (msg.type === 'action' && poste.role === 'saisie') {
+                    if (!msg.action || !moteur.ACTIONS_SAISIE_DISTANTE.includes(msg.action.type)) {
+                        refuser('Poste de saisie : seules la main courante et les points phones peuvent être modifiés ici.');
+                        return;
+                    }
+                    const action = moteur.horodaterActionDistante(msg.action, poste.nom);
+                    const version = moteur.appliquer(action, poste.nom);
+                    envoyer(ws, { type: 'accepte', ref: msg.ref, version });
+                    diffuser({ type: 'action', action, version });
+                    return;
+                }
+                // Toute autre modification est réservée au poste principal
                 if (poste.role !== 'principal') { refuser('Poste en consultation seule : modification impossible.'); return; }
                 switch (msg.type) {
                     case 'ouvrir': {
@@ -76,6 +94,19 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                         reseau.basculer(!!msg.actif)
                             .then(infos => { for (const [s, p] of postes) if (p.role === 'principal') envoyer(s, { type: 'reseau', ...infos }); })
                             .catch(e => refuser('Mode réseau : ' + e.message));
+                        return;
+                    }
+                    case 'saisieDistante': {
+                        if (!saisie) { refuser('Saisie sur les autres postes indisponible'); return; }
+                        saisie.changer(!!msg.actif);
+                        const nouveauRole = saisie.active() ? 'saisie' : 'consultation';
+                        for (const [s, p] of postes) {
+                            if (p.role === 'principal') continue;
+                            p.role = nouveauRole;
+                            envoyer(s, { type: 'role', role: nouveauRole });
+                        }
+                        if (reseau) for (const [s, p] of postes) if (p.role === 'principal') envoyer(s, { type: 'reseau', ...reseau.infos() });
+                        diffuserPostes();
                         return;
                     }
                     case 'supprimer': {

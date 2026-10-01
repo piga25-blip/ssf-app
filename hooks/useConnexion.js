@@ -4,7 +4,8 @@
 // Canal permanent (WebSocket /canal) avec le serveur du poste principal.
 // - Poste principal (fenêtre Electron, jeton secret) : ouvre les secours, envoie chaque action
 //   nommée au serveur, qui l'enregistre (fichiers + journal) et la transmet aux autres postes.
-// - Poste en consultation (navigateur d'un autre poste) : reçoit l'état puis chaque action.
+// - Autre poste (navigateur) : reçoit l'état puis chaque action ; en « saisie » (si le poste principal
+//   l'autorise), il peut aussi envoyer les actions de main courante et de points phones.
 // Les messages émis avant la connexion (ou pendant une coupure) partent dès qu'elle est établie.
 
 // Ce poste est-il le poste principal ? (jeton fourni par preload.js à la seule fenêtre Electron)
@@ -52,7 +53,8 @@ const useConnexion = ({ surEtat, surAction, surRefus }) => {
                     case 'action': if (r.surAction) r.surAction(msg.action, msg.version); break;
                     case 'postes': setPostes(msg.liste || []); break;
                     case 'dossiers': setDossiers(msg.liste || []); break;
-                    case 'reseau': setReseau({ actif: msg.actif, port: msg.port, adresses: msg.adresses || [] }); break;
+                    case 'reseau': setReseau({ actif: msg.actif, port: msg.port, adresses: msg.adresses || [], saisieDistante: !!msg.saisieDistante }); break;
+                    case 'role': setRole(msg.role); break;
                     case 'refus': if (r.surRefus) r.surRefus(msg.raison); break;
                     default: break;
                 }

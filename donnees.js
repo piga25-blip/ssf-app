@@ -22,6 +22,13 @@ const CLES_DONNEES = [
     'mcMode', 'mcIdentifiant', 'mcConfigured',
 ];
 
+// Actions permises aux postes de saisie (autres postes du réseau, quand le poste principal autorise
+// la saisie) : main courante et passages aux points phones. Le serveur refuse toutes les autres.
+const ACTIONS_SAISIE_DISTANTE = [
+    'MC/AJOUTER', 'MC/MODIFIER', 'MC/INSERER', 'MC/VALIDER_RAPPEL', 'MC/REPORTER_RAPPEL',
+    'MC/AJOUTER_PRESENTS_POINT_PHONE', 'PLANNING/AFFECTER_DEPUIS_MC',
+];
+
 const POINT_PHONE_PC = { lettre: 'PC', nom: 'Poste de Commandement', sousTerre: false, typePP: 'surface', ordre: 0 };
 
 // État d'un nouveau secours. startHour : heure de début du planning (fournie par l'appelant,
@@ -345,8 +352,20 @@ const ACTIONS_DONNEES = {
         return { ...etat, events: [...etat.events, ...evenements] };
     },
 
-    'MC/MODIFIER'(etat, { id, champs }) {
-        return { ...etat, events: etat.events.map(e => e.id === id ? { ...e, ...champs } : e) };
+    // Correction d'une ligne (décision 9) : les valeurs d'avant sont gardées dans « corrections »
+    // avec l'auteur et l'heure ; rien n'est jamais effacé. par / horodatage : qui corrige, et quand.
+    'MC/MODIFIER'(etat, { id, champs, par, horodatage }) {
+        return { ...etat, events: etat.events.map(e => {
+            if (e.id !== id) return e;
+            // Absent, vide, nul ou « non » : même valeur (un champ vide du formulaire n'est pas une correction)
+            const norm = (v) => (v === undefined || v === null || v === '' || v === false) ? null : JSON.stringify(v);
+            const modifies = Object.keys(champs).filter(c => norm(champs[c]) !== norm(e[c]));
+            if (modifies.length === 0) return e;
+            const avant = {};
+            modifies.forEach(c => { avant[c] = e[c] === undefined ? null : e[c]; });
+            const correction = { le: horodatage || null, par: par || '', avant };
+            return { ...e, ...champs, corrections: [...(e.corrections || []), correction] };
+        }) };
     },
 
     // Insertion juste après (ou avant) une ligne existante
@@ -357,8 +376,11 @@ const ACTIONS_DONNEES = {
         return { ...etat, events };
     },
 
-    // Rappel marqué comme réalisé + ligne de validation (construite par l'appelant)
+    // Rappel marqué comme réalisé + ligne de validation (construite par l'appelant). Si deux postes
+    // valident le même rappel, seule la première validation compte (décision 8).
     'MC/VALIDER_RAPPEL'(etat, { id, evenementValidation }) {
+        const rappel = etat.events.find(e => e.id === id);
+        if (!rappel || rappel.fait) return etat;
         return { ...etat, events: [...etat.events.map(e => e.id === id ? { ...e, fait: true } : e), evenementValidation] };
     },
 
@@ -682,7 +704,7 @@ const creerActionsDonnees = (dispatch) => {
         // Main courante (lignes construites par les écrans : identifiant, numéro et heure compris)
         ajouterLigneMC: (evenement) => dispatch({ type: 'MC/AJOUTER', evenement }),
         ajouterLignesMC: (evenements) => dispatch({ type: 'MC/AJOUTER_PLUSIEURS', evenements }),
-        modifierLigneMC: (id, champs) => dispatch({ type: 'MC/MODIFIER', id, champs }),
+        modifierLigneMC: (id, champs, par) => dispatch({ type: 'MC/MODIFIER', id, champs, par, horodatage: new Date().toISOString() }),
         insererLigneMC: (evenement, idReference, avant) => dispatch({ type: 'MC/INSERER', evenement, idReference, avant }),
         validerRappel: (id, evenementValidation) => dispatch({ type: 'MC/VALIDER_RAPPEL', id, evenementValidation }),
         reporterRappel: (id, dateRappel, heureRappel) => dispatch({ type: 'MC/REPORTER_RAPPEL', id, dateRappel, heureRappel }),
