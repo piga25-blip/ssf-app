@@ -12,6 +12,7 @@ files:
   - "!.git/**"
   - "!.claude/**"
   - "!App_SSF_*"
+  - "!docs/**"
 
 win:
   icon: assets/SSF.ico
