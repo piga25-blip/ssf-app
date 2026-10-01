@@ -1221,7 +1221,7 @@
                     setEvents([]);
                     setNextEventNumber(1);
                     setPlanning({});
-                    setStartHour(getDefaultStartHour());
+                    setStartHour(Math.max(0, new Date().getHours() - 1)); // début du planning : 1 h avant l'heure actuelle
                     setTotalDays(DEFAULT_TOTAL_DAYS);
                     alert('✅ Application réinitialisée (secours actuel uniquement).');
                 } else if (type === 'LOCAL_STORAGE') {
@@ -1243,7 +1243,7 @@
                     setEvents([]);
                     setNextEventNumber(1);
                     setPlanning({});
-                    setStartHour(getDefaultStartHour());
+                    setStartHour(Math.max(0, new Date().getHours() - 1)); // début du planning : 1 h avant l'heure actuelle
                     setTotalDays(DEFAULT_TOTAL_DAYS);
                     alert('✅ Tout le stockage du navigateur a été vidé.\n\nTous les secours ont été supprimés.');
                 }
