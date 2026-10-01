@@ -15,7 +15,7 @@ const RACINE = path.join(__dirname, '..');
 
 (async () => {
     const dossierDonnees = fs.mkdtempSync(path.join(os.tmpdir(), 'ssf-reouverture-'));
-    const app = await electron.launch({ args: [RACINE], cwd: RACINE, env: { ...process.env, SSF_TEST_USER_DATA: dossierDonnees } });
+    const app = await electron.launch({ args: [RACINE], cwd: RACINE, env: { ...process.env, SSF_TEST_USER_DATA: dossierDonnees, SSF_PORT: '0' } });
     let ok = false;
     try {
         const page = await app.firstWindow();

@@ -581,7 +581,6 @@
     <script type="text/babel" src="Modals.jsx"></script>
     <script type="text/babel" src="hooks/useAlerts.js"></script>
     <script type="text/babel" src="hooks/usePlanning.js"></script>
-    <script type="text/babel" src="hooks/useWebSocket.js"></script>
 
     <script type="text/babel">
         const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -705,12 +704,10 @@
                 handleValidateAlertGlobal
             } = useAlerts({ events, actions, reserverNumerosMC });
 
-            // ===== HOOK WEBSOCKET =====
-            const {
-                connectedUsers, notification, setNotification,
-                ws, isReceivingData,
-                userName, pcName, userRole, userMode, userId
-            } = useWebSocket({ actions });
+            // ===== POSTES CONNECTÉS (remplacé par la connexion au serveur intégré, lot 1) =====
+            const connectedUsers = [];
+            const [notification, setNotification] = useState(null);
+            const userName = '', pcName = '', userMode = '';
 
             // ===== VERSION STANDALONE - PAS DE WEBSOCKET =====
             // Les données sont sauvegardées uniquement en local (localStorage)
@@ -836,10 +833,6 @@
                     // qui peut rester bloqué en état "flou" après ce type d'opération).
                     window.electronAPI?.refocusWindow?.();
 
-                    // Envoi WebSocket si connecté et pas en réception
-                    if (!isReceivingData.current && ws.current && ws.current.readyState === 1) {
-                        ws.current.send(JSON.stringify({ type: 'data_update', data: dataToSave }));
-                    }
                 }, 600);
 
                 return () => clearTimeout(saveTimeoutRef.current);

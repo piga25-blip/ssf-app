@@ -17,7 +17,7 @@ const RACINE = path.join(__dirname, '..');
 
 (async () => {
     const dossierDonnees = fs.mkdtempSync(path.join(os.tmpdir(), 'ssf-export-'));
-    const app = await electron.launch({ args: [RACINE], cwd: RACINE, env: { ...process.env, SSF_TEST_USER_DATA: dossierDonnees } });
+    const app = await electron.launch({ args: [RACINE], cwd: RACINE, env: { ...process.env, SSF_TEST_USER_DATA: dossierDonnees, SSF_PORT: '0' } });
     const controles = [];
     const controler = (libelle, ok) => { controles.push(ok); console.log(`${ok ? '✅' : '❌'} ${libelle}`); };
     try {

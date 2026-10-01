@@ -373,7 +373,7 @@ const ETAPES = [
     const app = await electron.launch({
         args: [RACINE],
         cwd: RACINE,
-        env: { ...process.env, SSF_TEST_USER_DATA: dossierDonnees },
+        env: { ...process.env, SSF_TEST_USER_DATA: dossierDonnees, SSF_PORT: '0' },
     });
     try {
         page = await app.firstWindow();

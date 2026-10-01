@@ -8,8 +8,13 @@ if (process.env.SSF_TEST_USER_DATA) {
   app.setPath('userData', process.env.SSF_TEST_USER_DATA);
 }
 
-let mainWindow;
+const { demarrerServeur } = require('./serveur/serveur');
 
+let mainWindow;
+let serveurSSF = null; // { serveur, port, hote }
+
+// La fenêtre du poste principal charge l'application servie par le serveur intégré
+// (http://localhost:port), exactement comme le feront les autres postes en réseau.
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -20,19 +25,19 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      // Babel standalone charge les JSX via XHR file:// ; allowFileAccessFromFileURLs
-      // autorise ces requêtes locales sans désactiver toute la Same-Origin Policy
-      // (webSecurity: false était suspecté de causer un bug de focus clavier Electron/Windows)
-      allowFileAccessFromFileURLs: true,
     },
     title: 'Application SSF',
   });
 
-  mainWindow.loadFile('index.html');
+  mainWindow.loadURL(`http://localhost:${serveurSSF.port}/index.html`);
   mainWindow.setMenuBarVisibility(false);
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Port : 8080 par défaut (les suivants s'il est pris) ; SSF_PORT=0 pour les tests (au hasard)
+  const port = process.env.SSF_PORT !== undefined ? parseInt(process.env.SSF_PORT, 10) : 8080;
+  serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: '127.0.0.1' });
+  console.log(`Serveur SSF : http://localhost:${serveurSSF.port}`);
   createWindow();
 
   // VERSION RÉSEAU (TEST) : mise à jour automatique désactivée, sinon elle
