@@ -817,6 +817,8 @@
                         usedTeamNumbers,
                         secretaires,
                         pointsPhone,
+                        missionInfo,
+                        clotureInfo,
                         events,
                         nextEventNumber,
                         planning,
@@ -841,7 +843,7 @@
                 }, 600);
 
                 return () => clearTimeout(saveTimeoutRef.current);
-            }, [masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber, teams, usedTeamNumbers, secretaires, pointsPhone, events, nextEventNumber, planning, startHour, totalDays, currentRescueId]);
+            }, [masterSauveteursList, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber, teams, usedTeamNumbers, secretaires, pointsPhone, missionInfo, clotureInfo, events, nextEventNumber, planning, startHour, totalDays, mcMode, mcIdentifiant, mcConfigured, currentRescueId]);
 
             // Initialiser les numéros permanents pour les sauveteurs déjà dans le planning
             useEffect(() => {
@@ -910,6 +912,8 @@
                     teams,
                     secretaires,
                     pointsPhone,
+                    missionInfo,
+                    clotureInfo,
                     events,
                     nextEventNumber,
                     planning,
@@ -919,7 +923,7 @@
                     mcIdentifiant,
                     mcConfigured
                 };
-                
+
                 const jsonString = JSON.stringify(dataToExport, null, 2);
                 const blob = new Blob([jsonString], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -2058,7 +2062,11 @@
                                 }}
                                 onConfirm={(info) => {
                                     try {
-                                        setMissionInfo(info);
+                                        // En réouverture, info transporte aussi des champs techniques
+                                        // (rawData = copie complète du dossier) : ne garder que les infos
+                                        // du secours, désormais enregistrées avec le dossier.
+                                        const { rouvrir, rescueId, localStorageKey, rawData, ...infosSecours } = info;
+                                        setMissionInfo(infosSecours);
                                         if (info.rouvrir) {
                                             setCurrentRescueId(info.rescueId);
                                             setTempRescueIdInput(info.rescueId);
