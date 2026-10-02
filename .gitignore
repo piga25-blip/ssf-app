@@ -21,3 +21,6 @@ App_SSF_*.html
 
 # Résultats du scénario de référence (régénérés à chaque exécution)
 tests/sortie/
+
+# Vidéos et film des scénarios (régénérés par tests/film/tourner.js et monter.js)
+tests/film/sortie/
