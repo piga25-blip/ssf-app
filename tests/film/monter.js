@@ -5,7 +5,8 @@
 // chaque scénario (postes côte à côte quand plusieurs fenêtres sont ouvertes en même temps)
 // + sous-titres tirés des messages du test.
 // Utilisation (depuis C:ProjetsSSF-Reseau) :
-//   node tests/film/monter.js [fichier.mp4]   → par défaut tests/film/sortie/SSF-Reseau-scenarios.mp4
+//   node tests/film/monter.js [fichier.mp4]   → par défaut tests/film/sortie/SSF-Reseau-scenarios.mp4,
+//                                              et un film par scénario dans le sous-dossier scenarios/
 // Nécessite ffmpeg (winget install Gyan.FFmpeg --source winget) : trouvé dans le PATH, dans
 // FFMPEG_DIR, ou dans le dossier d'installation de winget.
 const fs = require('fs');
@@ -26,6 +27,10 @@ const ICI = path.join(__dirname, 'sortie');
 const VIDEOS = path.join(ICI, 'videos');
 const TRAVAIL = path.join(ICI, 'montage');
 const SORTIE = path.resolve(process.argv[2] || path.join(ICI, 'SSF-Reseau-scenarios.mp4'));
+// Un film par scénario (carton de titre + vidéo), à côté du film complet
+const PAR_SCENARIO = path.join(path.dirname(SORTIE), 'scenarios');
+fs.rmSync(PAR_SCENARIO, { recursive: true, force: true });
+fs.mkdirSync(PAR_SCENARIO, { recursive: true });
 const { SCENARIOS, ETAPES } = require('./etapes');
 fs.rmSync(TRAVAIL, { recursive: true, force: true });
 fs.mkdirSync(TRAVAIL, { recursive: true });
@@ -128,6 +133,9 @@ SCENARIOS.forEach(([id, titre, texte], i) => {
     fs.writeFileSync(path.join(TRAVAIL, `${n}.filtre`), filtres.join(';\n'));
     ffmpeg([...entrees, '-/filter_complex', `${n}.filtre`, '-map', '[fin]', '-t', duree.toFixed(2), ...ENC, `${n}-video.mp4`]);
     morceaux.push(`${n}-video.mp4`);
+    fs.writeFileSync(path.join(TRAVAIL, `${n}-liste.txt`), `file '${n}-titre.mp4'
+file '${n}-video.mp4'`);
+    ffmpeg(['-f', 'concat', '-safe', '0', '-i', `${n}-liste.txt`, '-c', 'copy', '-movflags', '+faststart', path.join(PAR_SCENARIO, `${n}-${id}.mp4`)]);
     console.log(`✅ ${id} : ${fen.length} fenêtre(s), ${nc} colonne(s), ${duree.toFixed(0)} s`);
 });
 
@@ -135,3 +143,4 @@ morceaux.push(carton('99-fin', 'Application SSF — version réseau', 'Fin', 'To
 fs.writeFileSync(path.join(TRAVAIL, 'liste.txt'), morceaux.map(f => `file '${f}'`).join('\n'));
 ffmpeg(['-f', 'concat', '-safe', '0', '-i', 'liste.txt', '-c', 'copy', '-movflags', '+faststart', SORTIE]);
 console.log(`🎬 Film : ${SORTIE} (${(ffprobeDuree(SORTIE) / 60).toFixed(1)} min)`);
+console.log(`🎞️  Un film par scénario : ${PAR_SCENARIO}`);
