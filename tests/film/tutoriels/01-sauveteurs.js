@@ -16,8 +16,8 @@ executer('01-sauveteurs', 'Inscrire les sauveteurs', async (t) => {
     await t.dire('La fenêtre « Gestion Liste Préfectorale » est vide pour l\'instant. Le bouton violet « Importer CSV » charge toute la liste en une fois.');
 
     await t.chapitre('Importer la liste depuis un fichier CSV');
-    await t.dire('Le fichier CSV contient une ligne par sauveteur, avec 4 colonnes séparées par des POINTS-VIRGULES : identifiant ; NOM Prénom ; rôle ; SSF. La première ligne (titres des colonnes) est ignorée.',
-        'Attention : l\'écran indique « ID,Nom Prénom,Rôle,SSF » avec des virgules, mais seul le point-virgule fonctionne. C\'est le format par défaut d\'Excel en français (« CSV séparateur point-virgule »).');
+    await t.dire('Le fichier CSV contient une ligne par sauveteur, avec 4 colonnes : identifiant ; NOM Prénom ; rôle ; SSF. La première ligne (titres des colonnes) est ignorée.',
+        'Le fichier peut venir directement d\'Excel (« Enregistrer sous… CSV ») : colonnes séparées par des points-virgules, des virgules ou des tabulations, accents compris.');
     await t.dire('Exemple de ligne :  34-001;MARTIN Alice;Chef d\'équipe;34');
     await t.fichier(p.locator('label:visible', { hasText: 'Importer CSV' }), p.locator('input[type="file"][accept=".csv,.txt"]'), path.join(__dirname, 'liste-prefectorale-exemple.csv'));
     await t.dire('L\'application confirme le nombre de sauveteurs importés. Ils apparaissent dans la liste complète, en bas de la fenêtre.');

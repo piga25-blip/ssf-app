@@ -844,8 +844,8 @@ try {
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm text-blue-900">
-                <strong>💡 Information :</strong> Cette version STANDALONE fonctionne en mode solo (pas de synchronisation multi-utilisateurs). 
-                Toutes les données sont sauvegardées localement sur ce PC.
+                <strong>💡 Information :</strong> Toutes les données sont enregistrées sur ce PC.
+                D'autres postes (PC, tablettes) peuvent s'y connecter par le réseau local : bouton « 🌐 Mode réseau ».
             </p>
         </div>
     </div>

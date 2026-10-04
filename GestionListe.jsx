@@ -159,14 +159,21 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const text = event.target.result;
-                const lines = text.split('\n');
+                // UTF-8, sinon Windows-1252 (CSV enregistré par Excel en français : accents)
+                const octets = new Uint8Array(event.target.result);
+                let text;
+                try { text = new TextDecoder('utf-8', { fatal: true }).decode(octets); }
+                catch (e) { text = new TextDecoder('windows-1252').decode(octets); }
+                text = text.replace(/^﻿/, '');
+                const lines = text.split(/\r?\n/);
                 const nouveauxSauveteurs = [];
 
                 for (let i = 1; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (line) {
-                        const parts = line.split(';');
+                        // Séparateur : point-virgule (Excel en français), tabulation ou virgule
+                        const separateur = line.includes(';') ? ';' : line.includes('\t') ? '\t' : ',';
+                        const parts = line.split(separateur).map(p => p.trim().replace(/^"(.*)"$/, '$1'));
                         if (parts.length >= 4) {
                             const id = parts[0].trim();
                             const name = parts[1].trim();
@@ -183,12 +190,14 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
                 if (nouveauxSauveteurs.length > 0) {
                     actions.importerSauveteursListe(nouveauxSauveteurs);
                     alert(`${nouveauxSauveteurs.length} sauveteur(s) importé(s) avec succès`);
+                } else {
+                    alert('Aucun sauveteur importé.\n\nFormat attendu : une ligne de titres, puis une ligne par sauveteur avec 4 colonnes :\nID ; NOM Prénom ; Rôle ; SSF\n(séparées par des points-virgules, des virgules ou des tabulations)');
                 }
             } catch (error) {
                 alert('Erreur lors de l\'importation du fichier CSV');
             }
         };
-        reader.readAsText(file);
+        reader.readAsArrayBuffer(file);
         e.target.value = null;
     };
 
@@ -225,7 +234,7 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
                             📂 Importer CSV
                             <input type="file" accept=".csv,.txt" onChange={handleImportCSV} className="hidden" />
                         </label>
-                        <p className="text-xs mt-2">Format: ID,Nom Prénom,Rôle,SSF</p>
+                        <p className="text-xs mt-2">Format : 1re ligne = titres, puis une ligne par sauveteur : ID ; NOM Prénom ; Rôle ; SSF (séparateur ; , ou tabulation)</p>
                     </div>
 
                     <div className="bg-gray-50 p-4 rounded-lg">

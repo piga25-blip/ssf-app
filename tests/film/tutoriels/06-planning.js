@@ -49,7 +49,7 @@ executer('06-planning', 'Le planning et les tableaux de synthèse', async (t) =>
     await t.glisser(cases.nth(premiere), cases.nth(premiere + 2));
     await t.clic(t.bouton('Repas - Déjeuner'));
     await t.dire('THOMAS David est noté « Repas - Déjeuner » sur les cases choisies.',
-        "Les activités marquées 👥 (Engagé, Approche, Sous Terre…) ne s'appliquent qu'aux membres d'une équipe : pour un sauveteur sans équipe, elles sont ignorées, sans message.");
+        "Les activités marquées 👥 (Engagé, Approche, Sous Terre…) ne s'appliquent qu'aux membres d'une équipe : pour un sauveteur sans équipe, l'application refuse et explique pourquoi.");
     await t.dire('La « poignée de recopie » (petit carré au coin de la sélection) prolonge une activité, comme dans un tableur.');
     await t.glisser(cases.nth(premiere), cases.nth(premiere + 2));
     const poignee = p.locator('.fill-handle');

@@ -35,9 +35,9 @@ executer('03-equipes', 'Gérer les équipes', async (t) => {
     await t.clic(t.bouton('Créer l\'Équipe'));
     await t.dire('L\'équipe 1 apparaît à droite, dans « Équipes Actives ». Une ligne est aussi ajoutée automatiquement dans la main courante.');
 
-    await t.dire('On crée de même une équipe de surface pour la logistique. Quand la fenêtre est restée ouverte, VÉRIFIER le numéro : il reste sur le précédent (1) et doit être changé à la main (2).',
-        'Sinon l\'application refuse la création : « L\'équipe T1 existe déjà ». En refermant puis en rouvrant la fenêtre, le bon numéro est proposé.');
-    await t.choisir(p.locator('select:visible', { has: p.locator('option[value="3"]') }).first(), '2');
+    await t.dire('On crée de même une équipe de surface pour la logistique. Le numéro suivant (2) est déjà proposé : les numéros déjà utilisés sont grisés dans la liste.',
+        'Un numéro d\'équipe n\'est jamais réutilisé pendant un secours : « Équipe 1 » désigne toujours la même équipe dans la main courante et le rapport.');
+    await t.viser(p.locator('select:visible', { has: p.locator('option[value="3"]') }).first());
     await t.clic(t.etiquette('Surface'));
     await t.saisir(t.champ('Titre (ex: Reconnaissance Zone Nord)'), 'Logistique surface');
     await t.choisir(typeMission, { label: '📦 Logistique' });
@@ -76,15 +76,14 @@ executer('03-equipes', 'Gérer les équipes', async (t) => {
     await t.dire('THOMAS David est passé dans l\'équipe 1, avec MARTIN Alice et BERNARD Bruno.');
     await deplier('Équipe 1');
     await t.rythme(2.5);
-    await t.dire('Autre méthode, à utiliser pour rejoindre une équipe issue d\'une scission (1B, 2A…) : « Ajouter des Membres » sur l\'équipe de destination, puis cocher la personne marquée « déjà en Équipe 1 ».',
-        'La zone « Mouvement Individuel Rapide » ne trouve pas les sous-équipes créées par une scission (« l\'équipe de destination n\'existe pas ») : c\'est un défaut connu de l\'application.');
-    await deplier('Équipe 1B');
-    await t.clic(carte('Équipe 1B').locator('button', { hasText: 'Ajouter des Membres' }));
-    await t.cocher(carte('Équipe 1B').locator('label', { hasText: 'BERNARD Bruno' }).locator('input[type="checkbox"]'));
-    await t.dire('L\'application demande s\'il faut retirer BERNARD Bruno de l\'équipe 1 pour l\'affecter à l\'équipe 1B : on répond OK.');
-    await t.clic(carte('Équipe 1B').locator('button', { hasText: '✓ Ajouter (' }));
+    await t.dire('Cela marche aussi vers une sous-équipe issue d\'une scission : BERNARD Bruno rejoint l\'équipe 1B, on tape « 1B ».');
+    const ligneBruno = carte('Équipe 1').locator('div.flex.items-center.gap-2', { hasText: 'BERNARD Bruno' });
+    await t.saisir(ligneBruno.locator('input[placeholder="ID Équipe / PC"]'), '1B');
+    await t.clic(ligneBruno.locator('button', { hasText: 'Déplacer' }));
     await t.dire('BERNARD Bruno est maintenant dans l\'équipe 1B avec DUBOIS Chloé.');
+    await deplier('Équipe 1B');
     await t.rythme(2);
+    await t.dire('Autre méthode : « Ajouter des Membres » sur l\'équipe de destination, puis cocher la personne marquée « déjà en Équipe… ». L\'application demande alors s\'il faut la retirer de son équipe actuelle.');
 
     await t.chapitre('Fin de mission');
     await t.dire('Quand une équipe a terminé sa mission et que ses membres sont de retour, on clique sur « Fin de mission ».',

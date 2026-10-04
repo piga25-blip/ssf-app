@@ -869,6 +869,15 @@ const PaletteActivites = ({
                 if (activity && activity.teamRequired && !sauveteurToTeamMap[rowId]) continue;
                 cellules.push({ id: rowId, slot: colIndex });
             }
+            // Activité d'équipe (👥) sur des sauveteurs sans équipe : ignorée pour eux, on le dit
+            if (activity && activity.teamRequired) {
+                const horsEquipe = [...new Set([...selectedCells].map(k => k.split('|')[0]))]
+                    .filter(id => !sauveteurToTeamMap[id])
+                    .map(id => (masterSauveteursList.find(s => s.id === id) || {}).name || id);
+                if (horsEquipe.length > 0) {
+                    alert(`👥 « ${activity.name} » est une activité d'équipe : elle n'a pas été appliquée à ${horsEquipe.join(', ')}, qui ne fai${horsEquipe.length > 1 ? 'saient' : 'sait'} partie d'aucune équipe.\n\nMettez d'abord ${horsEquipe.length > 1 ? 'ces sauveteurs' : 'ce sauveteur'} dans une équipe, ou choisissez une autre activité.`);
+                }
+            }
             // Planning modifié tout de suite ; la ligne de main courante éventuelle est ajoutée plus bas
             actions.affecterPlanning(cellules, activityId, null);
             
