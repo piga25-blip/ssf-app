@@ -7,6 +7,19 @@ let GestionEquipesModal = ({
     startHour, totalDays, planning, setPlanning, verifierEtPropagerAvantAction, pointsPhone, sauveursAyantQuitte
 }) => {
     const [nouvelleEquipe, setNouvelleEquipe] = useState({ numero: '', mission: '', ordreMission: '' });
+    // Une équipe vient d'être créée : si le numéro proposé est désormais pris, proposer le
+    // premier numéro libre (sinon la création suivante est refusée : « existe déjà »)
+    useEffect(() => {
+        if (editingTeam) return; // modification d'une équipe existante : son numéro est forcément pris
+        setNouvelleEquipe(prev => {
+            const utilises = new Set(usedTeamNumbers.map(u => u.numero.replace('T', '')));
+            if (!prev.numero || !utilises.has(prev.numero)) return prev;
+            for (let i = 1; i <= 100; i++) {
+                if (!utilises.has(String(i))) return { ...prev, numero: String(i) };
+            }
+            return prev;
+        });
+    }, [usedTeamNumbers.length]);
     const [selectedMembres, setSelectedMembres] = useState([]);
     const [mouvements, setMouvements] = useState({});
     const [expandedTeams, setExpandedTeams] = useState(new Set());
@@ -666,10 +679,18 @@ let GestionEquipesModal = ({
         // Déplacement vers une autre équipe
         else {
             const teamIdDest = destination.startsWith('T') ? destination : `T${destination}`;
-            const equipeDest = teams.find(t => t.id === teamIdDest);
+            // Par identifiant (T2) ou par nom : une sous-équipe de scission a un identifiant
+            // « T1B_<horodatage> » mais s'appelle « Équipe 1B »
+            const numDest = destination.replace(/^(T|ÉQUIPE\s*|EQUIPE\s*)/, '').trim();
+            const equipeDest = teams.find(t => t.status !== 'dissolved' &&
+                (t.id === teamIdDest || (t.name || '').toUpperCase() === 'ÉQUIPE ' + numDest));
 
             if (!equipeDest) {
                 alert(`L'équipe de destination "${destination}" n'existe pas`);
+                return;
+            }
+            if (equipeDest.id === equipeOrigineId) {
+                alert(`${membre.name} fait déjà partie de ${equipeDest.name}`);
                 return;
             }
 
@@ -694,7 +715,7 @@ let GestionEquipesModal = ({
                         ]
                     };
                 }
-                if (team.id === teamIdDest) {
+                if (team.id === equipeDest.id) {
                     return {
                         ...team,
                         members: [...team.members, memberId],
