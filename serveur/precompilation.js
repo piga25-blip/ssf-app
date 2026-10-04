@@ -12,7 +12,9 @@ const path = require('path');
 
 // dossierCache (facultatif) : résultats gardés sur disque d'un lancement à l'autre, indexés par le
 // contenu du fichier (un fichier modifié est retransformé)
-const creerPrecompilation = (racine, dossierCache = null) => {
+// version (facultative) : version de l'application, écrite dans la page servie (un navigateur n'a
+// pas accès à la version de l'application : il affichait celle notée en dur dans index.html)
+const creerPrecompilation = (racine, dossierCache = null, { version = null } = {}) => {
     let Babel = null;
     const babel = () => Babel || (Babel = require(path.join(racine, 'libs', 'babel.min.js')));
     const cache = new Map();   // chemin → { mtime, code }
@@ -52,6 +54,10 @@ const creerPrecompilation = (racine, dossierCache = null) => {
         page(fichierIndex) {
             return enCache(fichierIndex, () => {
                 let html = fs.readFileSync(fichierIndex, 'utf8');
+                if (version) {
+                    html = html.replace(/<meta name="ssf-version"\s+content="[^"]*">/, `<meta name="ssf-version" content="${version}">`);
+                    html = html.replace(/[ \t]*<meta name="ssf-date"\s+content="[^"]*">\r?\n?/, '');
+                }
                 html = html.replace(/[ \t]*<script src="\.\/libs\/babel\.min\.js"><\/script>\r?\n?/, '');
                 html = html.replace(/<script type="text\/babel" src="([^"]+)"><\/script>/g, (m, src) => `<script src="${src}?compile=1"></script>`);
                 let n = 0;

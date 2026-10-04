@@ -55,7 +55,7 @@ app.whenReady().then(async () => {
   if (reglages.modeReseau && !reglages.codeSession) { reglages.codeSession = nouveauCode(); enregistrerReglages(); }
   // Interface précompilée (tablettes) ; SSF_SANS_PRECOMPILATION=1 : transformation dans le navigateur
   const precompilation = process.env.SSF_SANS_PRECOMPILATION ? null
-    : creerPrecompilation(__dirname, path.join(app.getPath('userData'), 'cache-interface'));
+    : creerPrecompilation(__dirname, path.join(app.getPath('userData'), 'cache-interface'), { version: app.getVersion() });
   serveurSSF = await demarrerServeur({ racine: __dirname, port, hote: reglages.modeReseau ? '0.0.0.0' : '127.0.0.1', precompilation });
   // Mode réseau actif : ce poste ne doit pas se mettre en veille (les autres postes en dépendent)
   let blocageVeille = null;

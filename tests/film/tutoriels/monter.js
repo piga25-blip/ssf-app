@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { TUTORIELS } = require('./liste');
+const { TUTORIELS, GROUPES } = require('./liste');
 
 const trouverFfmpeg = () => {
     if (process.env.FFMPEG_DIR) return path.join(process.env.FFMPEG_DIR) + path.sep;
@@ -55,7 +55,7 @@ const carton = (nom, lignes, d) => {
     return nom + '.mp4';
 };
 
-const monter = (id, numero, titre, resume) => {
+const monter = (id, numero, titre, resume, groupe) => {
     const dossier = path.join(SORTIE, id);
     const journal = JSON.parse(fs.readFileSync(path.join(dossier, 'journal.json'), 'utf8'));
     const video = journal.video;
@@ -65,12 +65,13 @@ const monter = (id, numero, titre, resume) => {
     const coupe = Math.max(0, ((marqueDebut ? marqueDebut.t : debutVideo) - debutVideo) / 1000);
     const marques = journal.marques.filter(m => !marqueDebut || m.t >= marqueDebut.t).map(m => ({ ...m, s: (m.t - debutVideo) / 1000 - coupe }));
     const total = dv - coupe;
+    const tablette = journal.tablette && journal.tablette.video && fs.existsSync(journal.tablette.video) ? journal.tablette : null;
     const chapitres = marques.filter(m => m.type === 'chapitre');
 
     // Carton d'ouverture : titre + programme
     const programme = chapitres.map((c, i) => `${i + 1}.  ${c.texte}`).join('\n');
     const ouverture = carton(`${id}-ouverture`, [
-        { texte: `Application SSF — film de formation n° ${numero}`, taille: 36, couleur: '0x93c5fd', y: 170 },
+        { texte: `Application SSF — ${groupe.serie}, film n° ${numero}`, taille: 36, couleur: '0x93c5fd', y: 170 },
         { texte: titre, taille: 74, gras: true, y: 235 },
         { texte: couper(resume, 75), taille: 34, couleur: '0xe2e8f0', y: 360, interligne: 14 },
         { texte: 'Au programme :', taille: 34, gras: true, couleur: '0xfacc15', x: 330, y: 540 },
@@ -99,42 +100,70 @@ WrapStyle: 0
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Bandeau,Arial,34,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,7,28,28,24,1
-Style: Panneau,Arial,30,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,1432,30,150,1
+${tablette
+    // Deux postes : PC et tablette côte à côte, explications sur toute la largeur en bas
+    ? 'Style: Panneau,Arial,29,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,46,46,912,1'
+    : 'Style: Panneau,Arial,30,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,1432,30,150,1'}
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 ${evts.join('\n')}
 `);
-    const filtre = [
-        `[1:v]trim=start=${coupe.toFixed(2)},setpts=PTS-STARTPTS,fps=25[v]`,
-        `[0:v]drawbox=x=1400:y=90:w=520:h=900:color=0x1e293b:t=fill,drawtext=fontfile=arialbd.ttf:text='EXPLICATIONS':fontcolor=0x64748b:fontsize=24:x=1432:y=110[f]`,
-        `[f][v]overlay=x=0:y=90:eof_action=pass[o]`,
-        `[o]subtitles=${id}.ass:fontsdir=.,fade=in:st=0:d=0.5,fade=out:st=${(total + 2.5).toFixed(2)}:d=0.5[fin]`,
-    ].join(';\n');
+    const entrees = ['-f', 'lavfi', '-i', `color=c=${FOND}:s=1920x1080:r=25:d=${(total + 3).toFixed(2)}`, '-i', video];
+    let filtre;
+    if (tablette) {
+        // Même hauteur (760) pour les deux postes : PC 1182×760, tablette à l'échelle
+        const H = 760, WP = Math.round(1400 * H / 900 / 2) * 2;
+        const WT = Math.round(tablette.largeur * H / tablette.hauteur / 2) * 2;
+        const marge = Math.floor((1920 - WP - WT) / 3), xT = marge * 2 + WP;
+        // La vidéo de la tablette commence à l'ouverture de sa fenêtre
+        const debutTablette = tablette.fermeture - duree(tablette.video) * 1000;
+        const decalage = Math.max(0, (debutTablette - debutVideo) / 1000 - coupe);
+        entrees.push('-i', tablette.video);
+        const etiquette = (texte, x, w) => `drawtext=fontfile=arialbd.ttf:text='${texte}':fontcolor=0x93c5fd:fontsize=24:x=${x}+(${w}-tw)/2:y=${100 + H + 8}`;
+        filtre = [
+            `[1:v]trim=start=${coupe.toFixed(2)},setpts=PTS-STARTPTS,fps=25,scale=${WP}:${H}[v]`,
+            `[2:v]fps=25,scale=${WT}:${H},setpts=PTS-STARTPTS+${decalage.toFixed(3)}/TB[vt]`,
+            `[0:v]drawbox=x=0:y=900:w=1920:h=180:color=0x1e293b:t=fill,${etiquette('PC principal', marge, WP)},${etiquette('Tablette', xT, WT)}[f]`,
+            `[f][v]overlay=x=${marge}:y=100:eof_action=pass[o1]`,
+            `[o1][vt]overlay=x=${xT}:y=100:eof_action=pass[o]`,
+            `[o]subtitles=${id}.ass:fontsdir=.,fade=in:st=0:d=0.5,fade=out:st=${(total + 2.5).toFixed(2)}:d=0.5[fin]`,
+        ].join(';\n');
+    } else {
+        filtre = [
+            `[1:v]trim=start=${coupe.toFixed(2)},setpts=PTS-STARTPTS,fps=25[v]`,
+            `[0:v]drawbox=x=1400:y=90:w=520:h=900:color=0x1e293b:t=fill,drawtext=fontfile=arialbd.ttf:text='EXPLICATIONS':fontcolor=0x64748b:fontsize=24:x=1432:y=110[f]`,
+            `[f][v]overlay=x=0:y=90:eof_action=pass[o]`,
+            `[o]subtitles=${id}.ass:fontsdir=.,fade=in:st=0:d=0.5,fade=out:st=${(total + 2.5).toFixed(2)}:d=0.5[fin]`,
+        ].join(';\n');
+    }
     ecrire(`${id}.filtre`, filtre);
-    ffmpeg(['-f', 'lavfi', '-i', `color=c=${FOND}:s=1920x1080:r=25:d=${(total + 3).toFixed(2)}`, '-i', video, '-/filter_complex', `${id}.filtre`, '-map', '[fin]', '-t', (total + 3).toFixed(2), ...ENC, `${id}-video.mp4`]);
+    ffmpeg([...entrees, '-/filter_complex', `${id}.filtre`, '-map', '[fin]', '-t', (total + 3).toFixed(2), ...ENC, `${id}-video.mp4`]);
 
     const fermeture = carton(`${id}-fin`, [
         { texte: titre, taille: 56, gras: true, y: 420 },
         { texte: 'Fin du film', taille: 36, couleur: '0x93c5fd', y: 520 },
     ], 3);
     ecrire(`${id}-liste.txt`, [ouverture, `${id}-video.mp4`, fermeture].map(f => `file '${f}'`).join('\n'));
-    const nom = `${String(numero).padStart(2, '0')} - ${titre.replace(/[\\/:*?"<>|]/g, '-')}.mp4`;
+    const nom = `${groupe.prefixe}${String(numero).padStart(2, '0')} - ${titre.replace(/[\\/:*?"<>|]/g, '-')}.mp4`;
     ffmpeg(['-f', 'concat', '-safe', '0', '-i', `${id}-liste.txt`, '-c', 'copy', '-movflags', '+faststart', path.join(FILMS, nom)]);
     console.log(`🎬 ${nom} (${(duree(path.join(FILMS, nom)) / 60).toFixed(1)} min)`);
     return [ouverture, `${id}-video.mp4`, fermeture];
 };
 
+// Chaque groupe (le logiciel, le mode réseau) a sa numérotation et son propre film complet
 const choisis = process.argv.slice(2);
-const tous = [];
-TUTORIELS.forEach(([id, titre, resume], i) => {
-    if (choisis.length && !choisis.includes(id)) return;
-    if (!fs.existsSync(path.join(SORTIE, id, 'journal.json'))) { console.log(`⚠️ ${id} : pas encore tourné`); return; }
-    tous.push(...monter(id, i + 1, titre, resume));
-});
-if (!choisis.length && tous.length) {
-    ecrire('complet.txt', tous.map(f => `file '${f}'`).join('\n'));
-    const complet = path.join(SORTIE, 'SSF-films-de-formation.mp4');
-    ffmpeg(['-f', 'concat', '-safe', '0', '-i', 'complet.txt', '-c', 'copy', '-movflags', '+faststart', complet]);
-    console.log(`🎞️  Film complet : ${complet} (${(duree(complet) / 60).toFixed(1)} min)`);
+for (const groupe of GROUPES) {
+    const morceaux = [];
+    TUTORIELS.filter(tu => tu[3] === groupe.id).forEach(([id, titre, resume], i) => {
+        if (choisis.length && !choisis.includes(id)) return;
+        if (!fs.existsSync(path.join(SORTIE, id, 'journal.json'))) { console.log(`⚠️ ${id} : pas encore tourné`); return; }
+        morceaux.push(...monter(id, i + 1, titre, resume, groupe));
+    });
+    if (!choisis.length && morceaux.length) {
+        ecrire(`complet-${groupe.id}.txt`, morceaux.map(f => `file '${f}'`).join('\n'));
+        const complet = path.join(SORTIE, groupe.filmComplet + '.mp4');
+        ffmpeg(['-f', 'concat', '-safe', '0', '-i', `complet-${groupe.id}.txt`, '-c', 'copy', '-movflags', '+faststart', complet]);
+        console.log(`🎞️  ${groupe.filmComplet} : ${complet} (${(duree(complet) / 60).toFixed(1)} min)`);
+    }
 }

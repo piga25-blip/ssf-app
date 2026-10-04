@@ -16,6 +16,7 @@ const { _electron: electron } = require('playwright-core');
 const { fenetrePrincipale } = require('../../outils-fichiers');
 
 const RACINE = path.join(__dirname, '..', '..', '..');
+const NAVIGATEUR = path.join(RACINE, 'tests', 'aides', 'navigateur');
 const SORTIE = path.join(__dirname, '..', 'sortie', 'tutoriels');
 const RAPIDE = process.env.FILM_RAPIDE === '1';
 
@@ -98,7 +99,36 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0) } = {}) => 
     const minuterie = setInterval(() => page.evaluate(() => window.__film && window.__film.vieillir()).catch(() => {}), 500);
     const video = page.video();
     const t = new Tuto(page, journal);
+
+    // Un autre poste (tablette en portrait par défaut) qui ouvre `url` : fenêtre de navigateur
+    // filmée elle aussi ; le montage la place à droite du PC principal
+    const tablettes = [];
+    t.ouvrirTablette = async (url, { largeur = 820, hauteur = 1180 } = {}) => {
+        const donneesT = fs.mkdtempSync(path.join(os.tmpdir(), 'ssf-tuto-tablette-'));
+        const nav = await electron.launch({
+            args: [NAVIGATEUR],
+            env: { ...process.env, SSF_TEST_USER_DATA: donneesT, SSF_URL: url, SSF_TAILLE: `${largeur}x${hauteur}` },
+            recordVideo: { dir: path.join(dossierVideo, 'tablette'), size: { width: largeur, height: hauteur } },
+        });
+        const pt = await nav.firstWindow();
+        await nav.context().addInitScript(scriptPage);
+        await pt.reload();
+        await pt.waitForFunction(() => document.querySelector('#root')?.children.length > 0, null, { timeout: 60000 });
+        const tt = new Tuto(pt, journal);
+        tt.enPreparation = t.enPreparation;
+        tablettes.push({ nav, video: pt.video(), donneesT, largeur, hauteur,
+            minuterie: setInterval(() => pt.evaluate(() => window.__film && window.__film.vieillir()).catch(() => {}), 500) });
+        return tt;
+    };
+
     t.fermer = async () => {
+        for (const tb of tablettes) {
+            clearInterval(tb.minuterie);
+            const videoT = tb.video ? await tb.video.path() : null;
+            await tb.nav.close().catch(() => {});
+            journal.tablette = { video: videoT, fermeture: Date.now(), largeur: tb.largeur, hauteur: tb.hauteur };
+            try { fs.rmSync(tb.donneesT, { recursive: true, force: true }); } catch (e) { /* encore verrouillé */ }
+        }
         clearInterval(minuterie);
         journal.video = video ? await video.path() : null;
         journal.fin = Date.now();
