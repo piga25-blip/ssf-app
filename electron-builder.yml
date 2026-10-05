@@ -1,7 +1,5 @@
-# VERSION RÉSEAU (TEST) — identité distincte de la version officielle :
-# s'installe à côté, dossier de données séparé, aucune publication GitHub.
-appId: fr.ssf.app.reseau
-productName: Application SSF Reseau (test)
+appId: fr.ssf.app
+productName: Application SSF
 copyright: Copyright © 2026 Secours Souterrain Français
 
 directories:
@@ -30,7 +28,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Application SSF Reseau (test)
+  shortcutName: Application SSF
 
 # Pas de certificat Apple Developer : build non signé, non notarié.
 # Les utilisateurs Mac devront faire clic droit > Ouvrir au premier lancement
@@ -49,5 +47,9 @@ mac:
   hardenedRuntime: false
   gatekeeperAssess: false
 
-# Aucune publication : cette version ne doit jamais partir dans les mises à jour.
-publish: null
+publish:
+  provider: github
+  owner: piga25-blip
+  repo: ssf-app
+  releaseType: release
+  private: false

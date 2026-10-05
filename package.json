@@ -1,7 +1,7 @@
 {
-  "name": "ssf-app-reseau",
-  "productName": "Application SSF Reseau (test)",
-  "version": "13.42.1",
+  "name": "ssf-app",
+  "productName": "Application SSF",
+  "version": "14.0.0",
   "description": "Application SSF - Secours Souterrain Français",
   "main": "main.js",
   "scripts": {
@@ -14,7 +14,9 @@
     "film:tourner": "node tests/film/tourner.js",
     "film:monter": "node tests/film/monter.js",
     "formation:tourner": "node tests/film/tutoriels/tourner.js",
-    "formation:monter": "node tests/film/tutoriels/monter.js"
+    "formation:monter": "node tests/film/tutoriels/monter.js",
+    "publish": "set NODE_TLS_REJECT_UNAUTHORIZED=0 && electron-builder build --win --publish always",
+    "publish:mac": "electron-builder build --mac --publish always"
   },
   "dependencies": {
     "electron-updater": "^6.3.9",

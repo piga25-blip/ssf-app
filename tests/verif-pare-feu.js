@@ -5,7 +5,7 @@
 // 2. Application, mode réseau activé avec une règle existante (SSF_PARE_FEU_NOM) : la fenêtre
 //    « Mode réseau » affiche « les autres postes sont autorisés », sans demande d'autorisation.
 // 3. Tests sans SSF_PARE_FEU_NOM : aucune vérification (aucune demande d'autorisation possible).
-// Windows seulement (ailleurs : vérification ignorée). La règle « Application SSF Reseau (test) »
+// Windows seulement (ailleurs : vérification ignorée). La règle « <nom de l'application> »
 // doit exister (autoriser-pare-feu.cmd) pour le point 2 ; sinon il est ignoré.
 // Utilisation (depuis C:\Projets\SSF-Reseau) : node tests/verif-pare-feu.js
 
@@ -17,7 +17,7 @@ const { fenetrePrincipale } = require('./outils-fichiers');
 const { creerPareFeu } = require('../serveur/parefeu');
 
 const RACINE = path.join(__dirname, '..');
-const REGLE = 'Application SSF Reseau (test)';
+const REGLE = require('../package.json').productName; // nom de la règle = nom de l'application
 
 (async () => {
     const controles = [];

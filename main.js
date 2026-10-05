@@ -124,9 +124,9 @@ app.whenReady().then(async () => {
   console.log(`Serveur SSF : http://localhost:${serveurSSF.port}`);
   createWindow();
 
-  // VERSION RÉSEAU (TEST) : mise à jour automatique désactivée, sinon elle
-  // serait remplacée par la version officielle publiée sur GitHub.
-  const MISE_A_JOUR_AUTO = false;
+  // Mise à jour automatique depuis les publications GitHub (désactivée dans la version réseau
+  // de test, réactivée pour la version officielle 14)
+  const MISE_A_JOUR_AUTO = true;
 
   mainWindow.webContents.once('did-finish-load', () => {
     if (MISE_A_JOUR_AUTO && app.isPackaged) {
