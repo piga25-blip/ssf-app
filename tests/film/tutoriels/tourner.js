@@ -3,7 +3,7 @@
 // ============================================
 // Tourne chaque tutoriel de liste.js (rythme de démonstration, fenêtre visible). Un tutoriel
 // qui échoue est relancé une fois.
-// Utilisation (depuis C:\Projets\SSF-Reseau) :
+// Utilisation (depuis C:\Projets\SSF) :
 //   node tests/film/tutoriels/tourner.js [id ...]     puis     node tests/film/tutoriels/monter.js
 // Mise au point d'un tutoriel sans pauses : FILM_RAPIDE=1 node tests/film/tutoriels/<id>.js
 // (capture de chaque chapitre dans tests/film/sortie/tutoriels/_ecrans).

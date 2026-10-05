@@ -1,7 +1,7 @@
 // Film réseau 3 : le pare-feu réglé automatiquement à l'activation du mode réseau, la
 // vérification à chaque ouverture de la fenêtre, le bouton « Autoriser dans le pare-feu » et la
 // procédure manuelle. Windows seulement.
-// Une règle propre au film (« Application SSF Reseau (film) ») est utilisée : la vraie règle de
+// Une règle propre au film (« Application SSF (film) ») est utilisée : la vraie règle de
 // l'application n'est pas touchée. Les ajouts / retraits de règle demandent les droits
 // d'administrateur (Windows peut demander confirmation) ; la règle du film est retirée à la fin.
 const path = require('path');
@@ -11,7 +11,7 @@ const { spawnSync } = require('child_process');
 const { executer } = require('./outils');
 const P = require('./preparation');
 
-const REGLE_FILM = 'Application SSF Reseau (film)';
+const REGLE_FILM = 'Application SSF (film)';
 
 // Retire la règle du film (droits d'administrateur, comme l'application elle-même)
 const retirerRegleFilm = () => {

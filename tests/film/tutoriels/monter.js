@@ -4,7 +4,7 @@
 // Pour chaque tutoriel tourné (sortie/tutoriels/<id>/journal.json + vidéo) : carton d'ouverture
 // avec le programme, puis la vidéo (1400×900, à gauche) avec le bandeau du chapitre en haut et
 // les explications (« dire ») dans un panneau à droite. Un MP4 par tutoriel + un film complet.
-// Utilisation (depuis C:\Projets\SSF-Reseau) : node tests/film/tutoriels/monter.js [id ...]
+// Utilisation (depuis C:\Projets\SSF) : node tests/film/tutoriels/monter.js [id ...]
 
 const fs = require('fs');
 const path = require('path');

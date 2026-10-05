@@ -6,7 +6,7 @@
 // Les tests ne sont pas modifiés. Un scénario qui échoue est relancé une fois (le ralenti et
 // l'enregistrement chargent la machine : les tests « au même instant » y sont sensibles).
 //
-// Utilisation (depuis C:\Projets\SSF-Reseau) :
+// Utilisation (depuis C:\Projets\SSF) :
 //   node tests/film/tourner.js                      → tous les scénarios
 //   node tests/film/tourner.js verif-reseau ...     → seulement ceux-là
 // Puis : node tests/film/monter.js                  → film MP4 (ffmpeg requis)

@@ -4,7 +4,7 @@
 // Monte le film à partir des vidéos tournées par tourner.js : carton de titre + vidéo(s) de
 // chaque scénario (postes côte à côte quand plusieurs fenêtres sont ouvertes en même temps)
 // + sous-titres tirés des messages du test.
-// Utilisation (depuis C:ProjetsSSF-Reseau) :
+// Utilisation (depuis C:\Projets\SSF) :
 //   node tests/film/monter.js [fichier.mp4]   → par défaut tests/film/sortie/SSF-Reseau-scenarios.mp4,
 //                                              et un film par scénario dans le sous-dossier scenarios/
 // Nécessite ffmpeg (winget install Gyan.FFmpeg --source winget) : trouvé dans le PATH, dans
