@@ -19,6 +19,7 @@
   .sous-titre { color: var(--pale); margin: 0 0 16px; }
   .cadre { border: 1px solid var(--trait); border-radius: 6px; padding: 10px 14px; margin: 10px 0; background: var(--zone); }
   .attention { border-left: 4px solid var(--attention); }
+  li.attention { padding-left: 8px; }
   .champs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 24px; }
   .champ { border-bottom: 1px solid var(--trait); padding: 10px 0 2px; color: var(--pale); }
   table { width: 100%; border-collapse: collapse; margin: 8px 0; table-layout: fixed; }
@@ -79,7 +80,7 @@
 <ol>
   <li>Lancer <strong>« Application SSF Reseau (test) Setup 13.42.0.exe »</strong>.<br>
       Si Windows affiche « Windows a protégé votre ordinateur » : <span class="bouton">Informations complémentaires</span> puis <span class="bouton">Exécuter quand même</span> (le programme n'est pas signé).</li>
-  <li>Double-cliquer sur <strong>« autoriser-pare-feu.cmd »</strong>, répondre <span class="bouton">Oui</span>. Le message « OK : les autres postes peuvent se connecter à ce PC » doit s'afficher.</li>
+  <li>Pare-feu : <strong>rien à faire à l'avance</strong> — l'application demande elle-même l'autorisation quand on active le mode réseau (voir partie 3). À défaut, procédure manuelle en encadré « Pare-feu » ci-dessous.</li>
   <li>Ouvrir une première fois « Application SSF Reseau (test) » (icône sur le bureau) pour vérifier qu'elle démarre. Le titre de la fenêtre indique <strong>RÉSEAU (TEST)</strong>.</li>
   <li>Régler le PC pour qu'il <strong>ne se mette pas en veille quand on ferme le capot</strong> (Paramètres › Système › Alimentation). L'application empêche la mise en veille automatique, mais pas celle du capot fermé.</li>
 </ol>
@@ -89,16 +90,43 @@
   <li>Allumer le routeur. Connecter <strong>tous les appareils</strong> au même Wi-Fi.</li>
   <li>PC principal : ouvrir l'application, créer un dossier <strong>EXERCICE</strong>, choisir <strong>PC de Terrain</strong>, indiquer le secrétaire.</li>
   <li>Cliquer sur <span class="bouton">🌐 Mode réseau</span> puis <span class="bouton">Activer le mode réseau</span>.<br>
-      Si Windows demande l'accès au réseau : cocher <strong>réseaux privés et réseaux publics</strong>, puis <span class="bouton">Autoriser</span>.</li>
+      L'application vérifie le pare-feu et l'autorise elle-même si besoin. L'ordinateur peut demander confirmation :
+      <strong>Windows</strong> : « Voulez-vous autoriser cette application à apporter des modifications… » → <span class="bouton">Oui</span> ;
+      <strong>Mac</strong> : mot de passe de l'ordinateur → <span class="bouton">OK</span>.<br>
+      Si Windows affiche aussi « Alerte de sécurité Windows » : cocher <strong>réseaux privés et réseaux publics</strong>, puis <span class="bouton">Autoriser l'accès</span>.<br>
+      La fenêtre « Mode réseau » doit afficher <strong>« 🛡️ Pare-feu … : les autres postes sont autorisés »</strong> (ou « désactivé : rien à régler »).
+      Sinon : bouton <span class="bouton">🛡️ Autoriser dans le pare-feu</span>, ou procédure manuelle ci-dessous.</li>
   <li>Recopier ici l'adresse et le code affichés :
     <div class="champs"><div class="champ">Adresse (http://…:8080) :</div><div class="champ">Code de session :</div></div></li>
   <li>Cocher <span class="bouton">Autoriser la saisie sur les autres postes</span>.</li>
 </ol>
 
+<div class="cadre attention">
+  <strong>🛡️ Pare-feu — procédure manuelle</strong> (seulement si l'application n'a pas pu l'autoriser elle-même, ou si un autre poste reste sans réponse : « Ce site est inaccessible »)
+  <p><strong>Windows — méthode rapide :</strong> dans le dossier du kit, double-cliquer sur <strong>« autoriser-pare-feu.cmd »</strong>
+     (« Windows a protégé votre ordinateur » : <span class="bouton">Informations complémentaires</span> › <span class="bouton">Exécuter quand même</span>),
+     répondre <span class="bouton">Oui</span> ; le message « OK : les autres postes peuvent se connecter à ce PC » s'affiche.</p>
+  <p><strong>Windows — sans le script :</strong></p>
+  <ol>
+    <li>Menu Démarrer : taper <strong>« pare-feu »</strong> et ouvrir <strong>« Pare-feu Windows Defender avec fonctions avancées de sécurité »</strong>.</li>
+    <li>À gauche : <strong>Règles de trafic entrant</strong> ; à droite : <strong>Nouvelle règle…</strong></li>
+    <li>Type de règle : <strong>Port</strong> › Suivant.</li>
+    <li><strong>TCP</strong> ; <strong>Ports locaux spécifiques</strong> : <code>8080-8089</code> › Suivant.</li>
+    <li><strong>Autoriser la connexion</strong> › Suivant.</li>
+    <li>Cocher <strong>Domaine, Privé et Public</strong> › Suivant.</li>
+    <li>Nom : <strong>Application SSF Reseau (test)</strong> › Terminer.</li>
+  </ol>
+  <p><strong>Mac :</strong> menu Pomme › <strong>Réglages Système</strong> › <strong>Réseau</strong> › <strong>Coupe-feu</strong>.
+     Si le coupe-feu est <strong>désactivé</strong> : rien à faire. S'il est activé : <span class="bouton">Options…</span> › bouton <span class="bouton">+</span> ›
+     choisir <strong>Application SSF</strong> dans le dossier Applications › régler sur <strong>« Autoriser les connexions entrantes »</strong> › <span class="bouton">OK</span>.
+     Si le Mac demande « Voulez-vous que l'application … accepte les connexions réseau entrantes ? » : <span class="bouton">Autoriser</span>.</p>
+</div>
+
 <h2>4. Connexion des autres postes</h2>
 <ul>
-  <li><strong>PC</strong> : ouvrir le navigateur, taper l'adresse ci-dessus, saisir le code de session, puis donner le nom du secrétaire quand il est demandé.</li>
-  <li><strong>Tablette ou téléphone</strong> : scanner le <strong>code QR</strong> affiché dans « 🌐 Mode réseau » sur le PC principal (le code de session est déjà dedans).</li>
+  <li><strong>PC</strong> : ouvrir le <strong>navigateur</strong> (Chrome, Edge, Firefox…) et taper l'adresse ci-dessus <strong>en entier, avec <code>http://</code></strong> (ex. <code>http://192.168.1.26:8080</code>) dans la <strong>barre d'adresse</strong>, tout en haut de la fenêtre ; saisir le code de session, puis donner le nom du secrétaire quand il est demandé.</li>
+  <li><strong>Tablette ou téléphone</strong> : scanner le <strong>code QR</strong> affiché dans « 🌐 Mode réseau » sur le PC principal avec l'appareil photo (le code de session est déjà dedans). C'est le plus simple. À défaut, taper l'adresse comme sur un PC : dans la barre d'adresse du navigateur, avec <code>http://</code>.</li>
+  <li class="attention">⚠️ <strong>Ne pas taper l'adresse dans une recherche Google</strong> (application Google, barre de recherche de l'écran d'accueil, page google.fr) : on obtient une page de résultats au lieu de l'application. Sans <code>http://</code> au début, certains navigateurs lancent aussi une recherche.</li>
   <li>Sur le PC principal, la fenêtre <span class="bouton">🌐 Mode réseau</span> liste les postes connectés. Régler chacun en <strong>Saisie</strong> ou <strong>Consultation</strong>.</li>
   <li>Sur chaque autre poste, le bandeau doit indiquer <strong>« 🟢 Connecté au poste principal »</strong>.</li>
 </ul>
@@ -124,7 +152,7 @@
   <tr><td>B1</td><td>Inscrire des sauveteurs et enregistrer leur arrivée depuis un poste de saisie.</td><td>Liste à jour partout ; ligne d'arrivée dans la main courante.</td><td><span class="case"></span></td><td></td></tr>
   <tr><td>B2</td><td>Inscrire deux personnes en même temps sur deux postes (identifiant automatique).</td><td>Deux identifiants différents (EXT-…).</td><td><span class="case"></span></td><td></td></tr>
   <tr><td>C1</td><td>Créer une équipe depuis un poste de saisie.</td><td>Équipe visible partout, ligne dans la main courante.</td><td><span class="case"></span></td><td></td></tr>
-  <tr><td>C2</td><td>Créer la <strong>même</strong> équipe (même numéro) en même temps sur deux postes.</td><td>Une seule équipe ; l'autre poste reçoit un message clair.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>C2</td><td>Créer la <strong>même</strong> équipe (même numéro) en même temps sur deux postes.</td><td>Une seule équipe de ce numéro ; l'autre poste reçoit un message clair (« existe déjà »), ou son formulaire passe tout seul au numéro suivant.</td><td><span class="case"></span></td><td></td></tr>
   <tr><td>D1</td><td>Noter le passage d'une équipe à un point phone depuis un poste de saisie.</td><td>Planning mis à jour sur tous les postes.</td><td><span class="case"></span></td><td></td></tr>
   <tr><td>D2</td><td>Modifier le planning sur un poste pendant qu'un autre le regarde.</td><td>Message « 📅 Planning modifié sur … » sur l'autre poste.</td><td><span class="case"></span></td><td></td></tr>
   <tr><td>E1</td><td>Saisir une ligne avec un rappel dans 2 minutes.</td><td>L'alerte apparaît sur tous les postes.</td><td><span class="case"></span></td><td></td></tr>
@@ -182,7 +210,8 @@
 <div class="cadre">
   <strong>En cas de problème de connexion</strong>
   <ul>
-    <li>Le poste n'arrive pas à ouvrir l'adresse : vérifier qu'il est sur le <strong>même Wi-Fi</strong> ; relancer « autoriser-pare-feu.cmd » sur le PC principal ; vérifier l'adresse dans <span class="bouton">🌐 Mode réseau</span>.</li>
+    <li>Une <strong>page de résultats de recherche</strong> s'affiche au lieu de l'application : l'adresse a été tapée dans une recherche Google ou sans <code>http://</code>. La retaper <strong>en entier, avec <code>http://</code>, dans la barre d'adresse du navigateur</strong> — ou scanner le code QR.</li>
+    <li>Le poste n'arrive pas à ouvrir l'adresse (« Ce site est inaccessible ») : vérifier qu'il est sur le <strong>même Wi-Fi</strong> (pas le Wi-Fi invité de la box, pas la 4G) ; vérifier sur le PC principal que la fenêtre <span class="bouton">🌐 Mode réseau</span> affiche « 🛡️ Pare-feu … autorisés », sinon <span class="bouton">🛡️ Autoriser dans le pare-feu</span> ou l'encadré « Pare-feu » ; vérifier l'adresse dans <span class="bouton">🌐 Mode réseau</span>.</li>
     <li>Plusieurs adresses affichées (PC avec câble et Wi-Fi) : essayer celle qui commence comme l'adresse Wi-Fi du poste (souvent 192.168.…).</li>
     <li>« Code incorrect » : reprendre le code affiché <em>actuellement</em> sur le PC principal (il change avec « Changer le code »).</li>
   </ul>

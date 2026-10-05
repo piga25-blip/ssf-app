@@ -112,6 +112,13 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                             .catch(e => refuser('Mode réseau : ' + e.message));
                         return;
                     }
+                    case 'pareFeuAutoriser': {
+                        if (!reseau || !reseau.autoriserPareFeu) { refuser('Réglage du pare-feu indisponible'); return; }
+                        reseau.autoriserPareFeu()
+                            .then(infos => { for (const [s, p] of postes) if (p.role === 'principal') envoyer(s, { type: 'reseau', ...infos }); })
+                            .catch(e => refuser('Pare-feu : ' + e.message));
+                        return;
+                    }
                     case 'saisieDistante': {
                         if (!saisie) { refuser('Saisie sur les autres postes indisponible'); return; }
                         saisie.changer(!!msg.actif);
@@ -161,7 +168,7 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
     const estLocale = (a) => a === '127.0.0.1' || a === '::1' || a === 'localhost';
     const deconnecterDistants = () => { for (const [ws, p] of postes) if (!estLocale(p.adresse)) ws.terminate(); };
 
-    return { wss, postes: listePostes, deconnecterDistants, fermer: () => { for (const ws of postes.keys()) ws.terminate(); wss.close(); } };
+    return { wss, postes: listePostes, deconnecterDistants, informerPrincipal, fermer: () => { for (const ws of postes.keys()) ws.terminate(); wss.close(); } };
 };
 
 module.exports = { creerCanal };

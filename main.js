@@ -14,6 +14,7 @@ const { demarrerServeur, adressesReseau, codeQR } = require('./serveur/serveur')
 const { creerMoteur } = require('./serveur/moteur');
 const { creerCanal } = require('./serveur/canal');
 const { creerPrecompilation } = require('./serveur/precompilation');
+const { creerPareFeu } = require('./serveur/parefeu');
 const { reprendreMemoireNavigateur, reglagesARecopier, marquerReglagesRecopies } = require('./serveur/migration');
 
 let mainWindow;
@@ -64,10 +65,19 @@ app.whenReady().then(async () => {
     if (!actif && blocageVeille !== null) { powerSaveBlocker.stop(blocageVeille); blocageVeille = null; }
   };
   ajusterVeille(!!reglages.modeReseau);
+  // Pare-feu : à l'activation du mode réseau, autorisation des autres postes si nécessaire
+  // (Windows / macOS demandent confirmation). Jamais pendant les tests (SSF_TEST_USER_DATA), sauf
+  // SSF_PARE_FEU_NOM (nom de règle imposé, pour vérifier l'affichage)
+  const pareFeu = ((process.env.SSF_TEST_USER_DATA && !process.env.SSF_PARE_FEU_NOM) || process.env.SSF_PARE_FEU === '0') ? null
+    : creerPareFeu({ nomRegle: process.env.SSF_PARE_FEU_NOM || app.getName(), appMac: process.platform === 'darwin' ? path.resolve(process.execPath, '..', '..', '..') : null });
+  let etatPareFeu = { statut: pareFeu ? 'inconnu' : 'non-gere' };
+  const verifierPareFeu = async () => { if (pareFeu) etatPareFeu = await pareFeu.etat(); };
+  if (reglages.modeReseau) verifierPareFeu().then(() => canalSSF && canalSSF.informerPrincipal());
   const reseau = {
     infos: () => ({ actif: serveurSSF.hote === '0.0.0.0', port: serveurSSF.port, saisieDistante: !!reglages.saisieDistante, code: reglages.codeSession,
       // Le code QR contient le code de session : la tablette se connecte sans le saisir
-      adresses: adressesReseau().map(a => ({ ...a, qr: codeQR(`http://${a.adresse}:${serveurSSF.port}/?code=${reglages.codeSession || ''}`) })) }),
+      adresses: adressesReseau().map(a => ({ ...a, qr: codeQR(`http://${a.adresse}:${serveurSSF.port}/?code=${reglages.codeSession || ''}`) })),
+      pareFeu: { ...etatPareFeu, systeme: pareFeu ? pareFeu.systeme : null } }),
     basculer: async (actif) => {
       await serveurSSF.changerHote(actif ? '0.0.0.0' : '127.0.0.1');
       if (!actif && canalSSF) canalSSF.deconnecterDistants();
@@ -75,6 +85,15 @@ app.whenReady().then(async () => {
       reglages.modeReseau = actif;
       if (actif && !reglages.codeSession) reglages.codeSession = nouveauCode();
       enregistrerReglages();
+      if (actif && pareFeu) {
+        await verifierPareFeu();
+        if (!['autorise', 'inutile'].includes(etatPareFeu.statut)) etatPareFeu = await pareFeu.autoriser();
+      }
+      return reseau.infos();
+    },
+    // Bouton « Autoriser dans le pare-feu » (si la confirmation a été refusée à l'activation)
+    autoriserPareFeu: async () => {
+      if (pareFeu) etatPareFeu = await pareFeu.autoriser();
       return reseau.infos();
     },
   };

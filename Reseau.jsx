@@ -5,6 +5,34 @@
 // alors ouvrir l'application dans leur navigateur), adresses à saisir, postes connectés.
 // Bandeau des autres postes : consultation seule, état de la connexion.
 
+// État du pare-feu du poste principal (le PC demande lui-même l'autorisation à l'activation)
+const EtatPareFeu = ({ pareFeu, connexion }) => {
+    const [enCours, setEnCours] = React.useState(false);
+    React.useEffect(() => { setEnCours(false); }, [pareFeu && pareFeu.statut, pareFeu && pareFeu.refuse]);
+    if (!pareFeu || pareFeu.statut === 'non-gere') return null;
+    const nomSysteme = pareFeu.systeme === 'macos' ? 'macOS' : 'Windows';
+    if (pareFeu.statut === 'autorise') return <p className="text-sm text-green-800 mt-2">🛡️ Pare-feu {nomSysteme} : les autres postes sont autorisés.</p>;
+    if (pareFeu.statut === 'inutile') return <p className="text-sm text-green-800 mt-2">🛡️ Pare-feu {nomSysteme} désactivé : rien à régler.</p>;
+    if (pareFeu.statut === 'inconnu') return (
+        <p className="text-sm text-gray-600 mt-2">🛡️ État du pare-feu inconnu. Si un autre poste n'arrive pas à se connecter, suivre la procédure de la fiche (autoriser les ports TCP 8080 à 8089).</p>
+    );
+    return (
+        <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 mt-3 text-sm text-gray-800">
+            <p>
+                ⚠️ Le pare-feu {nomSysteme} {pareFeu.statut === 'bloque' ? 'bloque' : 'risque de bloquer'} les autres postes.
+                {pareFeu.refuse && ' (L\'autorisation a été refusée ou annulée.)'}
+            </p>
+            <button onClick={() => { setEnCours(true); connexion.envoyer({ type: 'pareFeuAutoriser' }); }} disabled={enCours}
+                className="mt-2 bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 rounded disabled:opacity-50">
+                {enCours ? '… répondre Oui à la demande de l\'ordinateur' : '🛡️ Autoriser dans le pare-feu'}
+            </button>
+            <span className="block text-xs text-gray-600 mt-1">
+                {nomSysteme === 'Windows' ? 'Windows peut demander « Voulez-vous autoriser cette application… » : répondre Oui.' : 'macOS demande le mot de passe administrateur.'}
+            </span>
+        </div>
+    );
+};
+
 let ModeReseauModal = ({ connexion, onClose }) => {
     useCloseOnEscape(onClose);
     const reseau = connexion.reseau;
@@ -44,6 +72,13 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                         {enCours ? '…' : (reseau.actif ? 'Désactiver' : 'Activer le mode réseau')}
                                     </button>
                                 </div>
+                                {enCours && !reseau.actif && (
+                                    <p className="text-sm text-gray-700 mt-2">
+                                        🛡️ Vérification du pare-feu… Si l'ordinateur demande une autorisation
+                                        (Windows : « Voulez-vous autoriser cette application… » ; Mac : mot de passe), répondre <strong>Oui</strong>.
+                                    </p>
+                                )}
+                                {reseau.actif && <EtatPareFeu pareFeu={reseau.pareFeu} connexion={connexion} />}
                             </div>
 
                             {reseau.actif && (
@@ -68,6 +103,14 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                     ))}
                                     {reseau.adresses.length > 1 && (
                                         <p className="text-xs text-gray-500">Plusieurs réseaux détectés : utilisez l'adresse du réseau auquel les autres postes sont reliés.</p>
+                                    )}
+                                    {reseau.adresses.length > 0 && (
+                                        <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 mt-2 text-sm text-gray-800">
+                                            ⚠️ Sur l'autre poste, ouvrir le <strong>navigateur</strong> (Chrome, Safari, Edge…) et taper l'adresse
+                                            <strong> en entier, avec http://</strong> dans la <strong>barre d'adresse</strong> tout en haut —
+                                            <strong> pas dans une recherche Google</strong> (sinon une page de résultats s'affiche au lieu de l'application).
+                                            Le plus simple sur une tablette : photographier le code QR.
+                                        </div>
                                     )}
                                     <p className="text-xs text-gray-500 mt-2">
                                         Navigateurs pris en charge : Chrome, Edge, Firefox, Safari (versions récentes).

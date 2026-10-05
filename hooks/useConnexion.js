@@ -83,7 +83,7 @@ const useConnexion = ({ surEtat, surAction, surRefus }) => {
                     case 'action': if (r.surAction) r.surAction(msg.action, msg.version, msg.emetteur); break;
                     case 'postes': setPostes(msg.liste || []); break;
                     case 'dossiers': setDossiers(msg.liste || []); break;
-                    case 'reseau': setReseau({ actif: msg.actif, port: msg.port, adresses: msg.adresses || [], saisieDistante: !!msg.saisieDistante, code: msg.code || null }); break;
+                    case 'reseau': setReseau({ actif: msg.actif, port: msg.port, adresses: msg.adresses || [], saisieDistante: !!msg.saisieDistante, code: msg.code || null, pareFeu: msg.pareFeu || null }); break;
                     case 'role': setRole(msg.role); break;
                     case 'refus': if (r.surRefus) r.surRefus(msg.raison); break;
                     case 'code-requis': codeDemande = true; setCodeRequis({ erreur: msg.erreur || null }); break;

@@ -10,7 +10,7 @@
     "build:dir": "set NODE_TLS_REJECT_UNAUTHORIZED=0 && electron-builder build --win --dir",
     "test:scenario": "node tests/scenario-reference.js",
     "test:scenario:maj": "node tests/scenario-reference.js --maj-reference",
-    "test": "node tests/verif-actions.js && node tests/verif-serveur.js && node tests/verif-stockage.js && node tests/verif-precompilation.js && node tests/scenario-reference.js && node tests/verif-reouverture.js && node tests/verif-export-import.js && node tests/verif-identifiants.js && node tests/verif-copies-perimees.js && node tests/verif-reprise.js && node tests/verif-reseau.js && node tests/verif-version.js && node tests/verif-saisie-multiposte.js && node tests/verif-conflits-multiposte.js && node tests/verif-session.js && node tests/verif-recopie-papier.js && node tests/verif-defauts-releves.js",
+    "test": "node tests/verif-actions.js && node tests/verif-serveur.js && node tests/verif-stockage.js && node tests/verif-precompilation.js && node tests/scenario-reference.js && node tests/verif-reouverture.js && node tests/verif-export-import.js && node tests/verif-identifiants.js && node tests/verif-copies-perimees.js && node tests/verif-reprise.js && node tests/verif-reseau.js && node tests/verif-version.js && node tests/verif-saisie-multiposte.js && node tests/verif-conflits-multiposte.js && node tests/verif-session.js && node tests/verif-recopie-papier.js && node tests/verif-defauts-releves.js && node tests/verif-pare-feu.js",
     "film:tourner": "node tests/film/tourner.js",
     "film:monter": "node tests/film/monter.js",
     "formation:tourner": "node tests/film/tutoriels/tourner.js",
