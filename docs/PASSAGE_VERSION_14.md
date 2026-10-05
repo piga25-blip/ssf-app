@@ -8,7 +8,7 @@ Ce document garde la trace de la préparation et liste ce qui reste à faire apr
 | Dossier | Branche | Rôle |
 |---|---|---|
 | `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.0)** : contient désormais le code réseau. Les corrections futures se font ici. |
-| `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; sert encore à tourner les films. |
+| `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
 ## 2. Ce qui change pour les utilisateurs
@@ -34,7 +34,7 @@ Ce document garde la trace de la préparation et liste ce qui reste à faire apr
 | Essai réel du mode réseau (PC + tablette sur Livebox, pare-feu automatique) | ✅ (version de test) |
 | **Essai pilote** : 14.0.0 installée par-dessus une 13.42.1 sur un PC portable contenant le dernier gros exercice — « tout fonctionne, même le réseau » (kit `dist/Kit-essai-pilote`, fiche `docs/essai-pilote`) | ✅ 05/10/2026 |
 | **Notice de mise à jour** (Windows et Mac) : document Claude + export Word `docs/Notice_MiseAJour_SSF_14.docx` (non suivi par git) | ✅ |
-| Films de formation : logiciel (8 films) et mode réseau (3 films) | ✅ tournés avec la version de test (titre « RÉSEAU (TEST) » visible) |
+| Films de formation : logiciel (8 films) et mode réseau (3 films) | ✅ tournés avec la version de test, puis **retournés avec la 14.0.0** après la publication (voir §6) |
 | Décision Mac : la 14.0.0 sort pour Windows **et** Mac | ✅ |
 
 ## 4. La publication (05/10/2026)
@@ -70,15 +70,23 @@ Fichiers à fournir, réunis dans `dist/A-distribuer-nouveaux-utilisateurs/` (no
 En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` (lecture seule)
 écrit sur le Bureau où l'application est installée, sous quel compte, et où sont les données.
 
-## 6. Reste à faire
+## 6. Fait après la publication
+
+- **Bootstrapper Windows corrigé** (§5) et bootstrapper Mac refabriqué (05/10/2026).
+- **Films de formation retournés avec la 14.0.0** (05/10/2026), depuis `C:\Projets\SSF` :
+  les 11 films (8 « Le logiciel SSF » + 3 « Le mode réseau ») et les deux films complets, titre
+  « Version 14.0.0 ». Pour les refaire : `npm run formation:tourner` puis
+  `npm run formation:monter` (environ 2 h en tout) ; résultat dans
+  `tests/film/sortie/tutoriels/` (non suivi par git). Copies de diffusion :
+  `E:\Vidéos\SSF-Films-de-formation\`. Les films des scénarios de test (`npm run film:tourner`)
+  n'ont pas été retournés.
+
+## 7. Reste à faire
 
 - **Essai sur un vrai Mac** : ni l'application 14 (serveur intégré, reprise des données, pare-feu
   macOS — partie Mac de `serveur/parefeu.js`) ni le bootstrapper Mac n'ont été essayés sur un Mac.
 - **Bootstrapper Windows corrigé** : l'installation complète n'a pas encore été faite avec la
   nouvelle version (à vérifier à la prochaine installation).
-- **Films** : les garder tels quels (version de test) ou les retourner avec la 14 (même outillage
-  dans `C:\Projets\SSF-Reseau` : `npm run formation:tourner` puis `npm run formation:monter`,
-  environ 2 h en tout).
 - Désinstaller « Application SSF Reseau (test) » des PC d'essai et retirer sa règle de pare-feu
   (`retirer-pare-feu.cmd` du kit) : la 14 crée sa propre règle « Application SSF ».
 - Le kit d'essai terrain (`docs/essai-terrain`) parle encore de la version de test : à mettre à
@@ -86,7 +94,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 - Les données de la version de test (`%APPDATA%\Application SSF Reseau (test)`) ne sont **pas**
   reprises par la 14 : exporter avant (« Exporter Tout ») ce qui doit être gardé.
 
-## 7. Retour en arrière, en cas de problème
+## 8. Retour en arrière, en cas de problème
 
 - La mise à jour automatique ne sait pas revenir à une version plus ancienne : un problème se
   corrige en publiant une **14.0.1** (depuis `C:\Projets\SSF`, `main`).
