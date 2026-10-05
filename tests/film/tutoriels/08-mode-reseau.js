@@ -102,4 +102,4 @@ executer('08-mode-reseau', 'Le mode réseau : connecter une tablette', async (t)
     await capture(tab, 'tablette-retour');
     await t.dire('En fin d\'utilisation, « Désactiver » sur le PC coupe l\'accès de tous les autres postes.');
     await t.rythme(3);
-}, { debut: new Date() }); // heure réelle : le PC principal date les lignes des autres postes à l'heure réelle
+}, { debut: 'reel' }); // heure réelle : le PC principal date les lignes des autres postes à l'heure réelle

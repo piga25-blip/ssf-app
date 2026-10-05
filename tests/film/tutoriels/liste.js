@@ -15,6 +15,7 @@ const TUTORIELS = [
     ['06-planning', 'Le planning et les tableaux de synthèse', "Lire le planning, saisir une activité à la main, le mettre à jour, puis utiliser la synthèse des affectations et le tableau de bord.", 'logiciel'],
     ['07-sauvegarde-cloture', 'Sauvegarder, faire le rapport et clôturer', "Les sauvegardes automatiques, Exporter / Importer Tout, le rapport de fin de mission et la clôture du secours.", 'logiciel'],
     ['08-mode-reseau', 'Le mode réseau : connecter une tablette', "Ouvrir le secours aux autres postes du réseau local : activer le mode réseau, connecter une tablette avec le code de session, lui donner le droit de saisir, changer le code, et ce qui se passe si le réseau est coupé.", 'reseau'],
+    ['09-plusieurs-postes', 'Plusieurs ordinateurs et tablettes en même temps', "Un PC principal, un second ordinateur et deux tablettes sur le même secours : un rôle par poste, des saisies simultanées sans doublon de numéro, des équipes créées sur deux postes, une progression suivie en direct, et les protections quand deux personnes modifient la même chose.", 'reseau'],
 ];
 
 module.exports = { TUTORIELS, GROUPES };

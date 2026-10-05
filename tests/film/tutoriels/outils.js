@@ -90,7 +90,8 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0) } = {}) => 
     });
     const page = await fenetrePrincipale(app);
     await app.context().addInitScript(scriptPage);
-    await page.clock.install({ time: debut });
+    // debut: 'reel' : horloge réelle (films réseau : les autres postes sont datés par le PC principal à l'heure réelle)
+    if (debut !== 'reel') await page.clock.install({ time: debut });
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#root')?.children.length > 0, null, { timeout: 60000 });
     await page.waitForTimeout(1500);
@@ -100,15 +101,16 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0) } = {}) => 
     const video = page.video();
     const t = new Tuto(page, journal);
 
-    // Un autre poste (tablette en portrait par défaut) qui ouvre `url` : fenêtre de navigateur
-    // filmée elle aussi ; le montage la place à droite du PC principal
-    const tablettes = [];
-    t.ouvrirTablette = async (url, { largeur = 820, hauteur = 1180 } = {}) => {
-        const donneesT = fs.mkdtempSync(path.join(os.tmpdir(), 'ssf-tuto-tablette-'));
+    // Un autre poste qui ouvre `url` (fenêtre de navigateur, comme Chrome sur un autre appareil),
+    // filmé lui aussi ; `nom` est l'étiquette affichée sous sa vidéo au montage.
+    // ouvrirTablette : tablette en portrait ; ouvrirPoste({ largeur: 1400, hauteur: 900 }) : ordinateur
+    const postes = [];
+    t.ouvrirPoste = async (url, { largeur = 768, hauteur = 1000, nom = 'Tablette' } = {}) => {
+        const donneesT = fs.mkdtempSync(path.join(os.tmpdir(), 'ssf-tuto-poste-'));
         const nav = await electron.launch({
             args: [NAVIGATEUR],
             env: { ...process.env, SSF_TEST_USER_DATA: donneesT, SSF_URL: url, SSF_TAILLE: `${largeur}x${hauteur}` },
-            recordVideo: { dir: path.join(dossierVideo, 'tablette'), size: { width: largeur, height: hauteur } },
+            recordVideo: { dir: path.join(dossierVideo, 'poste-' + (postes.length + 1)), size: { width: largeur, height: hauteur } },
         });
         const pt = await nav.firstWindow();
         await nav.context().addInitScript(scriptPage);
@@ -116,19 +118,24 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0) } = {}) => 
         await pt.waitForFunction(() => document.querySelector('#root')?.children.length > 0, null, { timeout: 60000 });
         const tt = new Tuto(pt, journal);
         tt.enPreparation = t.enPreparation;
-        tablettes.push({ nav, video: pt.video(), donneesT, largeur, hauteur,
+        postes.push({ nav, video: pt.video(), donneesT, largeur, hauteur, nom,
             minuterie: setInterval(() => pt.evaluate(() => window.__film && window.__film.vieillir()).catch(() => {}), 500) });
         return tt;
     };
+    // 768×1000 (format iPad) : la fenêtre doit tenir à l'écran, sinon Windows la raccourcit
+    // et la vidéo garde une bande grise
+    t.ouvrirTablette = (url, options = {}) => t.ouvrirPoste(url, { largeur: 768, hauteur: 1000, nom: 'Tablette', ...options });
 
     t.fermer = async () => {
-        for (const tb of tablettes) {
+        journal.postes = [];
+        for (const tb of postes) {
             clearInterval(tb.minuterie);
             const videoT = tb.video ? await tb.video.path() : null;
             await tb.nav.close().catch(() => {});
-            journal.tablette = { video: videoT, fermeture: Date.now(), largeur: tb.largeur, hauteur: tb.hauteur };
+            journal.postes.push({ video: videoT, fermeture: Date.now(), largeur: tb.largeur, hauteur: tb.hauteur, nom: tb.nom });
             try { fs.rmSync(tb.donneesT, { recursive: true, force: true }); } catch (e) { /* encore verrouillé */ }
         }
+        if (journal.postes.length === 1) journal.tablette = journal.postes[0];
         clearInterval(minuterie);
         journal.video = video ? await video.path() : null;
         journal.fin = Date.now();
@@ -285,6 +292,15 @@ class Tuto {
     }
 }
 
+// Actions au même instant sur plusieurs postes : [[poste, locator], …] — chaque élément est visé
+// (pointeur, contour) en parallèle, puis tous les clics partent ensemble
+const simultane = async (cibles) => {
+    const points = await Promise.all(cibles.map(([poste, l]) => poste.viser(l)));
+    await Promise.all(cibles.map(([poste], i) => poste.onde(points[i])));
+    await Promise.all(cibles.map(([, l]) => l.first().click()));
+    await pause(RYTHME.apresAction);
+};
+
 // Exécute un tutoriel : fonction (t) => {...}, avec capture d'écran en cas d'erreur
 const executer = (id, titre, fn, options) => {
     (async () => {
@@ -304,4 +320,4 @@ const executer = (id, titre, fn, options) => {
     })();
 };
 
-module.exports = { executer, RACINE };
+module.exports = { executer, simultane, RACINE };

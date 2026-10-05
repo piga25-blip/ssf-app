@@ -65,7 +65,9 @@ const monter = (id, numero, titre, resume, groupe) => {
     const coupe = Math.max(0, ((marqueDebut ? marqueDebut.t : debutVideo) - debutVideo) / 1000);
     const marques = journal.marques.filter(m => !marqueDebut || m.t >= marqueDebut.t).map(m => ({ ...m, s: (m.t - debutVideo) / 1000 - coupe }));
     const total = dv - coupe;
-    const tablette = journal.tablette && journal.tablette.video && fs.existsSync(journal.tablette.video) ? journal.tablette : null;
+    // Autres postes filmés (journaux plus anciens : une seule « tablette »)
+    const autresPostes = (journal.postes || (journal.tablette ? [{ ...journal.tablette, nom: 'Tablette' }] : []))
+        .filter(po => po.video && fs.existsSync(po.video));
     const chapitres = marques.filter(m => m.type === 'chapitre');
 
     // Carton d'ouverture : titre + programme
@@ -100,7 +102,7 @@ WrapStyle: 0
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Bandeau,Arial,34,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,7,28,28,24,1
-${tablette
+${autresPostes.length
     // Deux postes : PC et tablette côte à côte, explications sur toute la largeur en bas
     ? 'Style: Panneau,Arial,29,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,46,46,912,1'
     : 'Style: Panneau,Arial,30,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,1432,30,150,1'}
@@ -111,24 +113,37 @@ ${evts.join('\n')}
 `);
     const entrees = ['-f', 'lavfi', '-i', `color=c=${FOND}:s=1920x1080:r=25:d=${(total + 3).toFixed(2)}`, '-i', video];
     let filtre;
-    if (tablette) {
-        // Même hauteur (760) pour les deux postes : PC 1182×760, tablette à l'échelle
-        const H = 760, WP = Math.round(1400 * H / 900 / 2) * 2;
-        const WT = Math.round(tablette.largeur * H / tablette.hauteur / 2) * 2;
-        const marge = Math.floor((1920 - WP - WT) / 3), xT = marge * 2 + WP;
-        // La vidéo de la tablette commence à l'ouverture de sa fenêtre
-        const debutTablette = tablette.fermeture - duree(tablette.video) * 1000;
-        const decalage = Math.max(0, (debutTablette - debutVideo) / 1000 - coupe);
-        entrees.push('-i', tablette.video);
-        const etiquette = (texte, x, w) => `drawtext=fontfile=arialbd.ttf:text='${texte}':fontcolor=0x93c5fd:fontsize=24:x=${x}+(${w}-tw)/2:y=${100 + H + 8}`;
-        filtre = [
-            `[1:v]trim=start=${coupe.toFixed(2)},setpts=PTS-STARTPTS,fps=25,scale=${WP}:${H}[v]`,
-            `[2:v]fps=25,scale=${WT}:${H},setpts=PTS-STARTPTS+${decalage.toFixed(3)}/TB[vt]`,
-            `[0:v]drawbox=x=0:y=900:w=1920:h=180:color=0x1e293b:t=fill,${etiquette('PC principal', marge, WP)},${etiquette('Tablette', xT, WT)}[f]`,
-            `[f][v]overlay=x=${marge}:y=100:eof_action=pass[o1]`,
-            `[o1][vt]overlay=x=${xT}:y=100:eof_action=pass[o]`,
-            `[o]subtitles=${id}.ass:fontsdir=.,fade=in:st=0:d=0.5,fade=out:st=${(total + 2.5).toFixed(2)}:d=0.5[fin]`,
-        ].join(';\n');
+    if (autresPostes.length) {
+        // Plusieurs postes : ordinateurs (paysage) empilés à gauche, tablettes (portrait) côte à
+        // côte à droite, sur la hauteur 100…890 ; explications en bas sur toute la largeur
+        const fenetres = [{ nom: 'PC principal', largeur: 1400, hauteur: 900, entree: 1, decalage: 0 },
+            ...autresPostes.map((po, i) => ({ ...po, entree: i + 2,
+                // la vidéo d'un poste commence à l'ouverture de sa fenêtre
+                decalage: Math.max(0, (po.fermeture - duree(po.video) * 1000 - debutVideo) / 1000 - coupe) }))];
+        autresPostes.forEach(po => entrees.push('-i', po.video));
+        const paysages = fenetres.filter(f => f.largeur > f.hauteur), portraits = fenetres.filter(f => f.largeur <= f.hauteur);
+        const HZ = 790, ECART = 16;
+        let hP = (HZ - (paysages.length - 1) * ECART) / paysages.length, hT = HZ;
+        let colonne = paysages.length ? hP * 1400 / 900 : 0;
+        const largeurs = () => colonne + portraits.reduce((s, f) => s + hT * f.largeur / f.hauteur, 0);
+        const nbColonnes = (paysages.length ? 1 : 0) + portraits.length;
+        const place = 1920 - (nbColonnes + 1) * ECART;
+        if (largeurs() > place) { const k = place / largeurs(); hP *= k; hT *= k; colonne *= k; }
+        const pair = v => Math.round(v / 2) * 2;
+        let x = Math.round((1920 - largeurs() - (nbColonnes - 1) * ECART) / 2);
+        const yHaut = 100 + Math.round((HZ - Math.max(hT, paysages.length * hP + (paysages.length - 1) * ECART)) / 2);
+        paysages.forEach((f, i) => { f.w = pair(colonne); f.h = pair(hP); f.x = x; f.y = yHaut + Math.round(i * (hP + ECART)); });
+        if (paysages.length) x += Math.round(colonne) + ECART;
+        portraits.forEach(f => { f.h = pair(hT); f.w = pair(hT * f.largeur / f.hauteur); f.x = x; f.y = yHaut; x += f.w + ECART; });
+        const echappe = s => s.replace(/\\/g, '\\\\').replace(/'/g, "’").replace(/:/g, '\\:');
+        const parties = fenetres.map(f => f.entree === 1
+            ? `[1:v]trim=start=${coupe.toFixed(2)},setpts=PTS-STARTPTS,fps=25,scale=${f.w}:${f.h}[v1]`
+            : `[${f.entree}:v]fps=25,scale=${f.w}:${f.h},setpts=PTS-STARTPTS+${f.decalage.toFixed(3)}/TB[v${f.entree}]`);
+        parties.push(`[0:v]drawbox=x=0:y=900:w=1920:h=180:color=0x1e293b:t=fill[b0]`);
+        fenetres.forEach((f, i) => parties.push(`[b${i}][v${f.entree}]overlay=x=${f.x}:y=${f.y}:eof_action=pass[b${i + 1}]`));
+        const etiquettes = fenetres.map(f => `drawtext=fontfile=arialbd.ttf:text='${echappe(f.nom)}':fontcolor=white:fontsize=20:box=1:boxcolor=0x0f172a@0.8:boxborderw=6:x=${f.x + 6}:y=${f.y + 6}`).join(',');
+        parties.push(`[b${fenetres.length}]${etiquettes},subtitles=${id}.ass:fontsdir=.,fade=in:st=0:d=0.5,fade=out:st=${(total + 2.5).toFixed(2)}:d=0.5[fin]`);
+        filtre = parties.join(';\n');
     } else {
         filtre = [
             `[1:v]trim=start=${coupe.toFixed(2)},setpts=PTS-STARTPTS,fps=25[v]`,
