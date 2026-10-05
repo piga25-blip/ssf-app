@@ -112,6 +112,13 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                             .catch(e => refuser('Mode réseau : ' + e.message));
                         return;
                     }
+                    case 'pareFeuVerifier': {
+                        if (!reseau || !reseau.verifierPareFeu) return;
+                        reseau.verifierPareFeu()
+                            .then(infos => { for (const [s, p] of postes) if (p.role === 'principal') envoyer(s, { type: 'reseau', ...infos }); })
+                            .catch(() => {});
+                        return;
+                    }
                     case 'pareFeuAutoriser': {
                         if (!reseau || !reseau.autoriserPareFeu) { refuser('Réglage du pare-feu indisponible'); return; }
                         reseau.autoriserPareFeu()

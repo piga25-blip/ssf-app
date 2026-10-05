@@ -78,14 +78,15 @@ const scriptPage = () => {
 
 // Démarre l'application (dossier de données jetable), horloge fictive qui part de `debut` et
 // avance normalement (avancer() la fait sauter en avant)
-const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0) } = {}) => {
-    const dossierVideo = path.join(SORTIE, id);
+const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} } = {}) => {
+    // Mise au point (FILM_RAPIDE) : dossier à part, pour ne jamais écraser l'enregistrement réel
+    const dossierVideo = path.join(SORTIE, RAPIDE ? id + '-rapide' : id);
     fs.rmSync(dossierVideo, { recursive: true, force: true });
     fs.mkdirSync(dossierVideo, { recursive: true });
     const donnees = fs.mkdtempSync(path.join(os.tmpdir(), 'ssf-tuto-'));
     const app = await electron.launch({
         args: [RACINE], cwd: RACINE,
-        env: { ...process.env, SSF_TEST_USER_DATA: donnees, SSF_PORT: '0' },
+        env: { ...process.env, SSF_TEST_USER_DATA: donnees, SSF_PORT: '0', ...env },
         recordVideo: { dir: dossierVideo, size: { width: 1400, height: 900 } },
     });
     const page = await fenetrePrincipale(app);

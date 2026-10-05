@@ -39,6 +39,8 @@ let ModeReseauModal = ({ connexion, onClose }) => {
     const [enCours, setEnCours] = React.useState(false);
     React.useEffect(() => { setEnCours(false); }, [reseau && reseau.actif]);
     const basculer = () => { setEnCours(true); connexion.envoyer({ type: 'modeReseau', actif: !(reseau && reseau.actif) }); };
+    // À l'ouverture : relire l'état du pare-feu (la règle a pu être retirée depuis l'activation)
+    React.useEffect(() => { if (reseau && reseau.actif) connexion.envoyer({ type: 'pareFeuVerifier' }); }, []);
     const autres = (connexion.postes || []).filter(p => p.role !== 'principal');
     const heure = (iso) => { try { return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
 

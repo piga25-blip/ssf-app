@@ -91,6 +91,12 @@ app.whenReady().then(async () => {
       }
       return reseau.infos();
     },
+    // Ouverture de la fenêtre « Mode réseau » : relecture de l'état (la règle a pu être retirée
+    // entre-temps : antivirus, mise à jour de Windows…) — lecture seule, aucune demande
+    verifierPareFeu: async () => {
+      await verifierPareFeu();
+      return reseau.infos();
+    },
     // Bouton « Autoriser dans le pare-feu » (si la confirmation a été refusée à l'activation)
     autoriserPareFeu: async () => {
       if (pareFeu) etatPareFeu = await pareFeu.autoriser();

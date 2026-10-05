@@ -166,9 +166,14 @@ ${evts.join('\n')}
     return [ouverture, `${id}-video.mp4`, fermeture];
 };
 
-// Chaque groupe (le logiciel, le mode réseau) a sa numérotation et son propre film complet
-const choisis = process.argv.slice(2);
+// Chaque groupe (le logiciel, le mode réseau) a sa numérotation et son propre film complet.
+// Arguments : des identifiants de films (ces films seulement, sans film complet), ou
+// « --groupe reseau » (toute une série et son film complet)
+const args = process.argv.slice(2);
+const groupeChoisi = args.includes('--groupe') ? args[args.indexOf('--groupe') + 1] : null;
+const choisis = args.filter((a, i) => a !== '--groupe' && args[i - 1] !== '--groupe');
 for (const groupe of GROUPES) {
+    if (groupeChoisi && groupe.id !== groupeChoisi) continue;
     const morceaux = [];
     TUTORIELS.filter(tu => tu[3] === groupe.id).forEach(([id, titre, resume], i) => {
         if (choisis.length && !choisis.includes(id)) return;
