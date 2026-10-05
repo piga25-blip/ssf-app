@@ -50,7 +50,7 @@ fabriqué par la version officielle elle-même, dans un dossier temporaire.
    essayée sur un Mac (serveur intégré, reprise des données, pare-feu macOS — module
    `serveur/parefeu.js`, partie Mac non testée) : un essai sur un Mac avant la publication reste
    fortement conseillé (installateur produit à la main par le workflow `workflow_dispatch`).
-2. **Essai pilote sur un vrai PC** avant la publication : installer la 14.0.0 **par-dessus une
+2. **Essai pilote — FAIT le 05/10/2026, réussi** : sur un PC portable contenant le dernier gros exercice, « tout fonctionne, même le réseau » (kit `dist/Kit-essai-pilote`, fiche `docs/essai-pilote`). Rappel de la démarche : installer la 14.0.0 **par-dessus une
    13.42.1 qui contient de vrais secours**, vérifier que tout est là, puis essayer le mode réseau.
    ⚠️ L'installateur 14 a la même identité que la version officielle : il la **remplace**. Avant
    l'essai : « Exporter Tout » de chaque secours important et copie du dossier
