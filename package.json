@@ -1,7 +1,7 @@
 {
   "name": "ssf-app-reseau",
   "productName": "Application SSF Reseau (test)",
-  "version": "13.42.0",
+  "version": "13.42.1",
   "description": "Application SSF - Secours Souterrain Français",
   "main": "main.js",
   "scripts": {
