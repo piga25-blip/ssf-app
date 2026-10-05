@@ -44,12 +44,12 @@ fabriqué par la version officielle elle-même, dans un dossier temporaire.
 
 ## 4. Décisions à prendre avant de publier
 
-1. **Mac.** La création de la version Mac se lance **automatiquement** à chaque publication
-   (`.github/workflows/build-mac.yml`, déclencheur `release: published`). Or la 14 n'a jamais été
-   essayée sur un Mac (serveur intégré, reprise des données, pare-feu macOS). Deux possibilités :
-   - essayer d'abord sur un Mac (installateur produit à la main par le workflow) ;
-   - ou, pour la 14.0.0, retirer le déclenchement automatique (garder `workflow_dispatch`) et
-     publier la version Mac plus tard.
+1. **Mac — décidé le 05/10/2026 : la 14.0.0 sort pour Windows ET Mac** (notice rédigée en ce
+   sens). La version Mac est créée **automatiquement** à la publication
+   (`.github/workflows/build-mac.yml`, déclencheur `release: published`). ⚠️ Elle n'a jamais été
+   essayée sur un Mac (serveur intégré, reprise des données, pare-feu macOS — module
+   `serveur/parefeu.js`, partie Mac non testée) : un essai sur un Mac avant la publication reste
+   fortement conseillé (installateur produit à la main par le workflow `workflow_dispatch`).
 2. **Essai pilote sur un vrai PC** avant la publication : installer la 14.0.0 **par-dessus une
    13.42.1 qui contient de vrais secours**, vérifier que tout est là, puis essayer le mode réseau.
    ⚠️ L'installateur 14 a la même identité que la version officielle : il la **remplace**. Avant
