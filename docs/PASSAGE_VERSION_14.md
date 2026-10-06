@@ -90,11 +90,21 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   `retirer-pare-feu.cmd` retire aussi la règle de l'ancienne version de test). Kit reconstruit
   dans `dist/Kit-essai-terrain-14/` (non suivi par git) : fiche HTML et PDF, scripts,
   `SSF-Bootstrap.exe`, `Application-SSF-Setup-14.0.0.exe`.
+- **Kit d'essai Mac préparé** (06/10/2026) : fiche `docs/essai-mac/Fiche essai Mac 14.html`
+  (installation par le bootstrapper puis par le `.dmg`, déblocage Gatekeeper macOS 14 / 15,
+  reprise des données d'une 13, fonctionnement, mode réseau et coupe-feu macOS, observation de
+  la mise à jour automatique). Kit dans `dist/Kit-essai-Mac-14/` (non suivi par git) : fiche
+  HTML et PDF, `SSF-Bootstrap-app-mac.zip`, `SSF-Bootstrap-command-mac.zip`,
+  `Application-SSF-14.0.0-arm64.dmg` (puce Apple), `Application-SSF-14.0.0.dmg` (Intel).
 
 ## 7. Reste à faire
 
-- **Essai sur un vrai Mac** : ni l'application 14 (serveur intégré, reprise des données, pare-feu
-  macOS — partie Mac de `serveur/parefeu.js`) ni le bootstrapper Mac n'ont été essayés sur un Mac.
+- **Essai sur un vrai Mac**, avec le kit `dist/Kit-essai-Mac-14/` : ni l'application 14 (serveur
+  intégré, reprise des données, pare-feu macOS — partie Mac de `serveur/parefeu.js`) ni le
+  bootstrapper Mac n'ont été essayés sur un Mac.
+- **Mise à jour automatique sur Mac** : l'application n'étant pas signée par Apple, elle ne
+  fonctionnera probablement pas (à constater à la prochaine version, 14.0.1). Les utilisateurs
+  Mac devront alors relancer le bootstrapper pour chaque nouvelle version.
 - **Bootstrapper Windows corrigé** : l'installation complète n'a pas encore été faite avec la
   nouvelle version (à vérifier à la prochaine installation).
 - Désinstaller « Application SSF Reseau (test) » des PC d'essai et retirer sa règle de pare-feu
