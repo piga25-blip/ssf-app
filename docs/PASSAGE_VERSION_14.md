@@ -78,8 +78,12 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   « Version 14.0.0 ». Pour les refaire : `npm run formation:tourner` puis
   `npm run formation:monter` (environ 2 h en tout) ; résultat dans
   `tests/film/sortie/tutoriels/` (non suivi par git). Copies de diffusion :
-  `E:\Vidéos\SSF-Films-de-formation\`. Les films des scénarios de test (`npm run film:tourner`)
-  n'ont pas été retournés.
+  `E:\Vidéos\SSF-Films-de-formation\`.
+- **Films des scénarios de test retournés avec la 14.0.0** (05/10/2026), depuis `C:\Projets\SSF` :
+  les 13 scénarios, tous réussis, film complet de 14,6 min + un film par scénario. Pour les
+  refaire : `npm run film:tourner` puis `npm run film:monter` (environ 20 min) ; résultat dans
+  `tests/film/sortie/` (non suivi par git). Copies : `E:\Vidéos\SSF-Reseau-scenarios.mp4` et
+  `E:\Vidéos\SSF-Reseau-scenarios\` (noms lisibles, copiés à la main).
 
 ## 7. Reste à faire
 
