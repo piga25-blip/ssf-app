@@ -47,7 +47,7 @@
 <main>
 
 <h1>Essai terrain — Application SSF en réseau</h1>
-<p class="sous-titre">Version de test « Application SSF Reseau (test) » 13.42.0 — un PC principal, les autres postes par le navigateur</p>
+<p class="sous-titre">« Application SSF » version 14.0.0 — un PC principal, les autres postes par le navigateur</p>
 
 <div class="champs">
   <div class="champ">Date :</div>
@@ -59,8 +59,8 @@
 <div class="cadre attention">
   <strong>À savoir avant de commencer</strong>
   <ul>
-    <li>C'est une <strong>version de test</strong>, installée à côté de la version officielle : elle ne touche ni à ses données ni à ses mises à jour.</li>
-    <li>À utiliser pour un <strong>exercice</strong> seulement, pas pour un vrai secours.</li>
+    <li>Le mode réseau fait partie de la <strong>version officielle 14.0.0</strong>. Il est désactivé par défaut : sans lui, l'application fonctionne comme avant sur un seul PC.</li>
+    <li>Pour une première utilisation du mode réseau, faire l'essai sur un <strong>dossier EXERCICE</strong> plutôt que sur un vrai secours.</li>
     <li>Seul le <strong>PC principal</strong> reçoit l'installation. Les autres postes utilisent simplement leur navigateur (Chrome, Edge, Firefox ou Safari, à jour).</li>
     <li>Pas encore prévu : modifier le planning au doigt sur tablette (la consultation fonctionne).</li>
     <li><strong>Notez tout ce qui surprend</strong>, même un détail : c'est le but de l'essai.</li>
@@ -78,10 +78,14 @@
 
 <h2>2. Préparation du PC principal (avant le jour J)</h2>
 <ol>
-  <li>Lancer <strong>« Application SSF Reseau (test) Setup 13.42.0.exe »</strong>.<br>
-      Si Windows affiche « Windows a protégé votre ordinateur » : <span class="bouton">Informations complémentaires</span> puis <span class="bouton">Exécuter quand même</span> (le programme n'est pas signé).</li>
+  <li>Mettre l'application en <strong>version 14.0.0</strong> :
+    <ul>
+      <li>déjà installée (version 13) : accepter la <strong>mise à jour proposée</strong> au lancement (connexion internet nécessaire). Les secours déjà enregistrés sont repris automatiquement ;</li>
+      <li>pas encore installée : lancer <strong>« SSF-Bootstrap.exe »</strong> (ou « Application-SSF-Setup-14.0.0.exe ») et suivre l'installateur jusqu'au bouton <span class="bouton">Fermer</span>.</li>
+    </ul>
+    Si Windows affiche « Windows a protégé votre ordinateur » : <span class="bouton">Informations complémentaires</span> puis <span class="bouton">Exécuter quand même</span> (le programme n'est pas signé).</li>
   <li>Pare-feu : <strong>rien à faire à l'avance</strong> — l'application demande elle-même l'autorisation quand on active le mode réseau (voir partie 3). À défaut, procédure manuelle en encadré « Pare-feu » ci-dessous.</li>
-  <li>Ouvrir une première fois « Application SSF Reseau (test) » (icône sur le bureau) pour vérifier qu'elle démarre. Le titre de la fenêtre indique <strong>RÉSEAU (TEST)</strong>.</li>
+  <li>Ouvrir « Application SSF » (icône sur le bureau) pour vérifier qu'elle démarre. Le titre de la fenêtre indique <strong>Version 14.0.0</strong> et le bouton <span class="bouton">🌐 Mode réseau</span> est présent.</li>
   <li>Régler le PC pour qu'il <strong>ne se mette pas en veille quand on ferme le capot</strong> (Paramètres › Système › Alimentation). L'application empêche la mise en veille automatique, mais pas celle du capot fermé.</li>
 </ol>
 
@@ -114,7 +118,7 @@
     <li><strong>TCP</strong> ; <strong>Ports locaux spécifiques</strong> : <code>8080-8089</code> › Suivant.</li>
     <li><strong>Autoriser la connexion</strong> › Suivant.</li>
     <li>Cocher <strong>Domaine, Privé et Public</strong> › Suivant.</li>
-    <li>Nom : <strong>Application SSF Reseau (test)</strong> › Terminer.</li>
+    <li>Nom : <strong>Application SSF</strong> › Terminer.</li>
   </ol>
   <p><strong>Mac :</strong> menu Pomme › <strong>Réglages Système</strong> › <strong>Réseau</strong> › <strong>Coupe-feu</strong>.
      Si le coupe-feu est <strong>désactivé</strong> : rien à faire. S'il est activé : <span class="bouton">Options…</span> › bouton <span class="bouton">+</span> ›
@@ -183,8 +187,9 @@
   <li>PC principal : <span class="bouton">💾 Exporter Tout</span> (fichier à garder).</li>
   <li><span class="bouton">🌐 Mode réseau</span> › <span class="bouton">Désactiver</span>, puis fermer l'application.</li>
   <li>Copier sur la clé USB le dossier suivant (taper le chemin dans la barre de l'Explorateur) :<br>
-      <code>%APPDATA%\Application SSF Reseau (test)\secours</code><br>
-      Il contient le journal de toutes les actions (qui, quoi, quand), utile pour analyser l'essai.</li>
+      <code>%APPDATA%\Application SSF\secours</code><br>
+      Il contient un dossier par secours, avec le journal de toutes les actions (qui, quoi, quand), utile pour analyser l'essai.
+      Il suffit de copier le dossier de l'exercice de l'essai (son nom reprend celui du secours).</li>
   <li>Transmettre la clé, le fichier exporté et cette fiche remplie.</li>
 </ol>
 
@@ -203,8 +208,9 @@
 
 <h2>9. Après l'essai</h2>
 <ul>
-  <li>Retirer l'autorisation du pare-feu : double-clic sur <strong>« retirer-pare-feu.cmd »</strong>, puis <span class="bouton">Oui</span>.</li>
-  <li>La version de test peut être désinstallée (Paramètres › Applications › « Application SSF Reseau (test) »). La version officielle n'est pas touchée.</li>
+  <li>L'application reste installée telle quelle : c'est la version officielle. Le mode réseau peut rester désactivé jusqu'au prochain usage.</li>
+  <li>L'autorisation du pare-feu peut rester en place (elle ne sert que lorsque le mode réseau est activé). Pour la retirer quand même : double-clic sur <strong>« retirer-pare-feu.cmd »</strong>, puis <span class="bouton">Oui</span> ; elle sera redemandée à la prochaine activation.</li>
+  <li>Si l'ancienne version de test « Application SSF Reseau (test) » est encore installée sur ce PC, elle peut être désinstallée (Paramètres › Applications) ; « retirer-pare-feu.cmd » retire aussi sa règle de pare-feu.</li>
 </ul>
 
 <div class="cadre">
