@@ -6,7 +6,7 @@ const fs = require('fs');
 
 const SCENARIO = process.env.FILM_SCENARIO;
 const DOSSIER = path.join(process.env.FILM_DIR, SCENARIO);
-const PAUSE = Number(process.env.FILM_PAUSE || 700);
+const PAUSE = Number(process.env.FILM_PAUSE || 1800);   // avant chaque action (ms)
 fs.mkdirSync(DOSSIER, { recursive: true });
 
 const pw = require(require.resolve('playwright-core', { paths: [process.cwd()] }));
@@ -39,13 +39,13 @@ const patcherLocator = (page) => {
             if (!groupe || maintenant - groupe.debut > 100) groupe = { debut: maintenant, depart: maintenant + PAUSE };
             const depart = groupe.depart;
             // Surligne l'élément visé, laisse le temps de le voir, puis agit
-            await Promise.race([this.evaluate(el => {
+            await Promise.race([this.evaluate((el, duree) => {
                 el.scrollIntoView({ block: 'center', inline: 'nearest' });
                 el.__filmOutline = el.style.outline;
                 el.style.outline = '4px solid #ff2d55';
                 el.style.outlineOffset = '2px';
-                setTimeout(() => { el.style.outline = el.__filmOutline || ''; }, 900);
-            }, null, { timeout: PAUSE - 100 }).catch(() => {}), attendre(PAUSE - 100)]);
+                setTimeout(() => { el.style.outline = el.__filmOutline || ''; }, duree);
+            }, PAUSE + 600, { timeout: PAUSE - 100 }).catch(() => {}), attendre(PAUSE - 100)]);
             await attendre(depart - Date.now());
             const r = await orig.apply(this, args);
             await attendre(nom === 'fill' || nom === 'selectOption' ? PAUSE : PAUSE / 2);

@@ -131,12 +131,32 @@ SCENARIOS.forEach(([id, titre, texte], i) => {
     filtres.push(`[${base}]subtitles=${n}.srt:fontsdir=.:force_style='FontName=Arial,FontSize=11,BorderStyle=3,Outline=3,Shadow=0,BackColour=&H40000000,MarginV=18'[s]`);
     filtres.push(`[s]fade=in:st=0:d=0.3,fade=out:st=${(duree - 0.4).toFixed(2)}:d=0.4[fin]`);
     fs.writeFileSync(path.join(TRAVAIL, `${n}.filtre`), filtres.join(';\n'));
-    ffmpeg([...entrees, '-/filter_complex', `${n}.filtre`, '-map', '[fin]', '-t', duree.toFixed(2), ...ENC, `${n}-video.mp4`]);
+    ffmpeg([...entrees, '-/filter_complex', `${n}.filtre`, '-map', '[fin]', '-t', duree.toFixed(2), ...ENC, `${n}-brut.mp4`]);
+
+    // Arrêts sur image : à chaque sous-titre, l'image se fige le temps de le lire (2 s + 0,35 s
+    // par mot, 10 s au plus) ; les messages écrits presque ensemble font un seul arrêt
+    const arrets = [];
+    for (const x of msgs) {
+        const lecture = 2 + 0.35 * x.texte.split(/\s+/).length;
+        const dernier = arrets[arrets.length - 1];
+        if (dernier && x.t - dernier.t < 1) dernier.d = Math.min(14, dernier.d + lecture - 1);
+        else arrets.push({ t: x.t, d: Math.min(10, lecture) });
+    }
+    const coupes = arrets.map(a => Math.min(duree - 0.1, a.t + 0.5)).filter((c, j, l) => c > 0.2 && (j === 0 || c - l[j - 1] > 0.2));
+    const bornes = [0, ...coupes, duree];
+    const lent = [];
+    for (let j = 0; j < bornes.length - 1; j++) {
+        const geler = j < coupes.length ? arrets[j].d : 0;
+        lent.push(`[0:v]trim=start=${bornes[j].toFixed(3)}:end=${bornes[j + 1].toFixed(3)},setpts=PTS-STARTPTS${geler ? `,tpad=stop_mode=clone:stop_duration=${geler.toFixed(2)}` : ''}[p${j}]`);
+    }
+    lent.push(`${lent.map((_, j) => `[p${j}]`).join('')}concat=n=${lent.length}:v=1:a=0[lent]`);
+    fs.writeFileSync(path.join(TRAVAIL, `${n}-lent.filtre`), lent.join(';\n'));
+    ffmpeg(['-i', `${n}-brut.mp4`, '-/filter_complex', `${n}-lent.filtre`, '-map', '[lent]', ...ENC, `${n}-video.mp4`]);
     morceaux.push(`${n}-video.mp4`);
     fs.writeFileSync(path.join(TRAVAIL, `${n}-liste.txt`), `file '${n}-titre.mp4'
 file '${n}-video.mp4'`);
     ffmpeg(['-f', 'concat', '-safe', '0', '-i', `${n}-liste.txt`, '-c', 'copy', '-movflags', '+faststart', path.join(PAR_SCENARIO, `${n}-${id}.mp4`)]);
-    console.log(`✅ ${id} : ${fen.length} fenêtre(s), ${nc} colonne(s), ${duree.toFixed(0)} s`);
+    console.log(`✅ ${id} : ${fen.length} fenêtre(s), ${nc} colonne(s), ${duree.toFixed(0)} s → ${ffprobeDuree(path.join(TRAVAIL, `${n}-video.mp4`)).toFixed(0)} s avec les arrêts sur image`);
 });
 
 morceaux.push(carton('99-fin', 'Application SSF — version réseau', 'Fin', 'Tous les scénarios ont été rejoués sur la vraie application.', 4));
