@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche essai Mac</title>
+<style>
+  :root { --encre: #1f2937; --pale: #6b7280; --trait: #cbd5e1; --fond: #ffffff; --accent: #1d4ed8; --attention: #b45309; --zone: #f1f5f9; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --encre: #e5e7eb; --pale: #9ca3af; --trait: #475569; --fond: #111827; --accent: #93c5fd; --attention: #fbbf24; --zone: #1f2937; } }
+  :root[data-theme="dark"] { --encre: #e5e7eb; --pale: #9ca3af; --trait: #475569; --fond: #111827; --accent: #93c5fd; --attention: #fbbf24; --zone: #1f2937; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fond); color: var(--encre); font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 28px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--accent); color: var(--accent); }
+  h3 { font-size: 15px; margin: 18px 0 6px; }
+  p, li { margin: 4px 0; }
+  ol, ul { padding-left: 22px; }
+  .sous-titre { color: var(--pale); margin: 0 0 16px; }
+  .cadre { border: 1px solid var(--trait); border-radius: 6px; padding: 10px 14px; margin: 10px 0; background: var(--zone); }
+  .attention { border-left: 4px solid var(--attention); }
+  li.attention { padding-left: 8px; }
+  .champs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 24px; }
+  .champ { border-bottom: 1px solid var(--trait); padding: 10px 0 2px; color: var(--pale); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; table-layout: fixed; }
+  th, td { border: 1px solid var(--trait); padding: 6px 8px; vertical-align: top; text-align: left; word-wrap: break-word; }
+  th { background: var(--zone); font-weight: 600; }
+  col.n { width: 42px; } col.ok { width: 78px; } col.rem { width: 26%; }
+  .case { display: inline-block; width: 14px; height: 14px; border: 1.5px solid var(--encre); border-radius: 2px; vertical-align: -2px; margin-right: 6px; }
+  .bouton { font-weight: 600; white-space: nowrap; }
+  .lignes { height: 120px; border: 1px solid var(--trait); border-radius: 6px; margin: 6px 0; }
+  .tableau-defile { overflow-x: auto; }
+  @media (max-width: 600px) { .champs { grid-template-columns: 1fr; } col.rem { width: 30%; } }
+  @media print {
+    body { font-size: 11.5px; background: #fff; color: #000; }
+    main { max-width: none; padding: 0; }
+    h2 { break-after: avoid; color: #000; border-color: #000; }
+    table, .cadre { break-inside: avoid; }
+    tr { break-inside: avoid; }
+    .saut { break-before: page; }
+    .cadre { background: #fff; }
+  }
+  @page { size: A4; margin: 14mm 12mm; }
+</style>
+</head>
+<body>
+<main>
+<h1>Fiche d'essai — Application SSF 14.0.0 sur Mac</h1>
+<p class="sous-titre">Premier essai réel sur un Mac : installation, reprise des données, fonctionnement, mode réseau et pare-feu macOS. La version Windows est déjà validée ; la version Mac n'a jamais été essayée.</p>
+
+<div class="champs">
+  <div class="champ">Date :</div><div class="champ">Testeur :</div>
+  <div class="champ">Mac (modèle, puce Apple M1/M2… ou Intel) :</div><div class="champ">Version de macOS (menu Pomme › À propos de ce Mac) :</div>
+  <div class="champ">Application SSF déjà installée avant l'essai ? Version :</div><div class="champ">Wi-Fi / routeur utilisé :</div>
+</div>
+
+<div class="cadre attention">
+  <strong>⚠️ À lire avant de commencer</strong>
+  <ul>
+    <li>L'application et le bootstrapper <strong>ne sont pas signés par Apple</strong> (pas de compte développeur Apple). macOS va donc les bloquer au premier lancement : c'est attendu, la marche à suivre est donnée à chaque étape.</li>
+    <li>Si l'Application SSF est <strong>déjà installée</strong> sur ce Mac avec de vrais secours : faire la sauvegarde de la partie 2 avant tout.</li>
+    <li>Ne pas faire l'essai pendant un secours ou un exercice en cours.</li>
+    <li><strong>Notez tout ce qui surprend</strong>, même un détail, et faites des captures d'écran (touches <code>⇧ Maj + ⌘ Cmd + 4</code>) des messages inattendus.</li>
+  </ul>
+</div>
+
+<h2>1. Contenu du kit</h2>
+<table>
+  <tr><th>Fichier</th><th>Rôle</th></tr>
+  <tr><td><strong>SSF-Bootstrap-app-mac.zip</strong></td><td>installation automatique (méthode à essayer en premier, partie 3A)</td></tr>
+  <tr><td><strong>SSF-Bootstrap-command-mac.zip</strong></td><td>même chose avec une fenêtre Terminal (si la précédente ne marche pas)</td></tr>
+  <tr><td><strong>Application-SSF-14.0.0-arm64.dmg</strong></td><td>installation à la main, Mac à <strong>puce Apple</strong> (M1, M2, M3, M4…) — partie 3B</td></tr>
+  <tr><td><strong>Application-SSF-14.0.0.dmg</strong></td><td>installation à la main, Mac <strong>Intel</strong> — partie 3B</td></tr>
+  <tr><td><strong>Fiche essai Mac 14</strong> (.html / .pdf)</td><td>cette fiche</td></tr>
+</table>
+<p>Type de puce : menu Pomme › <strong>À propos de ce Mac</strong> › ligne « Puce » (Apple M…) ou « Processeur » (Intel).</p>
+
+<h2>2. Sauvegarde (seulement si l'Application SSF est déjà installée)</h2>
+<ol>
+  <li>Ouvrir l'application. Pour chaque secours, noter ci-dessous les nombres affichés en bas de la main courante, puis <span class="bouton">Exporter Tout</span> et garder les fichiers.</li>
+  <li><strong>Quitter</strong> l'application (<code>⌘ Cmd + Q</code>).</li>
+  <li>Finder › menu <strong>Aller</strong> › <strong>Aller au dossier…</strong> › taper <code>~/Library/Application Support</code> › Entrée.</li>
+  <li>Copier le dossier <strong>« Application SSF »</strong> (clic droit › Copier) dans <strong>Documents</strong> (clic droit › Coller), puis le renommer « Sauvegarde SSF » suivi de la date.</li>
+</ol>
+<div class="tableau-defile">
+<table>
+  <colgroup><col><col style="width:16%"><col style="width:16%"><col style="width:16%"><col style="width:16%"></colgroup>
+  <tr><th>Secours (nom affiché)</th><th>Total événements</th><th>Sauveteurs sur site</th><th>Équipes actives</th><th>Clôturé ?</th></tr>
+  <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+  <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+  <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+</table>
+</div>
+
+<h2>3. Installation</h2>
+<h3>3A. Avec le bootstrapper (à essayer d'abord)</h3>
+<ol>
+  <li>Double-cliquer sur <strong>SSF-Bootstrap-app-mac.zip</strong> : un fichier <strong>SSF-Bootstrap</strong> apparaît à côté.</li>
+  <li>Double-cliquer sur <strong>SSF-Bootstrap</strong>. macOS refuse de l'ouvrir (« ne peut pas être ouvert car Apple ne peut pas le vérifier… ») : c'est attendu.
+    <ul>
+      <li><strong>macOS 14 Sonoma ou plus ancien</strong> : clic droit (ou Ctrl + clic) sur SSF-Bootstrap › <span class="bouton">Ouvrir</span> › <span class="bouton">Ouvrir</span>.</li>
+      <li><strong>macOS 15 Sequoia ou plus récent</strong> : <span class="bouton">Terminé</span>, puis menu Pomme › <strong>Réglages Système</strong> › <strong>Confidentialité et sécurité</strong> › tout en bas : « SSF-Bootstrap a été bloqué… » › <span class="bouton">Ouvrir quand même</span> › mot de passe du Mac.</li>
+    </ul></li>
+  <li>Suivre les fenêtres : bienvenue › <span class="bouton">Installer</span> ; le téléchargement (environ 100 Mo) se fait en arrière-plan, avec des notifications d'avancement.</li>
+  <li>À la fin, l'application doit <strong>s'ouvrir toute seule</strong> (ou un message indique qu'elle est installée dans Applications et qu'il faut l'ouvrir à la main).</li>
+</ol>
+<div class="tableau-defile">
+<table>
+  <colgroup><col class="n"><col><col><col class="ok"><col class="rem"></colgroup>
+  <tr><th>N°</th><th>Vérification</th><th>Résultat attendu</th><th>OK</th><th>Remarques</th></tr>
+  <tr><td>I1</td><td>Ouverture du bootstrapper (étape 2).</td><td>Possible avec la marche à suivre ci-dessus.</td><td><span class="case"></span></td><td>Message exact :</td></tr>
+  <tr><td>I2</td><td>Fin de l'installation.</td><td>« Application SSF » est dans le dossier <strong>Applications</strong>.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>I3</td><td>Lancement automatique à la fin.</td><td>L'application s'ouvre, <strong>sans</strong> nouveau blocage de macOS ; ou message clair invitant à l'ouvrir.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>I4</td><td>Si SSF-Bootstrap a échoué : refaire 3A avec <strong>SSF-Bootstrap-command-mac.zip</strong> (fichier « SSF-Bootstrap.command », une fenêtre Terminal s'ouvre).</td><td>Installation réussie ; recopier le texte du Terminal en cas d'erreur.</td><td><span class="case"></span></td><td></td></tr>
+</table>
+</div>
+
+<h3>3B. À la main (seulement si 3A a échoué)</h3>
+<ol>
+  <li>Double-cliquer sur le <strong>.dmg</strong> correspondant à la puce du Mac (voir partie 1).</li>
+  <li>Dans la fenêtre qui s'ouvre, faire glisser <strong>Application SSF</strong> sur le dossier <strong>Applications</strong> (remplacer si demandé).</li>
+  <li>Ouvrir Applications › <strong>Application SSF</strong>. Au blocage de macOS, même marche à suivre qu'en 3A étape 2 (clic droit › Ouvrir, ou « Ouvrir quand même » dans Confidentialité et sécurité).</li>
+</ol>
+<p><span class="case"></span>Installation à la main réussie — Remarques : ………………………………………………</p>
+
+<h2 class="saut">4. Premier lancement et fonctionnement</h2>
+<p>Pour chaque ligne : cocher « OK » si le résultat attendu est obtenu, sinon décrire ce qui s'est passé.</p>
+<div class="tableau-defile">
+<table>
+  <colgroup><col class="n"><col><col><col class="ok"><col class="rem"></colgroup>
+  <tr><th>N°</th><th>Vérification</th><th>Résultat attendu</th><th>OK</th><th>Remarques</th></tr>
+  <tr><td>V1</td><td>Titre de la fenêtre.</td><td>« Application SSF Unifiée - Version 14.0.0 ».</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>V2</td><td><em>Seulement si une version 13 était installée</em> : <span class="bouton">Rouvrir un dossier</span>, puis rouvrir chaque secours.</td><td>Tous les secours de la partie 2 sont là, sans doublon, avec les mêmes nombres.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>V3</td><td>Créer un dossier <strong>EXERCICE</strong> « Essai Mac », poste <strong>PC de Terrain</strong>, indiquer un secrétaire.</td><td>La main courante s'affiche.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>V4</td><td>Saisir 3 lignes de main courante, inscrire 2 sauveteurs, créer une équipe, ajouter un point phone.</td><td>Tout s'enregistre et s'affiche normalement (accents, emojis, couleurs des boutons).</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>V5</td><td>Ouvrir Planning, Progression Équipes, Synthèse, Tableau de Bord.</td><td>Les écrans s'affichent sans erreur.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>V6</td><td><span class="bouton">Imprimer main courante</span>, puis <span class="bouton">Exporter Tout</span>.</td><td>L'aperçu d'impression s'ouvre ; le fichier d'export est enregistré (noter où).</td><td><span class="case"></span></td><td>Fichier :</td></tr>
+  <tr><td>V7</td><td>Quitter l'application (<code>⌘ Cmd + Q</code>) et la relancer.</td><td>Le secours « Essai Mac » se rouvre avec ses lignes ; rien n'est en double.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>V8</td><td>Fermer la fenêtre avec le bouton rouge (sans quitter), puis cliquer sur l'icône dans le Dock.</td><td>La fenêtre revient (ou l'application se relance) sans perte.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>V9</td><td>Finder › Aller › Aller au dossier… › <code>~/Library/Application Support/Application SSF/secours</code></td><td>Un dossier par secours, dont celui de « Essai Mac ».</td><td><span class="case"></span></td><td></td></tr>
+</table>
+</div>
+
+<h2>5. Mode réseau et pare-feu macOS</h2>
+<p>État du coupe-feu avant l'essai : menu Pomme › Réglages Système › Réseau › <strong>Coupe-feu</strong> : <span class="case"></span>activé <span class="case"></span>désactivé.
+   <em>Si possible, faire R1–R3 une fois coupe-feu <strong>désactivé</strong>, puis une fois <strong>activé</strong>.</em></p>
+<div class="tableau-defile">
+<table>
+  <colgroup><col class="n"><col><col><col class="ok"><col class="rem"></colgroup>
+  <tr><th>N°</th><th>Action</th><th>Résultat attendu</th><th>OK</th><th>Remarques</th></tr>
+  <tr><td>R1</td><td><span class="bouton">🌐 Mode réseau</span> › <span class="bouton">Activer le mode réseau</span>.</td><td>Coupe-feu désactivé : « 🛡️ Pare-feu macOS … désactivé : rien à régler ».<br>Coupe-feu activé : le Mac demande son <strong>mot de passe</strong> (« Application SSF veut apporter des modifications ») › puis « 🛡️ … les autres postes sont autorisés ».</td><td><span class="case"></span></td><td>Message affiché :</td></tr>
+  <tr><td>R2</td><td>Si macOS affiche « Voulez-vous que l'application « Application SSF » accepte les connexions réseau entrantes ? ».</td><td><span class="bouton">Autoriser</span>. Noter si la question revient à chaque lancement.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>R3</td><td>Tablette ou téléphone sur le <strong>même Wi-Fi</strong> : photographier le code QR, entrer le code de session, donner un nom de secrétaire.</td><td>Bandeau « 🟢 Connecté au poste principal » ; le secours « Essai Mac » s'affiche.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>R4</td><td>Sur le Mac, passer la tablette en <strong>Saisie</strong> ; saisir une ligne depuis la tablette.</td><td>La ligne apparaît aussitôt sur le Mac.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>R5</td><td>Saisir une ligne sur le Mac.</td><td>Elle apparaît sur la tablette en 1 à 2 secondes.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>R6</td><td>Si un PC Windows est disponible : ouvrir l'adresse affichée (avec <code>http://</code>) dans son navigateur.</td><td>Connexion et saisie comme sur la tablette.</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>R7</td><td>Fermer le capot du Mac 1 minute (sur secteur), le rouvrir.</td><td>Noter ce qui se passe sur la tablette (déconnexion, reconnexion seule ?).</td><td><span class="case"></span></td><td></td></tr>
+  <tr><td>R8</td><td><span class="bouton">Désactiver</span> le mode réseau.</td><td>La tablette affiche « Connexion perdue ».</td><td><span class="case"></span></td><td></td></tr>
+</table>
+</div>
+
+<h2>6. Mise à jour automatique</h2>
+<p>Point à observer : comme l'application n'est pas signée par Apple, la mise à jour automatique risque de <strong>ne pas fonctionner sur Mac</strong>.
+   Rien à tester aujourd'hui (il n'existe pas de version plus récente). Noter seulement :</p>
+<ul>
+  <li><span class="case"></span>Un message de mise à jour ou d'erreur est apparu pendant l'essai — lequel : ……………………………………</li>
+  <li>Pour les versions suivantes, sur Mac, la méthode sûre est de <strong>relancer SSF-Bootstrap</strong> (garder le fichier : il n'est plus bloqué par macOS après la première fois).</li>
+</ul>
+
+<h2>7. Bilan</h2>
+<table>
+  <colgroup><col><col style="width:12%"><col style="width:12%"></colgroup>
+  <tr><th>Question</th><th>Oui</th><th>Non</th></tr>
+  <tr><td>Installation possible par le bootstrapper ?</td><td><span class="case"></span></td><td><span class="case"></span></td></tr>
+  <tr><td>L'application fonctionne-t-elle comme sur Windows ?</td><td><span class="case"></span></td><td><span class="case"></span></td></tr>
+  <tr><td>Données de la version 13 reprises (si concerné) ?</td><td><span class="case"></span></td><td><span class="case"></span></td></tr>
+  <tr><td>Le mode réseau a-t-il fonctionné ?</td><td><span class="case"></span></td><td><span class="case"></span></td></tr>
+  <tr><td><strong>La version Mac peut-elle être recommandée aux utilisateurs ?</strong></td><td><span class="case"></span></td><td><span class="case"></span></td></tr>
+</table>
+<p>Remarques, problèmes rencontrés :</p>
+<div class="lignes"></div>
+
+<div class="cadre attention">
+  <strong>À renvoyer après l'essai</strong>
+  <ul>
+    <li>Cette fiche remplie et les captures d'écran.</li>
+    <li>Le fichier « Exporter Tout » de V6.</li>
+    <li>En cas de problème : une copie du dossier <code>~/Library/Application Support/Application SSF/secours</code> (journal de toutes les actions).</li>
+    <li><strong>Ne pas supprimer</strong> la sauvegarde de la partie 2 ni les fichiers « Exporter Tout ».</li>
+  </ul>
+</div>
+</main>
+</body>
+</html>
