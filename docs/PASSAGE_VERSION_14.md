@@ -84,6 +84,12 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   refaire : `npm run film:tourner` puis `npm run film:monter` (environ 20 min) ; résultat dans
   `tests/film/sortie/` (non suivi par git). Copies : `E:\Vidéos\SSF-Reseau-scenarios.mp4` et
   `E:\Vidéos\SSF-Reseau-scenarios\` (noms lisibles, copiés à la main).
+- **Fiche d'essai terrain mise à jour pour la 14.0.0** (06/10/2026) : `docs/essai-terrain`
+  (version officielle, installation par mise à jour ou `SSF-Bootstrap.exe`, règle de pare-feu
+  « Application SSF », données dans `%APPDATA%\Application SSF\secours` ;
+  `retirer-pare-feu.cmd` retire aussi la règle de l'ancienne version de test). Kit reconstruit
+  dans `dist/Kit-essai-terrain-14/` (non suivi par git) : fiche HTML et PDF, scripts,
+  `SSF-Bootstrap.exe`, `Application-SSF-Setup-14.0.0.exe`.
 
 ## 7. Reste à faire
 
@@ -93,8 +99,6 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   nouvelle version (à vérifier à la prochaine installation).
 - Désinstaller « Application SSF Reseau (test) » des PC d'essai et retirer sa règle de pare-feu
   (`retirer-pare-feu.cmd` du kit) : la 14 crée sa propre règle « Application SSF ».
-- Le kit d'essai terrain (`docs/essai-terrain`) parle encore de la version de test : à mettre à
-  jour ou à archiver.
 - Les données de la version de test (`%APPDATA%\Application SSF Reseau (test)`) ne sont **pas**
   reprises par la 14 : exporter avant (« Exporter Tout ») ce qui doit être gardé.
 
