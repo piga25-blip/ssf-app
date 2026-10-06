@@ -53,6 +53,10 @@ const getContrastColor = (hexColor) => {
     return luminance > 0.5 ? '#000000' : '#ffffff';
 };
 
+// Date « aaaa-mm-jj » en heure LOCALE (toISOString donne la date UTC : la veille entre
+// minuit et 2 h du matin en heure d'été, et un rappel se retrouvait alors déjà dépassé)
+const dateLocaleISO = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
 const formatDecimalHours = (decimalHours) => {
     if (isNaN(decimalHours) || decimalHours < 0) return '00:00';
     const totalMinutes = Math.round(decimalHours * 60);

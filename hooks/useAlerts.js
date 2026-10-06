@@ -36,13 +36,21 @@ const useAlerts = ({ events, actions, actives = true }) => {
         // les ferme partout (décision 8). Un poste en consultation ne peut pas les valider.
         if (!actives) return;
         const checkAlerts = () => {
+            // Mêmes rappels que ceux que la fenêtre affiche (urgents ou dépassés) : sinon la fenêtre
+            // était « ouverte » trop tôt, restait invisible, et n'apparaissait à l'échéance qu'à la
+            // prochaine modification du secours
             const urgentAlerts = events.filter(e => {
-                if (!e.dateRappel || e.fait) return false;
-                const rappelDate = new Date(e.dateRappel + 'T' + (e.heureRappel || '00:00'));
-                const diff = rappelDate - new Date();
-                return diff < 0 || diff <= 2 * 60 * 60 * 1000;
+                const statut = getAlertStatusGlobal(e);
+                return statut === 'urgent' || statut === 'passed';
             });
-            if (urgentAlerts.length > 0 && !showAlertsModal && Date.now() > alertSnoozedUntil.current) {
+            // Plus rien à afficher (rappel validé, ici ou sur un autre poste, après une réouverture
+            // le temps que la validation revienne du serveur) : la fenêtre se referme vraiment, sinon
+            // elle restait « ouverte » sans rien montrer et plus aucun rappel ne pouvait l'ouvrir
+            if (urgentAlerts.length === 0) {
+                if (showAlertsModal) setShowAlertsModal(false);
+                return;
+            }
+            if (!showAlertsModal && Date.now() > alertSnoozedUntil.current) {
                 setShowAlertsModal(true);
                 setAlertModalPosition({
                     x: Math.max(0, window.innerWidth / 2 - 300),

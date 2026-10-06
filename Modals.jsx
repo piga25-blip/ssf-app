@@ -433,7 +433,7 @@ SecretaireModal = React.memo(SecretaireModal);
 // ============================================
 // MODAL - INFORMATIONS DE MISSION (démarrage)
 // ============================================
-const MissionInfoModal = ({ onConfirm, onSkip, initialMissionInfo, connexion }) => {
+const MissionInfoModal = ({ onConfirm, onSkip, initialMissionInfo, connexion, modification }) => {
     const [onglet, setOnglet] = React.useState('nouveau'); // 'nouveau' | 'rouvrir'
     // Onglet Nouveau dossier — pré-rempli si initialMissionInfo fourni
     const [typeSecours, setTypeSecours] = React.useState(initialMissionInfo?.typeSecours || 'secours');
@@ -442,7 +442,8 @@ const MissionInfoModal = ({ onConfirm, onSkip, initialMissionInfo, connexion }) 
     const [delaiAlerteOccupation, setDelaiAlerteOccupation] = React.useState(
 initialMissionInfo?.delaiAlerteOccupation ? Math.round(initialMissionInfo.delaiAlerteOccupation / 60) : 10
     );
-    const isModification = !!(initialMissionInfo?.nomCavite);
+    // Ouverte par « ✏️ Modifier » : formulaire seul (pas d'onglets, pas de liste des dossiers)
+    const isModification = modification !== undefined ? !!modification : !!(initialMissionInfo?.nomCavite);
     // Onglet Rouvrir
     const [dossiersExistants, setDossiersExistants] = React.useState([]);
     const [dossierSelectionne, setDossierSelectionne] = React.useState(null);
@@ -462,7 +463,7 @@ const dossiers = connexion.dossiers.map(d => ({
 dossiers.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 setDossiersExistants(dossiers);
 // Si des dossiers existent, ouvrir directement l'onglet "rouvrir" (à la première liste reçue)
-if (!ongletChoisi.current) { ongletChoisi.current = true; if (dossiers.length > 0) setOnglet('rouvrir'); }
+if (!ongletChoisi.current) { ongletChoisi.current = true; if (dossiers.length > 0 && !isModification) setOnglet('rouvrir'); }
     }, [connexion.dossiers]);
 
     const handleConfirmNouveau = () => {
@@ -677,7 +678,7 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
                     className="px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-md" style={{backgroundColor:"#f97316",border:"1px solid #ea580c"}} onMouseEnter={e=>e.target.style.backgroundColor="#ea580c"} onMouseLeave={e=>e.target.style.backgroundColor="#f97316"}
                     title="Démarrer sans renseigner les informations de mission"
                 >
-                    ⏭ Passer
+                    {isModification ? 'Annuler' : '⏭ Passer'}
                 </button>
             </div>
         </div>

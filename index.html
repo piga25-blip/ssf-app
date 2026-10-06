@@ -85,6 +85,10 @@
         .border-green-400 { border-color: rgb(74 222 128); }
         .text-orange-700 { color: rgb(194 65 12); }
         .text-teal-600 { color: rgb(13 148 136); }
+        /* Classes adaptatives (largeur d'écran) absentes de la feuille compilée */
+        @media (min-width: 640px) { .sm\:inline-flex { display: inline-flex; } }
+        @media (min-width: 768px) { .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (min-width: 1024px) { .lg\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lg\:grid-cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 
         /* --- FIX: le bouton natif d'import CSV (Events.jsx) utilise des classes
            file:* pour styler ::file-selector-button, mais AUCUNE de ces règles
@@ -704,6 +708,9 @@
 
             // Informations de mission (saisies au démarrage)
             const [showMissionInfoModal, setShowMissionInfoModal] = useState(EST_POSTE_PRINCIPAL); // consultation : pas de démarrage
+            // Fenêtre ouverte par « ✏️ Modifier » : on modifie les infos du secours en cours, sans
+            // changer de dossier ni repasser par le choix du mode
+            const [modifInfosSecours, setModifInfosSecours] = useState(false);
             const [modalRepos, setModalRepos] = useState(null); // Modale durée de repos — partagée planning↔MC
             const [showClotureModal, setShowClotureModal] = useState(false);
 
@@ -1472,7 +1479,7 @@
                                         {missionInfo.commune && <span className="text-gray-500">({missionInfo.commune})</span>}
                                         {!clotureInfo && (
                                             <button
-                                                onClick={() => setShowMissionInfoModal(true)}
+                                                onClick={() => { setModifInfosSecours(true); setShowMissionInfoModal(true); }}
                                                 className="ml-1 text-blue-600 hover:text-blue-800 font-semibold"
                                                 title="Modifier les informations du secours"
                                             >✏️ Modifier</button>
@@ -1930,7 +1937,7 @@
                                 const rappelStr = rappelTs.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
 
                                 const handleValider = () => {
-                                    const dateRappel = avecRappel ? rappelTs.toISOString().split('T')[0] : '';
+                                    const dateRappel = avecRappel ? dateLocaleISO(rappelTs) : '';
                                     const heureRappel = avecRappel ? rappelTs.toTimeString().slice(0,5) : '';
                                     const newEvents = [];
                                     if (selectionnes.length > 0) {
@@ -2030,11 +2037,22 @@
                             <MissionInfoModal
                                 initialMissionInfo={missionInfo}
                                 connexion={connexion}
+                                modification={modifInfosSecours}
                                 onSkip={() => {
                                     setShowMissionInfoModal(false);
+                                    if (modifInfosSecours) { setModifInfosSecours(false); return; }
                                     setShowModeSelectionModal(true);
                                 }}
                                 onConfirm={(info) => {
+                                    // « ✏️ Modifier » : infos du secours en cours seulement (même dossier,
+                                    // même identifiant, même mode)
+                                    if (modifInfosSecours) {
+                                        const { rouvrir, rescueId, localStorageKey, rawData, ...infosSecours } = info;
+                                        actions.definirInfosSecours(infosSecours);
+                                        setModifInfosSecours(false);
+                                        setShowMissionInfoModal(false);
+                                        return;
+                                    }
                                     try {
                                         // En réouverture, info transporte aussi des champs techniques
                                         // (rawData = copie complète du dossier) : ne garder que les infos
@@ -2130,9 +2148,10 @@
                                     <button 
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            e.stopPropagation();
                                             alertSnoozedUntil.current = Date.now() + 30 * 1000;
+                                            setShowAlertsModal(false);
                                         }}
+                                        onMouseDown={(e) => e.stopPropagation()}
                                         className="text-white hover:text-gray-200 text-2xl font-bold leading-none"
                                         title="Fermer (réapparaîtra dans 30 secondes)"
                                     >
@@ -2162,7 +2181,7 @@
                                                             onClick={() => {
                                                                 const now = new Date();
                                                                 now.setMinutes(now.getMinutes() + 5);
-                                                                const newDate = now.toISOString().split('T')[0];
+                                                                const newDate = dateLocaleISO(now);
                                                                 const newTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
                                                                 actions.reporterRappel(event.id, newDate, newTime);
                                                                 alertSnoozedUntil.current = Date.now() + 5 * 60 * 1000;

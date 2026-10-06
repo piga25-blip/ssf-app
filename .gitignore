@@ -24,3 +24,7 @@ tests/sortie/
 
 # Vidéos et film des scénarios (régénérés par tests/film/tourner.js et monter.js)
 tests/film/sortie/
+
+# Vérification du scénario de formation (régénérés par tests/scenario-formation/jouer.js)
+tests/scenario-formation/sortie/
+tests/scenario-formation/journal.txt
