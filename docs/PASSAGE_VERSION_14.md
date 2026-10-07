@@ -1,13 +1,14 @@
 # Passage de la version réseau en version officielle (14.0.0)
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
+Correctif **14.0.1 publié le 06/10/2026** (voir §6).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
 
 | Dossier | Branche | Rôle |
 |---|---|---|
-| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.0)** : contient désormais le code réseau. Les corrections futures se font ici. |
+| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.1)** : contient désormais le code réseau. Les corrections futures se font ici. |
 | `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
@@ -96,6 +97,26 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   la mise à jour automatique). Kit dans `dist/Kit-essai-Mac-14/` (non suivi par git) : fiche
   HTML et PDF, `SSF-Bootstrap-app-mac.zip`, `SSF-Bootstrap-command-mac.zip`,
   `Application-SSF-14.0.0-arm64.dmg` (puce Apple), `Application-SSF-14.0.0.dmg` (Intel).
+- **Scénario de formation des gestionnaires** (06/10/2026) : exercice dicté de 2 h à 4 h couvrant
+  toutes les fonctions (document Claude + `docs/Scenario_Formation_Gestionnaires_SSF.docx`, non
+  suivi par git). **Joué sur l'application** par `node tests/scenario-formation/jouer.js`
+  (112 étapes contrôlées, de jour comme de nuit) : il a révélé les défauts corrigés en 14.0.1.
+- **Version 14.0.1 publiée** (06/10/2026, release `v14.0.1` « Latest », Windows et Mac) :
+  « ✏️ Modifier » les infos du secours (plus de retour au choix du mode, formulaire à chaque
+  ouverture) ; fenêtre d'alertes (ouverture seule à l'échéance, plus de blocage après « Traité »,
+  « × » qui ferme vraiment) ; rappels entre minuit et 2 h datés du bon jour ; badge 👑 du chef et
+  grilles à plusieurs colonnes. Test de non-régression `tests/verif-rappels.js` (dans `npm test`).
+- **Films** (06–07/10/2026) : films des scénarios de test ralentis (pause de 1,8 s avant chaque
+  action, arrêt sur image à chaque sous-titre ; 37,9 min) ; tous les films de formation existent
+  aussi **avec une voix** qui lit les explications (voix neuronale Microsoft « Denise » :
+  `node tests/film/tutoriels/voix.js neurale`, Internet + `python -m pip install edge-tts truststore`) ;
+  nouvelle série « Film complet 3 - Scénario de formation » (8 films, un par phase, avec et sans
+  voix). Copies : `E:\Vidéos\SSF-Films-de-formation\` (sans voix) et son sous-dossier
+  `Avec la voix\`.
+- **Kits mis à jour pour la 14.0.1** (07/10/2026) : `dist/Kit-essai-terrain-14/`
+  (`Application-SSF-Setup-14.0.1.exe`) et `dist/Kit-essai-Mac-14/`
+  (`Application-SSF-14.0.1-arm64.dmg`, `Application-SSF-14.0.1.dmg`), fiches HTML et PDF à jour
+  (`docs/essai-terrain`, `docs/essai-mac`).
 
 ## 7. Reste à faire
 
@@ -103,8 +124,8 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   intégré, reprise des données, pare-feu macOS — partie Mac de `serveur/parefeu.js`) ni le
   bootstrapper Mac n'ont été essayés sur un Mac.
 - **Mise à jour automatique sur Mac** : l'application n'étant pas signée par Apple, elle ne
-  fonctionnera probablement pas (à constater à la prochaine version, 14.0.1). Les utilisateurs
-  Mac devront alors relancer le bootstrapper pour chaque nouvelle version.
+  fonctionnera probablement pas. Vérifiable maintenant : un Mac en 14.0.0 doit se voir proposer
+  la 14.0.1. Sinon, les utilisateurs Mac relanceront le bootstrapper à chaque nouvelle version.
 - **Bootstrapper Windows corrigé** : l'installation complète n'a pas encore été faite avec la
   nouvelle version (à vérifier à la prochaine installation).
 - Désinstaller « Application SSF Reseau (test) » des PC d'essai et retirer sa règle de pare-feu
@@ -115,7 +136,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 ## 8. Retour en arrière, en cas de problème
 
 - La mise à jour automatique ne sait pas revenir à une version plus ancienne : un problème se
-  corrige en publiant une **14.0.1** (depuis `C:\Projets\SSF`, `main`).
+  corrige en publiant une nouvelle version, par exemple **14.0.2** (depuis `C:\Projets\SSF`, `main`).
 - En urgence sur un PC : réinstaller la 13.42.1 (release GitHub v13.42.1). Comme l'ancienne
   mémoire n'est jamais effacée, la 13 retrouve les secours **tels qu'ils étaient avant la mise à
   jour** ; ce qui a été saisi avec la 14 serait à reprendre par « Exporter Tout » (14) puis
