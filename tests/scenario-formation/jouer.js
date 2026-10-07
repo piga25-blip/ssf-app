@@ -560,9 +560,9 @@ const ecrireRapport = () => {
         verifier(c === 'communication', `catégorie : ${c}`);
     });
     let rappelSamu;
-    await etape('4.1:30', 'Rappel SAMU à +20 min → PROGRAMMÉE', async () => {
-        rappelSamu = (await maintenant()) + 20 * 60000;
-        await ligne({ texte: 'Le SAMU demande un bilan médical dans 20 minutes.', rappel: rappelSamu });
+    await etape('4.1:30', 'Rappel SAMU à +30 min → PROGRAMMÉE', async () => {
+        rappelSamu = (await maintenant()) + 30 * 60000;
+        await ligne({ texte: 'Le SAMU demande un bilan médical dans 30 minutes.', rappel: rappelSamu });
         verifier((await derniereLigne()).includes('PROGRAMMÉE'), 'statut PROGRAMMÉE absent');
     });
     await etape('4.1:32', 'Rappel famille à +3 min → URGENT, fenêtre d\'alertes, Report 5 mn', async () => {

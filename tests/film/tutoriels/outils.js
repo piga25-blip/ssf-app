@@ -72,7 +72,13 @@ const scriptPage = () => {
         }),
     };
     window.alert = (msg) => window.__film.message('💬 Message de l\'application', String(msg));
-    window.confirm = (msg) => { window.__film.message('❓ Question de l\'application → réponse : OK', String(msg), 7000); return true; };
+    // window.__filmNon = n : les n prochaines questions reçoivent « Annuler »
+    window.confirm = (msg) => {
+        if (window.__filmNon > 0) { window.__filmNon--; window.__film.message('❓ Question de l\'application → réponse : Annuler', String(msg), 7000); return false; }
+        window.__film.message('❓ Question de l\'application → réponse : OK', String(msg), 7000); return true;
+    };
+    // Impression : pas de fenêtre système pendant le tournage
+    window.print = () => window.__film.message('🖨️ Impression', 'La fenêtre d\'impression de Windows s\'ouvre ici.', 4000);
     if (document.readyState !== 'loading') installer(); else document.addEventListener('DOMContentLoaded', installer);
 };
 
@@ -89,6 +95,12 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
         env: { ...process.env, SSF_TEST_USER_DATA: donnees, SSF_PORT: '0', ...env },
         recordVideo: { dir: dossierVideo, size: { width: 1400, height: 900 } },
     });
+    // Téléchargements (exports, pièces jointes…) enregistrés sans fenêtre « Enregistrer sous »
+    const telechargements = fs.mkdtempSync(path.join(os.tmpdir(), 'ssf-tuto-dl-'));
+    const sansDialogue = (a) => a.evaluate(({ session }, d) => {
+        session.defaultSession.on('will-download', (e, item) => item.setSavePath(d + '\\' + Date.now() + '-' + item.getFilename()));
+    }, telechargements);
+    await sansDialogue(app);
     const page = await fenetrePrincipale(app);
     await app.context().addInitScript(scriptPage);
     // debut: 'reel' : horloge réelle (films réseau : les autres postes sont datés par le PC principal à l'heure réelle)
@@ -101,6 +113,8 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
     const minuterie = setInterval(() => page.evaluate(() => window.__film && window.__film.vieillir()).catch(() => {}), 500);
     const video = page.video();
     const t = new Tuto(page, journal);
+    t.app = app;
+    t.telechargements = telechargements;
 
     // Un autre poste qui ouvre `url` (fenêtre de navigateur, comme Chrome sur un autre appareil),
     // filmé lui aussi ; `nom` est l'étiquette affichée sous sa vidéo au montage.
@@ -113,14 +127,18 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
             env: { ...process.env, SSF_TEST_USER_DATA: donneesT, SSF_URL: url, SSF_TAILLE: `${largeur}x${hauteur}` },
             recordVideo: { dir: path.join(dossierVideo, 'poste-' + (postes.length + 1)), size: { width: largeur, height: hauteur } },
         });
+        await sansDialogue(nav);
         const pt = await nav.firstWindow();
         await nav.context().addInitScript(scriptPage);
         await pt.reload();
         await pt.waitForFunction(() => document.querySelector('#root')?.children.length > 0, null, { timeout: 60000 });
         const tt = new Tuto(pt, journal);
         tt.enPreparation = t.enPreparation;
-        postes.push({ nav, video: pt.video(), donneesT, largeur, hauteur, nom,
-            minuterie: setInterval(() => pt.evaluate(() => window.__film && window.__film.vieillir()).catch(() => {}), 500) });
+        const poste = { nav, video: pt.video(), donneesT, largeur, hauteur, nom,
+            minuterie: setInterval(() => pt.evaluate(() => window.__film && window.__film.vieillir()).catch(() => {}), 500) };
+        postes.push(poste);
+        // Fermer ce poste avant la fin du film (sa vidéo s'arrête ici)
+        tt.fermerPoste = async () => { clearInterval(poste.minuterie); poste.fermeTot = Date.now(); await nav.close().catch(() => {}); };
         return tt;
     };
     // 768×1000 (format iPad) : la fenêtre doit tenir à l'écran, sinon Windows la raccourcit
@@ -133,7 +151,7 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
             clearInterval(tb.minuterie);
             const videoT = tb.video ? await tb.video.path() : null;
             await tb.nav.close().catch(() => {});
-            journal.postes.push({ video: videoT, fermeture: Date.now(), largeur: tb.largeur, hauteur: tb.hauteur, nom: tb.nom });
+            journal.postes.push({ video: videoT, fermeture: tb.fermeTot || Date.now(), largeur: tb.largeur, hauteur: tb.hauteur, nom: tb.nom });
             try { fs.rmSync(tb.donneesT, { recursive: true, force: true }); } catch (e) { /* encore verrouillé */ }
         }
         if (journal.postes.length === 1) journal.tablette = journal.postes[0];

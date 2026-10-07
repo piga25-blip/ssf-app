@@ -9,6 +9,7 @@
 //   node tests/film/tutoriels/voix.js neurale|windows [id ...]
 //     neurale : voix neuronale Microsoft (Denise, Internet) ; windows : Hortense (hors ligne)
 //     sans id : tous les films, puis les films complets de chaque série (avec la voix)
+//     --groupe <id> : une seule série et son film complet (ex. --groupe scenario)
 // Prérequis voix neuronale : python -m pip install edge-tts truststore
 // Résultat : tests/film/sortie/tutoriels/films-voix/<film> - voix <...>.mp4
 
@@ -17,7 +18,9 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { TUTORIELS, GROUPES } = require('./liste');
 
-const [moteur, ...ids] = process.argv.slice(2);
+const [moteur, ...args] = process.argv.slice(2);
+const groupeChoisi = args.includes('--groupe') ? args[args.indexOf('--groupe') + 1] : null;
+const ids = args.filter((a, i) => a !== '--groupe' && args[i - 1] !== '--groupe');
 const MOTEURS = {
     windows: { libelle: 'voix Windows (Hortense)', ext: 'wav' },
     neurale: { libelle: 'voix neuronale (Denise)', ext: 'mp3' },
@@ -139,14 +142,14 @@ return sortie;
 };
 
 // Tous les films (ou ceux demandés), puis un film complet par série si tous ont été faits
-const choisis = ids.length ? ids : TUTORIELS.map(t => t[0]);
+const choisis = ids.length ? ids : TUTORIELS.filter(t => !groupeChoisi || t[3] === groupeChoisi).map(t => t[0]);
 const faits = {};
 for (const id of choisis) {
     if (!fs.existsSync(path.join(SORTIE, id, 'journal.json'))) { console.log(`⚠️ ${id} : pas encore tourné`); continue; }
     faits[id] = narrer(id);
 }
 if (!ids.length) {
-    for (const groupe of GROUPES) {
+    for (const groupe of GROUPES.filter(g => !groupeChoisi || g.id === groupeChoisi)) {
         const films = TUTORIELS.filter(t => t[3] === groupe.id).map(t => faits[t[0]]);
         if (films.some(f => !f)) continue;
         const liste = path.join(FILMS_VOIX, `complet-${groupe.id}.txt`);

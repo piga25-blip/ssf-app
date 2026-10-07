@@ -67,7 +67,9 @@ const monter = (id, numero, titre, resume, groupe) => {
     const total = dv - coupe;
     // Autres postes filmés (journaux plus anciens : une seule « tablette »)
     const autresPostes = (journal.postes || (journal.tablette ? [{ ...journal.tablette, nom: 'Tablette' }] : []))
-        .filter(po => po.video && fs.existsSync(po.video));
+        .filter(po => po.video && fs.existsSync(po.video))
+        // Poste fermé avant le début du film (ouvert pendant la préparation) : pas affiché
+        .filter(po => !marqueDebut || po.fermeture > marqueDebut.t + 1000);
     const chapitres = marques.filter(m => m.type === 'chapitre');
 
     // Carton d'ouverture : titre + programme
