@@ -1,14 +1,14 @@
 # Passage de la version réseau en version officielle (14.0.0)
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
-Correctif **14.0.1 publié le 06/10/2026** (voir §6).
+Correctifs **14.0.1 publié le 06/10/2026** et **14.0.2 publié le 08/10/2026** (voir §6).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
 
 | Dossier | Branche | Rôle |
 |---|---|---|
-| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.1)** : contient désormais le code réseau. Les corrections futures se font ici. |
+| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.2)** : contient désormais le code réseau. Les corrections futures se font ici. |
 | `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
@@ -113,9 +113,15 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   nouvelle série « Film complet 3 - Scénario de formation » (8 films, un par phase, avec et sans
   voix). Copies : `E:\Vidéos\SSF-Films-de-formation\` (sans voix) et son sous-dossier
   `Avec la voix\`.
-- **Kits mis à jour pour la 14.0.1** (07/10/2026) : `dist/Kit-essai-terrain-14/`
-  (`Application-SSF-Setup-14.0.1.exe`) et `dist/Kit-essai-Mac-14/`
-  (`Application-SSF-14.0.1-arm64.dmg`, `Application-SSF-14.0.1.dmg`), fiches HTML et PDF à jour
+- **Version 14.0.2 publiée** (08/10/2026, release `v14.0.2` « Latest », Windows et Mac) : après
+  le clic sur « Mise à jour prête — Cliquez pour redémarrer », le bandeau affiche aussitôt
+  « ⏳ Installation en cours… » et ignore les clics suivants (remarque d'utilisateurs : doubles
+  clics faute de retour visuel) ; mode réseau actif : mise à jour reportée, bandeau de nouveau
+  cliquable. Test `tests/verif-bandeau-maj.js` (dans `npm test`). La confirmation n'apparaît
+  qu'à partir des mises à jour faites depuis la 14.0.2.
+- **Kits mis à jour pour la 14.0.2** (08/10/2026) : `dist/Kit-essai-terrain-14/`
+  (`Application-SSF-Setup-14.0.2.exe`) et `dist/Kit-essai-Mac-14/`
+  (`Application-SSF-14.0.2-arm64.dmg`, `Application-SSF-14.0.2.dmg`), fiches HTML et PDF à jour
   (`docs/essai-terrain`, `docs/essai-mac`).
 
 ## 7. Reste à faire
@@ -124,8 +130,8 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   intégré, reprise des données, pare-feu macOS — partie Mac de `serveur/parefeu.js`) ni le
   bootstrapper Mac n'ont été essayés sur un Mac.
 - **Mise à jour automatique sur Mac** : l'application n'étant pas signée par Apple, elle ne
-  fonctionnera probablement pas. Vérifiable maintenant : un Mac en 14.0.0 doit se voir proposer
-  la 14.0.1. Sinon, les utilisateurs Mac relanceront le bootstrapper à chaque nouvelle version.
+  fonctionnera probablement pas. Vérifiable maintenant : un Mac en 14.0.0 ou 14.0.1 doit se voir
+  proposer la 14.0.2. Sinon, les utilisateurs Mac relanceront le bootstrapper à chaque nouvelle version.
 - **Bootstrapper Windows corrigé** : l'installation complète n'a pas encore été faite avec la
   nouvelle version (à vérifier à la prochaine installation).
 - Désinstaller « Application SSF Reseau (test) » des PC d'essai et retirer sa règle de pare-feu
@@ -136,7 +142,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 ## 8. Retour en arrière, en cas de problème
 
 - La mise à jour automatique ne sait pas revenir à une version plus ancienne : un problème se
-  corrige en publiant une nouvelle version, par exemple **14.0.2** (depuis `C:\Projets\SSF`, `main`).
+  corrige en publiant une nouvelle version, par exemple **14.0.3** (depuis `C:\Projets\SSF`, `main`).
 - En urgence sur un PC : réinstaller la 13.42.1 (release GitHub v13.42.1). Comme l'ancienne
   mémoire n'est jamais effacée, la 13 retrouve les secours **tels qu'ils étaient avant la mise à
   jour** ; ce qui a été saisi avec la 14 serait à reprendre par « Exporter Tout » (14) puis
