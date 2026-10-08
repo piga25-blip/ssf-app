@@ -1,5 +1,5 @@
 const UpdateNotifier = () => {
-  const [etat, setEtat] = React.useState('idle'); // idle | disponible | telechargement | pret
+  const [etat, setEtat] = React.useState('idle'); // idle | disponible | telechargement | pret | installation
   const [nouvelleVersion, setNouvelleVersion] = React.useState('');
   const [progression, setProgression] = React.useState(0);
 
@@ -23,11 +23,20 @@ const UpdateNotifier = () => {
 
   if (!window.electronAPI || etat === 'idle') return null;
 
-  const handleClick = () => {
-    if (etat === 'pret') window.electronAPI.installUpdate();
+  // Le clic est confirmé tout de suite (« Installation en cours… ») et les clics suivants sont
+  // ignorés ; si la mise à jour est reportée (mode réseau actif), le bandeau redevient cliquable
+  const handleClick = async () => {
+    if (etat !== 'pret') return;
+    setEtat('installation');
+    try {
+      const reponse = await window.electronAPI.installUpdate();
+      if (reponse && reponse.reporte) setEtat('pret');
+    } catch (e) {
+      setEtat('pret');
+    }
   };
 
-  const bgColor = etat === 'pret'
+  const bgColor = etat === 'pret' || etat === 'installation'
     ? '#15803d'
     : etat === 'telechargement'
     ? '#1d4ed8'
@@ -41,7 +50,7 @@ const UpdateNotifier = () => {
         backgroundColor: bgColor,
         color: 'white', borderRadius: '8px', padding: '10px 16px',
         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-        cursor: etat === 'telechargement' ? 'default' : 'pointer',
+        cursor: etat === 'pret' ? 'pointer' : 'default',
         display: 'flex', alignItems: 'center', gap: '10px',
         fontSize: '13px', fontWeight: '600',
         transition: 'background-color 0.3s',
@@ -52,7 +61,7 @@ const UpdateNotifier = () => {
       {etat === 'disponible' && (
         <>
           <span style={{ fontSize: '16px' }}>⬆</span>
-          <span>Mise à jour v{nouvelleVersion} disponible — Cliquez pour télécharger</span>
+          <span>Mise à jour v{nouvelleVersion} disponible — téléchargement en cours…</span>
         </>
       )}
       {etat === 'telechargement' && (
@@ -67,6 +76,12 @@ const UpdateNotifier = () => {
         <>
           <span style={{ fontSize: '16px' }}>✓</span>
           <span>Mise à jour prête — Cliquez pour redémarrer</span>
+        </>
+      )}
+      {etat === 'installation' && (
+        <>
+          <span style={{ fontSize: '16px' }}>⏳</span>
+          <span>Installation en cours… L'application va se fermer puis redémarrer toute seule. Merci de patienter.</span>
         </>
       )}
     </div>

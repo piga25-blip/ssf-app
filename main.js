@@ -161,7 +161,9 @@ autoUpdater.on('update-downloaded', () => {
   mainWindow.webContents.send('update-downloaded');
 });
 
-ipcMain.on('install-update', async () => {
+// Réponse au bandeau : { reporte: true } (mode réseau actif) ou { installation: true }. Le bandeau
+// affiche alors « Installation en cours… » : l'application se ferme 1,5 s plus tard, le temps de le lire
+ipcMain.handle('install-update', async () => {
   // Mode réseau actif : l'installation redémarrerait l'application et couperait les autres postes
   if (serveurSSF && serveurSSF.hote === '0.0.0.0') {
     await dialog.showMessageBox(mainWindow, {
@@ -169,9 +171,11 @@ ipcMain.on('install-update', async () => {
       message: 'Le mode réseau est activé : d\'autres postes utilisent l\'application.',
       detail: 'Désactivez le mode réseau (bouton « 🌐 Mode réseau »), puis cliquez de nouveau sur la mise à jour.',
     });
-    return;
+    return { reporte: true };
   }
-  autoUpdater.quitAndInstall(false, true);
+  // Tests : pas de redémarrage
+  if (!process.env.SSF_TEST_USER_DATA) setTimeout(() => autoUpdater.quitAndInstall(false, true), 1500);
+  return { installation: true };
 });
 
 ipcMain.handle('get-app-version', () => app.getVersion());
