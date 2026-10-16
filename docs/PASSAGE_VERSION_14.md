@@ -2,7 +2,7 @@
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
 Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** et **14.0.3 publié le 16/10/2026** (voir §6).
-Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3).
+Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, kits en 14.0.3).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
@@ -179,10 +179,15 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   conseillé, tri par spécialité ; l'annexe du scénario passe au format `ID;Nom;Prénom;Rôle;SSF`
   avec spécialités (à recopier dans `liste-formation.csv`) et l'étape de l'équipe 3 fait constater
   le tri. Scénario rejoué : 112/112. Notice Word copiée dans les deux kits.
+- **Kits passés en 14.0.3** (16/10/2026, commit `68485ea`) :
+  - `dist/Kit-essai-terrain-14/` : `Application-SSF-Setup-14.0.3.exe` (téléchargé depuis la
+    release, identique à celui construit) ;
+  - `dist/Kit-essai-Mac-14/` : `Application-SSF-14.0.3-arm64.dmg` et `Application-SSF-14.0.3.dmg` ;
+  - fiches `docs/essai-terrain` et `docs/essai-mac` en 14.0.3, PDF refaits ; anciens
+    installateurs 14.0.2 retirés.
 
 ## 7. Reste à faire
 
-- **Kits** : ils contiennent encore l'installateur et les `.dmg` de la 14.0.2.
 - **Films** : à retourner une fois les remarques des conseillers techniques traitées (bouton
   renommé, nouvelle liste, tri par spécialité) ; les scripts sont déjà à jour.
 - **Essai sur un vrai Mac**, avec le kit `dist/Kit-essai-Mac-14/` : ni l'application 14 (serveur
