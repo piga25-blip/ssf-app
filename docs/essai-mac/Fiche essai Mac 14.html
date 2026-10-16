@@ -72,6 +72,7 @@
   <tr><td><strong>Application-SSF-14.0.2-arm64.dmg</strong></td><td>installation à la main, Mac à <strong>puce Apple</strong> (M1, M2, M3, M4…) — partie 3B</td></tr>
   <tr><td><strong>Application-SSF-14.0.2.dmg</strong></td><td>installation à la main, Mac <strong>Intel</strong> — partie 3B</td></tr>
   <tr><td><strong>Fiche essai Mac 14</strong> (.html / .pdf)</td><td>cette fiche</td></tr>
+  <tr><td><strong>Notice_MiseAJour_SSF_14.docx</strong></td><td>notice de la version 14 (Windows et Mac) : ce qui change, mode réseau, dépannage</td></tr>
 </table>
 <p>Type de puce : menu Pomme › <strong>À propos de ce Mac</strong> › ligne « Puce » (Apple M…) ou « Processeur » (Intel).</p>
 
@@ -157,6 +158,14 @@
   <tr><td>R7</td><td>Fermer le capot du Mac 1 minute (sur secteur), le rouvrir.</td><td>Noter ce qui se passe sur la tablette (déconnexion, reconnexion seule ?).</td><td><span class="case"></span></td><td></td></tr>
   <tr><td>R8</td><td><span class="bouton">Désactiver</span> le mode réseau.</td><td>La tablette affiche « Connexion perdue ».</td><td><span class="case"></span></td><td></td></tr>
 </table>
+</div>
+
+<div class="cadre">
+  <strong>Si la tablette n'arrive pas à se connecter</strong>
+  <ul>
+    <li>Ouvrir sur la tablette la page du routeur (souvent <code>http://192.168.0.1</code> ou <code>http://192.168.1.1</code>). Si elle s'affiche, le Wi-Fi est bon : revoir le coupe-feu du Mac (R1, R2). Sinon : dans le routeur, décocher « Client Isolation » / « AP Isolation » et vérifier que le serveur DHCP est activé.</li>
+    <li><strong>Partage de connexion d'un smartphone</strong> à la place du routeur : il fonctionne. Si la tablette repart sur un Wi-Fi qu'elle connaît (box de la maison), désactiver pour celui-ci « Reconnexion automatique » (Android) ou « Rejoindre automatiquement » (iPad), ou l'« Oublier ». Si un appareil ne voit pas le partage : bande <strong>2,4 GHz</strong> (Android) ou <strong>« Optimiser la compatibilité »</strong> (iPhone). L'adresse change : rescanner le code QR.</li>
+  </ul>
 </div>
 
 <h2>6. Mise à jour automatique</h2>
