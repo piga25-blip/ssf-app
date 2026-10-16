@@ -296,21 +296,45 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, sa
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const lu = lireExportBaseNationale(new Uint8Array(event.target.result), file.name);
-                if (!lu) {
-                    alert('Ce fichier n\'est pas un export de la base nationale.\n\nSur sauveteurs.speleo-secours-francais.fr : « Export de la liste » › « Export au format Excel », puis importer le fichier téléchargé.\n\nPour une liste préparée à la main, utiliser « 📂 Importer CSV ».');
-                    return;
-                }
-                if (lu.sauveteurs.length === 0) { alert('Aucun sauveteur trouvé dans ce fichier.'); return; }
-                setApercuBase({ ...lu, fichier: file.name });
-            } catch (error) {
-                alert('Ce fichier Excel ne peut pas être lu.');
-            }
-        };
+        reader.onload = (event) => ouvrirApercuBase(new Uint8Array(event.target.result), file.name);
         reader.readAsArrayBuffer(file);
         e.target.value = null;
+    };
+
+    const ouvrirApercuBase = (octets, nomFichier) => {
+        try {
+            const lu = lireExportBaseNationale(octets, nomFichier);
+            if (!lu) {
+                alert('Ce fichier n\'est pas un export de la base nationale.\n\nSur sauveteurs.speleo-secours-francais.fr : « Export de la liste » › « Export au format Excel », puis importer le fichier téléchargé.\n\nPour une liste préparée à la main, utiliser « 📂 Importer CSV ».');
+                return;
+            }
+            if (lu.sauveteurs.length === 0) { alert('Aucun sauveteur trouvé dans ce fichier.'); return; }
+            setApercuBase({ ...lu, fichier: nomFichier });
+        } catch (error) {
+            alert('Ce fichier Excel ne peut pas être lu.');
+        }
+    };
+
+    // Récupération « en direct » : le site s'ouvre dans une fenêtre de l'application (poste
+    // principal seulement), l'utilisateur s'identifie et clique sur l'export Excel ; le fichier
+    // arrive ici et passe par le même aperçu
+    const [recuperationEnCours, setRecuperationEnCours] = useState(false);
+    const peutRecuperer = !!(window.electronAPI && window.electronAPI.recupererBaseNationale);
+    const recupererDepuisBase = async () => {
+        if (recuperationEnCours) return;
+        setRecuperationEnCours(true);
+        try {
+            const r = await window.electronAPI.recupererBaseNationale();
+            if (r && r.erreur) alert(r.erreur);
+            else if (r && r.octets) ouvrirApercuBase(Uint8Array.from(atob(r.octets), c => c.charCodeAt(0)), r.nom);
+        } finally {
+            setRecuperationEnCours(false);
+        }
+    };
+    const deconnecterBase = async () => {
+        if (!window.confirm('Oublier la connexion à la base nationale sur ce PC ?\n\nIl faudra s\'identifier de nouveau à la prochaine récupération.')) return;
+        await window.electronAPI.deconnecterBaseNationale();
+        alert('Connexion à la base nationale oubliée sur ce PC.');
     };
 
     // Ce que l'import changera, pour l'aperçu
@@ -374,8 +398,16 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, sa
                             📊 Importer la base nationale (Excel)
                             <input type="file" accept=".xlsx,.xls" onChange={handleImportBaseNationale} className="hidden" />
                         </label>
+                        {peutRecuperer && (
+                            <button onClick={recupererDepuisBase} disabled={recuperationEnCours} className="ml-2 bg-teal-700 text-white px-4 py-2 rounded-lg hover:bg-teal-800 font-semibold disabled:opacity-60" title="Ouvre le site de la base nationale : identifiez-vous puis cliquez « Export au format Excel »">
+                                {recuperationEnCours ? '⏳ Fenêtre de la base nationale ouverte…' : '🌐 Récupérer depuis la base nationale'}
+                            </button>
+                        )}
+                        {peutRecuperer && (
+                            <button onClick={deconnecterBase} className="ml-2 text-xs underline text-gray-600" title="Efface la connexion au site gardée sur ce PC">Se déconnecter de la base</button>
+                        )}
                         <p className="text-xs mt-2">Format : 1re ligne = titres, puis une ligne par sauveteur : ID;Nom;Prénom;Rôle;SSF (séparateur point-virgule) — plusieurs spécialités dans Rôle, séparées par des virgules (« NOM Prénom » en une colonne aussi accepté)</p>
-                        <p className="text-xs mt-1">Base nationale : sur sauveteurs.speleo-secours-francais.fr, « Export de la liste » › « Export au format Excel ». La liste est <strong>remplacée</strong> (aperçu avant) ; adresses, téléphones et e-mails ne sont pas repris.</p>
+                        <p className="text-xs mt-1">Base nationale : sur sauveteurs.speleo-secours-francais.fr, « Export de la liste » › « Export au format Excel ». La liste est <strong>remplacée</strong> (aperçu avant) ; adresses, téléphones et e-mails ne sont pas repris. Avec « 🌐 Récupérer depuis la base nationale », le site s'ouvre dans l'application : identifiez-vous (l'application ne voit pas le mot de passe), puis cliquez sur l'icône « Export au format Excel ».</p>
                     </div>
 
                     {apercuBase && bilanApercu && (

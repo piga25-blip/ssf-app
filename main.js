@@ -16,6 +16,7 @@ const { creerCanal } = require('./serveur/canal');
 const { creerPrecompilation } = require('./serveur/precompilation');
 const { creerPareFeu } = require('./serveur/parefeu');
 const { reprendreMemoireNavigateur, reglagesARecopier, marquerReglagesRecopies } = require('./serveur/migration');
+const { recupererBaseNationale, deconnecterBaseNationale } = require('./serveur/base-nationale');
 
 let mainWindow;
 let serveurSSF = null; // { serveur, port, hote }
@@ -179,6 +180,10 @@ ipcMain.handle('install-update', async () => {
 });
 
 ipcMain.handle('get-app-version', () => app.getVersion());
+
+// Liste des sauveteurs depuis la base nationale : fenêtre du site, l'utilisateur s'identifie lui-même
+ipcMain.handle('base-nationale-recuperer', () => recupererBaseNationale(mainWindow));
+ipcMain.handle('base-nationale-deconnecter', () => deconnecterBaseNationale());
 
 // Filet de sécurité (léger) : nudge de focus côté webContents, insuffisant
 // à lui seul contre le bug ci-dessous mais conservé au cas où il aide dans

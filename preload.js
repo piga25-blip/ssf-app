@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, percent) => cb(percent)),
   onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', () => cb()),
   installUpdate: () => ipcRenderer.invoke('install-update'),
+  recupererBaseNationale: () => ipcRenderer.invoke('base-nationale-recuperer'),
+  deconnecterBaseNationale: () => ipcRenderer.invoke('base-nationale-deconnecter'),
   refocusWindow: () => ipcRenderer.send('refocus-window'),
   unstickWindow: () => ipcRenderer.send('unstick-window'),
 });
