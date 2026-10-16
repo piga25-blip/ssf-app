@@ -2,6 +2,7 @@
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
 Correctifs **14.0.1 publié le 06/10/2026** et **14.0.2 publié le 08/10/2026** (voir §6).
+Dernière mise à jour du document : 16/10/2026 (routeur de terrain).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
@@ -123,6 +124,18 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   (`Application-SSF-Setup-14.0.2.exe`) et `dist/Kit-essai-Mac-14/`
   (`Application-SSF-14.0.2-arm64.dmg`, `Application-SSF-14.0.2.dmg`), fiches HTML et PDF à jour
   (`docs/essai-terrain`, `docs/essai-mac`).
+- **Routeur de terrain** (16/10/2026) : essai avec un routeur TP-Link TL-WR841N. Le Wi-Fi
+  fonctionnait, mais aucun poste n'ouvrait l'application sur le PC principal, alors que tout
+  marchait sur la Livebox. Le routeur n'était pas en cause : Windows avait classé ce Wi-Fi en
+  profil **« Public »**, qui refuse les connexions entrantes. Remède : Paramètres › Réseau et
+  Internet › Wi-Fi › **Profil réseau : Privé**, puis désactiver et réactiver « 🌐 Mode réseau ».
+  Windows retient ce choix pour chaque Wi-Fi ; c'est vérifié en repassant par la Livebox puis
+  le TP-Link (tablette reconnectée aussitôt, smartphone par le code QR). Pour savoir de quel
+  côté vient le blocage : si la page du routeur s'ouvre sur la tablette, il vient du PC
+  principal ; sinon, vérifier « Client/AP Isolation » et le DHCP du routeur. La consigne a été
+  ajoutée à la fiche d'essai terrain (partie 3 et encadré « En cas de problème de connexion »,
+  PDF du kit refait) et à la notice (document Claude et `docs/Notice_MiseAJour_SSF_14.docx`,
+  copiée dans `dist/Kit-essai-terrain-14/`).
 
 ## 7. Reste à faire
 
@@ -135,7 +148,8 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 - **Bootstrapper Windows corrigé** : l'installation complète n'a pas encore été faite avec la
   nouvelle version (à vérifier à la prochaine installation).
 - Désinstaller « Application SSF Reseau (test) » des PC d'essai et retirer sa règle de pare-feu
-  (`retirer-pare-feu.cmd` du kit) : la 14 crée sa propre règle « Application SSF ».
+  (`retirer-pare-feu.cmd` du kit) : la 14 crée sa propre règle « Application SSF ». C'est fait
+  sur le PC de développement (07/10/2026 : application, règle et dossier de données retirés).
 - Les données de la version de test (`%APPDATA%\Application SSF Reseau (test)`) ne sont **pas**
   reprises par la 14 : exporter avant (« Exporter Tout ») ce qui doit être gardé.
 
