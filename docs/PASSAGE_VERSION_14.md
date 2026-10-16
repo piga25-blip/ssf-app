@@ -2,7 +2,7 @@
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
 Correctifs **14.0.1 publié le 06/10/2026** et **14.0.2 publié le 08/10/2026** (voir §6).
-Dernière mise à jour du document : 16/10/2026 (routeur de terrain).
+Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
@@ -136,6 +136,15 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   ajoutée à la fiche d'essai terrain (partie 3 et encadré « En cas de problème de connexion »,
   PDF du kit refait) et à la notice (document Claude et `docs/Notice_MiseAJour_SSF_14.docx`,
   copiée dans `dist/Kit-essai-terrain-14/`).
+- **Partage de connexion d'un smartphone** (16/10/2026) : essayé à la place du routeur, il
+  fonctionne (PC, tablette et smartphone connectés). Seule difficulté : la tablette repartait sur
+  la Livebox, qu'elle connaissait. Consignes ajoutées à la fiche d'essai terrain (partie 1 et
+  encadré « En cas de problème de connexion ») et à la notice (« Matériel conseillé » et tableau
+  « En cas de problème ») :
+  - sur la tablette, désactiver la reconnexion automatique à la box, ou l'« Oublier » ;
+  - sur le smartphone, bande 2,4 GHz (Android) ou « Optimiser la compatibilité » (iPhone) ;
+  - sur le PC principal, passer ce Wi-Fi en profil « Privé », puis désactiver et réactiver le
+    mode réseau ; l'adresse change, il faut rescanner le code QR.
 
 ## 7. Reste à faire
 
