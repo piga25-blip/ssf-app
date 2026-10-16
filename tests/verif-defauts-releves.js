@@ -29,7 +29,7 @@ executer('_verif-defauts', 'vérification', async (t) => {
     await vider();
 
     // 1. CSV
-    await t.clic(t.bouton('Liste Préfectorale'));
+    await t.clic(t.bouton('Liste des sauveteurs'));
     const entree = p.locator('input[type="file"][accept=".csv,.txt"]');
     const virgules = path.join(dossier, 'virgules-ansi.csv');
     fs.writeFileSync(virgules, Buffer.from('ID,Nom Prénom,Rôle,SSF\r\nA-1,MARTIN Alice,Chef d\'équipe,34\r\nA-2,DUBOIS Chloé,Médecin,30\r\n', 'latin1'));

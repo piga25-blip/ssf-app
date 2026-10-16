@@ -48,7 +48,7 @@ const RACINE = path.join(__dirname, '..');
         await page.locator('input[placeholder="Ex: Martin DUPONT"]').fill('Testeur');
         await bouton(/^✓ Enregistrer$/).click();
 
-        await bouton('Liste Préfectorale').click();
+        await bouton('Liste des sauveteurs').click();
         for (const [nom, prenom] of [['ALPHA', 'Anne'], ['BRAVO', 'Bob'], ['CHARLIE', 'Carl']]) {
             await page.locator('input[placeholder="NOM"]:visible').fill(nom);
             await page.locator('input[placeholder="Prénom"]:visible').fill(prenom);

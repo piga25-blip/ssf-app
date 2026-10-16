@@ -1,4 +1,4 @@
-// Film 1 : inscrire les sauveteurs — liste préfectorale importée d'un fichier CSV, sauveteur
+// Film 1 : inscrire les sauveteurs — liste des sauveteurs importée d'un fichier CSV, sauveteur
 // non inscrit sur la liste, arrivée sur site, départ.
 const path = require('path');
 const { executer } = require('./outils');
@@ -9,11 +9,11 @@ executer('01-sauveteurs', 'Inscrire les sauveteurs', async (t) => {
     await creerDossier(t);
     await t.debutFilm();
 
-    await t.chapitre('La liste préfectorale');
-    await t.dire('Avant l\'arrivée des sauveteurs, on charge la liste préfectorale : la liste des sauveteurs agréés du département, fournie par le CTDS ou la préfecture.',
+    await t.chapitre('La liste des sauveteurs');
+    await t.dire('Avant l\'arrivée des sauveteurs, on charge la liste des sauveteurs agréés du département, fournie par le CTDS ou la préfecture.',
         'Elle évite de ressaisir chaque nom le jour du secours : il suffira de cocher les personnes qui se présentent.');
-    await t.clic(t.bouton('Liste Préfectorale'));
-    await t.dire('La fenêtre « Gestion Liste Préfectorale » est vide pour l\'instant. Le bouton violet « Importer CSV » charge toute la liste en une fois.');
+    await t.clic(t.bouton('Liste des sauveteurs'));
+    await t.dire('La fenêtre « Gestion de la liste des sauveteurs » est vide pour l\'instant. Le bouton violet « Importer CSV » charge toute la liste en une fois.');
 
     await t.chapitre('Importer la liste depuis un fichier CSV');
     await t.dire('Le fichier CSV contient une ligne par sauveteur, avec 4 colonnes : identifiant ; NOM Prénom ; rôle ; SSF. La première ligne (titres des colonnes) est ignorée.',
@@ -29,7 +29,7 @@ executer('01-sauveteurs', 'Inscrire les sauveteurs', async (t) => {
     await t.saisir(t.champ('🔍 Recherche rapide...'), '');
 
     await t.chapitre('Ajouter un sauveteur qui n\'est pas sur la liste');
-    await t.dire('Un sauveteur se présente mais il n\'est pas sur la liste préfectorale (renfort d\'un autre département, nouveau membre…). On l\'ajoute à la main en haut de la fenêtre.',
+    await t.dire('Un sauveteur se présente mais il n\'est pas sur la liste des sauveteurs (renfort d\'un autre département, nouveau membre…). On l\'ajoute à la main en haut de la fenêtre.',
         'Tout sauveteur engagé doit être inscrit : c\'est ce qui permet de le placer dans une équipe, au planning, et de savoir à tout moment qui est sur site.');
     await p.locator('h3:visible', { hasText: 'Ajouter un sauveteur' }).scrollIntoViewIfNeeded();
     await t.dire('Le premier champ (identifiant) peut rester vide : l\'application attribue automatiquement un numéro EXT-001, EXT-002… qui signale un sauveteur ajouté hors liste.');
@@ -49,7 +49,7 @@ executer('01-sauveteurs', 'Inscrire les sauveteurs', async (t) => {
     await t.dire('Être sur la liste ne veut pas dire être présent. Quand un sauveteur arrive au PC, on enregistre son arrivée.',
         'Seuls les sauveteurs « sur site » apparaissent au planning et peuvent être mis dans une équipe.');
     await t.clic(t.bouton('Enregistrement des sauveteurs'));
-    await t.dire('À gauche : la liste préfectorale. On coche les sauveteurs qui viennent d\'arriver, puis « Arrivée ».');
+    await t.dire('À gauche : la liste des sauveteurs. On coche les sauveteurs qui viennent d\'arriver, puis « Arrivée ».');
     for (const nom of ['MARTIN Alice', 'BERNARD Bruno', 'DUBOIS Chloé', 'THOMAS David', 'GARNIER Inès']) {
         await t.cocher(t.etiquette(nom).locator('input[type="checkbox"]'));
     }
@@ -62,7 +62,7 @@ executer('01-sauveteurs', 'Inscrire les sauveteurs', async (t) => {
         'Il disparaît du planning à partir de cet instant : la liste des présents reste juste, ce qui compte pour la sécurité et pour le rapport de fin de mission.');
     await t.cocher(p.locator('label:visible', { hasText: 'THOMAS David' }).last().locator('input[type="checkbox"]'));
     await t.clic(t.bouton('Départ'));
-    await t.dire('THOMAS David est revenu dans la liste préfectorale : s\'il revient plus tard, il suffira d\'enregistrer à nouveau son arrivée.');
+    await t.dire('THOMAS David est revenu dans la liste des sauveteurs : s\'il revient plus tard, il suffira d\'enregistrer à nouveau son arrivée.');
     await t.clic(t.bouton(/^Fermer$/, { dernier: true }));
     await t.dire('Les sauveteurs présents sont maintenant visibles dans l\'onglet « Planning Opérationnel ».');
     await t.clic(t.bouton('Planning Opérationnel'));

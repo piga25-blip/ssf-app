@@ -177,10 +177,10 @@ PHASES.push(async (t, o) => {
 // Phase 2 — Arrivée des sauveteurs
 PHASES.push(async (t, o) => {
     const p = t.page;
-    await t.chapitre('La liste préfectorale');
-    await t.dire(dicte('Chargez la liste préfectorale du département : fichier liste-formation sur le Bureau.'),
+    await t.chapitre('La liste des sauveteurs');
+    await t.dire(dicte('Chargez la liste des sauveteurs du département : fichier liste-formation sur le Bureau.'),
         'Le fichier CSV : une ligne de titres, puis ID ; NOM Prénom ; Rôle ; SSF. Point-virgule, virgule ou tabulation, accents d\'Excel acceptés.');
-    await t.clic(t.bouton('Liste Préfectorale'));
+    await t.clic(t.bouton('Liste des sauveteurs'));
     await t.fichier(t.bouton('Importer CSV'), p.locator('input[type="file"][accept*=".csv"]'), CSV);
     await t.dire(dicte('Retrouvez MOREAU Inès, puis triez la liste par SSF.'));
     await t.saisir(t.champ('🔍 Recherche rapide...'), 'mor');

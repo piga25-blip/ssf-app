@@ -134,7 +134,7 @@ const GestionPlanningModal = ({
 
                     <div className="grid grid-cols-2 gap-6">
                         <div className="bg-green-50 p-4 rounded-lg">
-                            <h3 className="font-bold text-lg mb-3">Liste Préfectorale ({listePrefectorale.length})</h3>
+                            <h3 className="font-bold text-lg mb-3">Liste des sauveteurs ({listePrefectorale.length})</h3>
                             <input 
                                 type="text" 
                                 value={searchTerm}

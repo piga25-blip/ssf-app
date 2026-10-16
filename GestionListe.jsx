@@ -159,39 +159,81 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                // UTF-8, sinon Windows-1252 (CSV enregistré par Excel en français : accents)
+                // UTF-16 (Excel « Texte Unicode », Bloc-notes « UTF-16 »), UTF-8, sinon
+                // Windows-1252 (CSV enregistré par Excel en français : accents)
                 const octets = new Uint8Array(event.target.result);
+                // Sans marque d'en-tête, l'UTF-16 se reconnaît aux octets nuls une position sur deux
+                const echantillon = Math.min(octets.length, 400);
+                let zerosPairs = 0, zerosImpairs = 0;
+                for (let i = 0; i < echantillon; i++) if (octets[i] === 0) { if (i % 2) zerosImpairs++; else zerosPairs++; }
                 let text;
-                try { text = new TextDecoder('utf-8', { fatal: true }).decode(octets); }
-                catch (e) { text = new TextDecoder('windows-1252').decode(octets); }
-                text = text.replace(/^﻿/, '');
-                const lines = text.split(/\r?\n/);
-                const nouveauxSauveteurs = [];
-
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (line) {
-                        // Séparateur : point-virgule (Excel en français), tabulation ou virgule
-                        const separateur = line.includes(';') ? ';' : line.includes('\t') ? '\t' : ',';
-                        const parts = line.split(separateur).map(p => p.trim().replace(/^"(.*)"$/, '$1'));
-                        if (parts.length >= 4) {
-                            const id = parts[0].trim();
-                            const name = parts[1].trim();
-                            const role = parts[2].trim();
-                            const ssf = parts[3].trim();
-
-                            if (id && name && role && ssf) {
-                                nouveauxSauveteurs.push({ id, name, role, SSF: ssf });
-                            }
-                        }
-                    }
+                if (octets[0] === 0xFF && octets[1] === 0xFE) text = new TextDecoder('utf-16le').decode(octets);
+                else if (octets[0] === 0xFE && octets[1] === 0xFF) text = new TextDecoder('utf-16be').decode(octets);
+                else if (zerosImpairs > echantillon / 4 && zerosImpairs > zerosPairs) text = new TextDecoder('utf-16le').decode(octets);
+                else if (zerosPairs > echantillon / 4) text = new TextDecoder('utf-16be').decode(octets);
+                else {
+                    try { text = new TextDecoder('utf-8', { fatal: true }).decode(octets); }
+                    catch (e) { text = new TextDecoder('windows-1252').decode(octets); }
                 }
+                text = text.replace(/^﻿/, '');
+                // Fichier illisible (classeur Excel .xlsx renommé, autre format) : ne rien importer
+                if (/[\u0000�]/.test(text) || text.startsWith('PK')) {
+                    alert('Ce fichier ne peut pas être lu : les noms apparaîtraient sous forme de symboles.\n\nDans Excel : Fichier › Enregistrer sous › type « CSV UTF-8 (délimité par des virgules) » ou « CSV (séparateur : point-virgule) », puis importer ce nouveau fichier.');
+                    return;
+                }
+                // Séparateur, d'après la ligne de titres : point-virgule (Excel en français),
+                // tabulation (copier-coller d'Excel, « Texte Unicode ») ou virgule
+                const titres = text.split(/\r?\n/)[0] || '';
+                const compte = (c) => titres.split(c).length - 1;
+                const separateur = [';', '\t', ','].reduce((meilleur, c) => compte(c) > compte(meilleur) ? c : meilleur, ';');
+                // Découpage en lignes et cellules ; une cellule entre guillemets peut contenir le
+                // séparateur ou plusieurs lignes (plusieurs rôles dans une même case d'Excel)
+                const lignes = [];
+                let ligne = [], cellule = '', guillemets = false;
+                for (let i = 0; i < text.length; i++) {
+                    const c = text[i];
+                    if (guillemets) {
+                        if (c === '"' && text[i + 1] === '"') { cellule += '"'; i++; }
+                        else if (c === '"') guillemets = false;
+                        else cellule += c;
+                    } else if (c === '"' && cellule.trim() === '') { cellule = ''; guillemets = true; }
+                    else if (c === separateur) { ligne.push(cellule); cellule = ''; }
+                    else if (c === '\n') { ligne.push(cellule); lignes.push(ligne); ligne = []; cellule = ''; }
+                    else if (c !== '\r') cellule += c;
+                }
+                ligne.push(cellule); lignes.push(ligne);
+
+                // Colonnes repérées par leur titre : « ID ; Nom ; Prénom ; Rôle ; SSF » ou « ID ; NOM Prénom ; Rôle ; SSF »
+                const normaliser = (t) => (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+                const entetes = lignes[0].map(normaliser);
+                const colonne = (test) => entetes.findIndex(test);
+                let col = {
+                    id: colonne(t => /^(id|n|no|num|numero|identifiant|matricule)$/.test(t)),
+                    nomPrenom: colonne(t => /^(nom (et )?prenoms?|prenoms? (et )?nom|nom complet|identite)$/.test(t)),
+                    nom: colonne(t => t === 'nom' || t === 'nom de famille'),
+                    prenom: colonne(t => /^prenoms?$/.test(t)),
+                    role: colonne(t => /^(roles?|specialites?|qualifications?|fonctions?|competences?)\b/.test(t)),
+                    ssf: colonne(t => /^(ssf|departement|dept|dpt)\b/.test(t)),
+                };
+                // Titres non reconnus : ancien format, colonnes dans l'ordre ID ; NOM Prénom ; Rôle ; SSF
+                if (col.nomPrenom < 0 && col.nom < 0) col = { id: 0, nomPrenom: 1, nom: -1, prenom: -1, role: 2, ssf: 3 };
+                const lire = (cellules, i) => (i >= 0 && cellules[i] !== undefined ? cellules[i] : '').trim();
+
+                const nouveauxSauveteurs = [];
+                lignes.slice(1).forEach((cellules) => {
+                    if (cellules.every(x => !x.trim())) return;
+                    const name = col.nomPrenom >= 0 ? lire(cellules, col.nomPrenom) : [lire(cellules, col.nom), lire(cellules, col.prenom)].filter(Boolean).join(' ');
+                    const id = lire(cellules, col.id);
+                    // Plusieurs rôles dans la case (retours à la ligne, espaces multiples) : séparés par des virgules
+                    const role = lire(cellules, col.role).split(/\s*\n\s*|\s{2,}|\t/).filter(Boolean).join(', ');
+                    if (id && name) nouveauxSauveteurs.push({ id, name, role, SSF: lire(cellules, col.ssf) });
+                });
 
                 if (nouveauxSauveteurs.length > 0) {
                     actions.importerSauveteursListe(nouveauxSauveteurs);
                     alert(`${nouveauxSauveteurs.length} sauveteur(s) importé(s) avec succès`);
                 } else {
-                    alert('Aucun sauveteur importé.\n\nFormat attendu : une ligne de titres, puis une ligne par sauveteur avec 4 colonnes :\nID ; NOM Prénom ; Rôle ; SSF\n(séparées par des points-virgules, des virgules ou des tabulations)');
+                    alert('Aucun sauveteur importé.\n\nFormat attendu : une ligne de titres, puis une ligne par sauveteur, colonnes séparées par des points-virgules :\nID;Nom;Prénom;Rôle;SSF\n1;DUPONT;Marie;CE évacuation, Eq transmission;25\n(plusieurs spécialités dans la case Rôle, séparées par des virgules ; « NOM Prénom » dans une seule colonne est aussi accepté)');
                 }
             } catch (error) {
                 alert('Erreur lors de l\'importation du fichier CSV');
@@ -206,7 +248,7 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
             <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-auto">
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold">Gestion Liste Préfectorale</h2>
+                        <h2 className="text-2xl font-bold">Gestion de la liste des sauveteurs</h2>
                         <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                     </div>
 

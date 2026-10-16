@@ -47,7 +47,7 @@ Durée : environ 1 min 30. La fenêtre de l'application s'ouvre et se ferme tout
 | 01 | Démarrage | L'application se charge |
 | 02 | Nouveau dossier | Exercice « Gouffre du Test » à Testville, délai d'alerte 6 h |
 | 03 | Mode et secrétaire | PC de Terrain (poste maître) ; secrétaire « Secrétaire TEST » |
-| 04 | Liste préfectorale | 6 sauveteurs (MARTIN, BERNARD, DUBOIS, THOMAS, ROBERT, PETIT) |
+| 04 | Liste des sauveteurs | 6 sauveteurs (MARTIN, BERNARD, DUBOIS, THOMAS, ROBERT, PETIT) |
 | 05 | Arrivées | 5 sauveteurs arrivent : n° permanents, main courante, planning |
 | 06 | Points phones | A Entrée de la cavité, B Puits P40, C Salle du Camp |
 | 07 | Équipe 1 | Sous terre, reconnaissance, chef MARTIN + BERNARD + DUBOIS |

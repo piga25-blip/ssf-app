@@ -56,7 +56,7 @@ const RACINE = path.join(__dirname, '..');
         await pause(1500);
         await page.locator('input[placeholder="Ex: Martin DUPONT"]').fill('Testeur');
         await bouton(/^✓ Enregistrer$/).click();
-        await bouton('Liste Préfectorale').click();
+        await bouton('Liste des sauveteurs').click();
         for (const [nom, prenom] of [['ALPHA', 'Anne'], ['BRAVO', 'Bob'], ['CHARLIE', 'Carl'], ['DELTA', 'Dan']]) {
             await page.locator('input[placeholder="NOM"]:visible').fill(nom);
             await page.locator('input[placeholder="Prénom"]:visible').fill(prenom);
@@ -131,7 +131,7 @@ const RACINE = path.join(__dirname, '..');
         await page.evaluate(() => {
             window.__injection = (api) => api.actions.ajouterSauveteurListe({ id: 'EXT-099', name: 'ECHO Eve', role: 'Secouriste', SSF: '00' });
         });
-        await bouton('Liste Préfectorale').click();
+        await bouton('Liste des sauveteurs').click();
         await page.locator('tr:visible', { hasText: 'DELTA Dan' }).locator('button[title="Supprimer"]').click();
         await pause(1200);
         e = await etat();

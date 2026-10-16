@@ -198,7 +198,7 @@ const idsUniques = (events) => {
     });
 };
 
-// Prochain identifiant libre « EXT-nnn » de la liste préfectorale
+// Prochain identifiant libre « EXT-nnn » de la liste des sauveteurs
 const prochainIdExterne = (etat) => {
     const nums = etat.masterSauveteursList.map(s => (String(s.id).match(/^EXT-(\d{1,4})$/) || [])[1]).filter(Boolean).map(Number);
     return `EXT-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
@@ -216,7 +216,7 @@ const nomsSauveteurs = (etat, ids) => ids
 
 const ACTIONS_DONNEES = {
 
-    // ===== Sauveteurs : liste préfectorale =====
+    // ===== Sauveteurs : liste des sauveteurs =====
 
     // idAuto : identifiant EXT-nnn proposé par le poste ; s'il vient d'être pris par un autre poste,
     // le suivant libre est attribué. Identifiant saisi à la main et déjà pris : refus.

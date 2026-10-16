@@ -161,7 +161,7 @@ const ETAPES = [
         await clic(/^✓ Enregistrer$/);
     }],
     ['04-liste-prefectorale', async () => {
-        await clic('Liste Préfectorale');
+        await clic('Liste des sauveteurs');
         for (const [nom, prenom, role, ssf] of SAUVETEURS) {
             await saisir('NOM', nom);
             await saisir('Prénom', prenom);

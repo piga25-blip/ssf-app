@@ -146,6 +146,45 @@ let GestionEquipesModal = ({
         .map(s => ({ ...s, currentTeam: membersInTeams.get(s.id) || null }))
         .sort((a, b) => (a.name || '').localeCompare((b.name || ''), 'fr', { sensitivity: 'base' }));
 
+    // Tri par spécialité : la colonne « Rôle » de la liste des sauveteurs peut contenir plusieurs
+    // spécialités (« CE évacuation  Eq transmission  Artificier »). Pour le type de mission choisi,
+    // on présente d'abord les chefs d'équipe de la spécialité (CE, chef), puis ses équipiers, puis
+    // les autres sauveteurs.
+    const SPECIALITES = {
+        'Transmission': { libelle: 'transmission', motif: /\b(transmissions?|transmetteurs?|telephon\w*|tel|tps|spl|radio)\b/ },
+        'ASV': { libelle: 'assistance victime', motif: /\b(assistance victimes?|asv|medecins?|infirmi\w*)\b/ },
+        'Brancardage': { libelle: 'évacuation', motif: /\b(evacuation|brancard\w*)\b/ },
+        'Désobstruction': { libelle: 'désobstruction', motif: /\b(desob\w*|artificiers?)\b/ },
+        'Plongée': { libelle: 'plongée', motif: /\b(plong\w*)\b/ },
+        'Logistique': { libelle: 'logistique', motif: /\b(gestion materiel|logistique|pompage|ventilation|flottaison)\b/ },
+        'Gestion': { libelle: 'gestion', motif: /\b(gestion pc|ct)\b/ },
+        'Équipement': { libelle: 'équipement', motif: /\b(equipement|equipeurs?)\b/ },
+    };
+    const [specialiteTri, setSpecialiteTri] = useState('auto'); // 'auto' = selon le type de mission, '' = sans tri
+    // 1 = chef d'équipe de la spécialité, 2 = équipier de la spécialité, 3 = autre
+    const rangSpecialite = (role, specialite) => {
+        const texte = normaliserTexte(role).replace(/['’]/g, ' ');
+        const morceaux = texte.replace(/\b(ce|eq|eqp|equipiers?|chefs?|ct)\b/g, '|$1').split(/\||\s{2,}|[,;\/\n\t+]+/);
+        let rang = 3;
+        for (const m of morceaux.map(x => x.trim()).filter(Boolean)) {
+            if (!specialite.motif.test(m)) continue;
+            rang = Math.min(rang, /^(ce|chefs?|ct)\b/.test(m) ? 1 : 2);
+        }
+        return rang;
+    };
+    const grouperParSpecialite = (liste, typeId) => {
+        const specialite = SPECIALITES[typeId];
+        if (!specialite) return [{ titre: null, membres: liste }];
+        const groupes = [
+            { titre: `👑 Chefs d'équipe ${specialite.libelle}`, membres: [] },
+            { titre: `Équipiers ${specialite.libelle}`, membres: [] },
+            { titre: 'Autres sauveteurs', membres: [] },
+        ];
+        liste.forEach(s => groupes[rangSpecialite(s.role, specialite) - 1].membres.push(s));
+        return groupes.filter(g => g.membres.length > 0);
+    };
+    const typeTriCreation = specialiteTri === 'auto' ? typeMission : specialiteTri;
+
     const filtrerParRecherche = (liste, recherche) => {
         if (!recherche || !recherche.trim()) return liste;
         const q = normaliserTexte(recherche);
@@ -902,6 +941,22 @@ let GestionEquipesModal = ({
                                 </div>
                                 {!editingTeam && <p className="text-sm text-amber-700 font-semibold">⚠️ Le 1er sélectionné = Chef</p>}
                                 {!editingTeam && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="font-semibold text-gray-700 whitespace-nowrap">Trier par spécialité :</span>
+                                        <select
+                                            value={specialiteTri}
+                                            onChange={(e) => setSpecialiteTri(e.target.value)}
+                                            className="flex-1 px-2 py-1 border rounded-lg text-sm"
+                                        >
+                                            <option value="auto">Selon le type de mission{SPECIALITES[typeMission] ? ` (${SPECIALITES[typeMission].libelle})` : ''}</option>
+                                            {Object.keys(SPECIALITES).map(id => (
+                                                <option key={id} value={id}>{(typesMission.find(t => t.id === id) || { nom: id }).nom}</option>
+                                            ))}
+                                            <option value="">Sans tri (ordre alphabétique)</option>
+                                        </select>
+                                    </div>
+                                )}
+                                {!editingTeam && (
                                     <input
                                         type="text"
                                         value={searchNewTeam}
@@ -916,7 +971,10 @@ let GestionEquipesModal = ({
                                     ) : filtrerParRecherche(selectableMembers, searchNewTeam).length === 0 ? (
                                         <p className="text-center text-gray-500 py-4">{searchNewTeam ? 'Aucun sauveteur ne correspond' : 'Aucun sauveteur actif'}</p>
                                     ) : (
-                                        filtrerParRecherche(selectableMembers, searchNewTeam).map(s => (
+                                        grouperParSpecialite(filtrerParRecherche(selectableMembers, searchNewTeam), typeTriCreation).map(groupe => (
+                                        <React.Fragment key={groupe.titre || 'tous'}>
+                                        {groupe.titre && <p className="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-1 mt-1 rounded uppercase tracking-wide">{groupe.titre} ({groupe.membres.length})</p>}
+                                        {groupe.membres.map(s => (
                                             <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-amber-50 rounded cursor-pointer border-b border-gray-100 last:border-0">
                                                 <input
                                                     type="checkbox"
@@ -950,6 +1008,8 @@ let GestionEquipesModal = ({
                                                     </span>
                                                 )}
                                             </label>
+                                        ))}
+                                        </React.Fragment>
                                         ))
                                     )}
                                 </div>
@@ -1086,7 +1146,10 @@ let GestionEquipesModal = ({
                                                                         <div className="max-h-48 overflow-y-auto border border-emerald-300 rounded bg-white mb-2">
                                                                             {candidatsFiltres.length === 0 ? (
                                                                                 <p className="text-sm text-gray-500 text-center py-3">Aucun sauveteur ne correspond</p>
-                                                                            ) : candidatsFiltres.map(s => (
+                                                                            ) : grouperParSpecialite(candidatsFiltres, team.typeMission).map(groupe => (
+                                                                                <React.Fragment key={groupe.titre || 'tous'}>
+                                                                                {groupe.titre && <p className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-1 uppercase tracking-wide">{groupe.titre} ({groupe.membres.length})</p>}
+                                                                                {groupe.membres.map(s => (
                                                                                 <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-emerald-50 cursor-pointer border-b last:border-b-0">
                                                                                     <input
                                                                                         type="checkbox"
@@ -1105,12 +1168,15 @@ let GestionEquipesModal = ({
                                                                                         className="w-4 h-4"
                                                                                     />
                                                                                     <span className="text-sm font-medium">{s.name}</span>
+                                                                                    {s.role && <span className="text-xs text-gray-500 truncate">{s.role}</span>}
                                                                                     {s.currentTeam && (
                                                                                         <span className="ml-auto text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap">
                                                                                             déjà en {s.currentTeam.name}
                                                                                         </span>
                                                                                     )}
                                                                                 </label>
+                                                                                ))}
+                                                                                </React.Fragment>
                                                                             ))}
                                                                         </div>
                                                                         <button

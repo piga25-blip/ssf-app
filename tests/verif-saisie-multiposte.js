@@ -114,7 +114,7 @@ const ID_SECOURS = /Gouffre Multiposte/;
         controler('2. Mêmes numéros affichés sur les postes de saisie', memesNumeros.every(Boolean));
 
         // ===== 3. Inscription autorisée (lot 3) ; clôture réservée au poste principal
-        await b(postes[0], 'Liste Préfectorale').click();
+        await b(postes[0], 'Liste des sauveteurs').click();
         await postes[0].locator('input[placeholder="NOM"]:visible').fill('CHARLIE');
         await postes[0].locator('input[placeholder="Prénom"]:visible').fill('Carl');
         await b(postes[0], '+ Ajouter').click();
@@ -125,7 +125,7 @@ const ID_SECOURS = /Gouffre Multiposte/;
         await postes[0].waitForTimeout(1000);
         const tInterdit = await texte(postes[0]);
         s = await secours();
-        controler('3. Liste préfectorale depuis un poste de saisie : sauveteur ajouté', s.masterSauveteursList.some(x => x.name === 'CHARLIE Carl'));
+        controler('3. Liste des sauveteurs depuis un poste de saisie : sauveteur ajouté', s.masterSauveteursList.some(x => x.name === 'CHARLIE Carl'));
         controler('3. Clôture depuis un poste de saisie : refusée avec message, rien d\'enregistré',
             tInterdit.includes('réservée au poste principal') && !s.clotureInfo && !s.events.some(e => (e.evenement || '').includes('CLÔTURE')));
 

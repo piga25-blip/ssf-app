@@ -43,7 +43,7 @@ const controler = (l, v) => { ok.push(v); console.log(`${v ? '✅' : '❌'} ${l}
         await p.waitForTimeout(1500);
         await champ('Ex: Martin DUPONT').fill('Claire VIDAL');
         await b(/^✓ Enregistrer$/).click();
-        await b('Liste Préfectorale').click();
+        await b('Liste des sauveteurs').click();
         await p.locator('input[type="file"][accept=".csv,.txt"]').setInputFiles(path.join(RESEAU, 'tests', 'film', 'tutoriels', 'liste-prefectorale-exemple.csv'));
         await p.waitForTimeout(800);
         await b(/^Fermer$/, { dernier: true }).click();

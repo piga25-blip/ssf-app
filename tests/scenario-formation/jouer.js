@@ -204,7 +204,7 @@ const ecrireRapport = () => {
     };
     const ouvert = async (titre) => (await p.locator('h2:visible', { hasText: titre }).count()) > 0;
     const ouvrir = async (titre, bouton) => { if (!(await ouvert(titre))) { await b(bouton).click(); await attendre(500); } };
-    const ouvrirListe = () => ouvrir('Gestion Liste Préfectorale', 'Liste Préfectorale');
+    const ouvrirListe = () => ouvrir('Gestion de la liste des sauveteurs', 'Liste des sauveteurs');
     const ouvrirEnregistrement = () => ouvrir('Enregistrement des sauveteurs', 'Enregistrement des sauveteurs');
     const ouvrirPoints = () => ouvrir('Gestion des Points Phone', 'Points Phone');
     const equipes = () => ouvrir('Gestion des Équipes', /^👥 Équipes$/);
@@ -1145,7 +1145,7 @@ const ecrireRapport = () => {
         await b('Confirmer et Démarrer', { dernier: true }).click(); await attendre(1500);
         if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await champ('Ex: Martin DUPONT').fill('Stagiaire DEUX'); await b(/^✓ Enregistrer$/).click(); }
         await viderMsgs();
-        await b('Liste Préfectorale').click();
+        await b('Liste des sauveteurs').click();
         await p.locator('button[title="Supprimer tous les sauveteurs de la liste"]').click(); await attendre(600);
         await msgContient('');
         await fermer();

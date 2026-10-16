@@ -18,7 +18,7 @@ const SCENARIOS = [
 
 const ETAPES = {
     'demarrage': 'Démarrage de l\'application', 'nouveau-dossier': 'Création du dossier de secours', 'mode-pc-terrain': 'Choix du mode PC de Terrain',
-    'liste-prefectorale': 'Liste préfectorale des sauveteurs', 'arrivee-sauveteurs': 'Arrivée des sauveteurs', 'points-phone': 'Points phones',
+    'liste-prefectorale': 'Liste des sauveteurs', 'arrivee-sauveteurs': 'Arrivée des sauveteurs', 'points-phone': 'Points phones',
     'creation-equipe-1': 'Création de l\'équipe 1', 'mc-message-simple': 'Main courante : message simple', 'mc-depart-equipe-1': 'Main courante : départ de l\'équipe 1',
     'mc-rappel': 'Main courante : message avec rappel', 'alerte-rappel': 'Alerte de rappel', 'creation-equipe-2': 'Création de l\'équipe 2',
     'mc-depart-equipe-2-surface': 'Départ de l\'équipe 2 (surface)', 'arrivee-tardive': 'Arrivée tardive d\'un sauveteur', 'ajout-membre-equipe-2': 'Ajout d\'un membre à l\'équipe 2',

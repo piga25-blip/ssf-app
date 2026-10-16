@@ -1,5 +1,5 @@
 // Préparation (non filmée, ou filmée dans « démarrer un secours ») : dossier, secrétaire,
-// liste préfectorale, arrivées, points phones, équipes — pour que chaque film commence
+// liste des sauveteurs, arrivées, points phones, équipes — pour que chaque film commence
 // directement sur son sujet.
 
 const SAUVETEURS = [
@@ -31,7 +31,7 @@ const creerDossier = async (t, { cavite = 'Gouffre de la Combe', commune = 'Lanv
 };
 
 const remplirListe = async (t, n = SAUVETEURS.length) => {
-    await t.clic(t.bouton('Liste Préfectorale'));
+    await t.clic(t.bouton('Liste des sauveteurs'));
     for (const [id, nom, role, ssf] of SAUVETEURS.slice(0, n)) {
         const [NOM, ...prenom] = nom.split(' ');
         await t.saisir(t.page.locator('input.bg-gray-100:visible').first(), id);

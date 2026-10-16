@@ -994,7 +994,7 @@ let DashboardTab = ({
                 <div className="bg-gradient-to-br from-blue-500 to-blue-700 text-white p-6 rounded-lg shadow-lg">
                     <div className="text-4xl font-bold">{stats.totalSauveteurs}</div>
                     <div className="text-sm opacity-90 mt-2">Total Sauveteurs</div>
-                    <div className="text-xs opacity-75 mt-1">Liste préfectorale</div>
+                    <div className="text-xs opacity-75 mt-1">Liste des sauveteurs</div>
                 </div>
                 <div className="bg-gradient-to-br from-green-500 to-green-700 text-white p-6 rounded-lg shadow-lg">
                     <div className="text-4xl font-bold">{stats.sauveteursSurSite}</div>
