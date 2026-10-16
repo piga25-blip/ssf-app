@@ -2,7 +2,7 @@
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
 Correctifs **14.0.1 publié le 06/10/2026** et **14.0.2 publié le 08/10/2026** (voir §6).
-Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone).
+Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
@@ -145,6 +145,13 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   - sur le smartphone, bande 2,4 GHz (Android) ou « Optimiser la compatibilité » (iPhone) ;
   - sur le PC principal, passer ce Wi-Fi en profil « Privé », puis désactiver et réactiver le
     mode réseau ; l'adresse change, il faut rescanner le code QR.
+- **Kits mis à jour** (16/10/2026), toujours en 14.0.2 :
+  - `dist/Kit-essai-terrain-14/` : fiche HTML et PDF (routeur de terrain, partage de connexion)
+    et `Notice_MiseAJour_SSF_14.docx` ajoutée ;
+  - `dist/Kit-essai-Mac-14/` : la fiche Mac (`docs/essai-mac`) reçoit un encadré « Si la tablette
+    n'arrive pas à se connecter » (page du routeur, coupe-feu, isolation et DHCP, partage de
+    connexion ; pas de profil « Privé », qui n'existe pas sur Mac). La notice Word est ajoutée au
+    kit et à la liste « Contenu du kit » de la fiche, et le PDF est refait.
 
 ## 7. Reste à faire
 
