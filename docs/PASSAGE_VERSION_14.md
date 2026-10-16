@@ -1,15 +1,15 @@
 # Passage de la version réseau en version officielle (14.0.0)
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
-Correctifs **14.0.1 publié le 06/10/2026** et **14.0.2 publié le 08/10/2026** (voir §6).
-Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits).
+Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** et **14.0.3 publié le 16/10/2026** (voir §6).
+Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
 
 | Dossier | Branche | Rôle |
 |---|---|---|
-| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.2)** : contient désormais le code réseau. Les corrections futures se font ici. |
+| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.3)** : contient désormais le code réseau. Les corrections futures se font ici. |
 | `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
@@ -152,9 +152,39 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
     n'arrive pas à se connecter » (page du routeur, coupe-feu, isolation et DHCP, partage de
     connexion ; pas de profil « Privé », qui n'existe pas sur Mac). La notice Word est ajoutée au
     kit et à la liste « Contenu du kit » de la fiche, et le PDF est refait.
+- **Version 14.0.3 publiée** (16/10/2026, release `v14.0.3` « Latest », Windows et Mac, commit
+  `89e3def`), suite aux remarques des conseillers techniques nationaux :
+  - bouton « Liste Préfectorale » renommé **« 📋 Liste des sauveteurs »** (fenêtre « Gestion de la
+    liste des sauveteurs », colonne de l'enregistrement des arrivées, tableau de bord) : tous les
+    départements n'ont pas de liste préfectorale ;
+  - **import CSV** : une liste enregistrée en UTF-16 (Excel « Texte Unicode », Bloc-notes)
+    s'affichait en symboles. L'UTF-16 est maintenant lu, et un fichier illisible (classeur `.xlsx`
+    renommé) est refusé avec une explication. Une liste déjà importée en symboles reste à
+    supprimer et réimporter ;
+  - **format de la liste** : colonnes repérées par leur titre. Format conseillé
+    `ID;Nom;Prénom;Rôle;SSF`, plusieurs spécialités séparées par des virgules dans la case Rôle
+    (« CE évacuation, Eq transmission ») ; aussi acceptés : « NOM Prénom » en une colonne,
+    virgule ou tabulation, plusieurs lignes dans une case Excel. L'ID reste obligatoire ;
+  - **tri par spécialité** à la création d'une équipe et dans « Ajouter des membres » : selon le
+    type de mission, les chefs d'équipe de la spécialité (« CE … », « CT » pour la gestion), puis
+    ses équipiers, puis les autres ; menu « Trier par spécialité ». Correspondances : Transmission
+    (transmission, téléphone, TPS, SPL, radio), ASV (assistance victime, médecin, infirmier),
+    Brancardage (évacuation), Désobstruction (désob, artificier), Plongée (plongeur seulement),
+    Logistique (gestion matériel, pompage, ventilation, flottaison), Gestion (Gestion PC, CT) ;
+  - test `tests/verif-import-liste.js` ajouté à `npm test` (encodages, format d'un département,
+    tri d'une équipe téléphone).
+- **Après la 14.0.3** (16/10/2026, commit `70dafa6`, pour la prochaine version) : la ligne
+  « Format » sous « Importer CSV » affichait encore l'ancien format, corrigée. Notice et
+  scénario de formation mis à jour (document Claude et Word) : nouveau nom du bouton, format
+  conseillé, tri par spécialité ; l'annexe du scénario passe au format `ID;Nom;Prénom;Rôle;SSF`
+  avec spécialités (à recopier dans `liste-formation.csv`) et l'étape de l'équipe 3 fait constater
+  le tri. Scénario rejoué : 112/112. Notice Word copiée dans les deux kits.
 
 ## 7. Reste à faire
 
+- **Kits** : ils contiennent encore l'installateur et les `.dmg` de la 14.0.2.
+- **Films** : à retourner une fois les remarques des conseillers techniques traitées (bouton
+  renommé, nouvelle liste, tri par spécialité) ; les scripts sont déjà à jour.
 - **Essai sur un vrai Mac**, avec le kit `dist/Kit-essai-Mac-14/` : ni l'application 14 (serveur
   intégré, reprise des données, pare-feu macOS — partie Mac de `serveur/parefeu.js`) ni le
   bootstrapper Mac n'ont été essayés sur un Mac.
@@ -172,7 +202,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 ## 8. Retour en arrière, en cas de problème
 
 - La mise à jour automatique ne sait pas revenir à une version plus ancienne : un problème se
-  corrige en publiant une nouvelle version, par exemple **14.0.3** (depuis `C:\Projets\SSF`, `main`).
+  corrige en publiant une nouvelle version, par exemple **14.0.4** (depuis `C:\Projets\SSF`, `main`).
 - En urgence sur un PC : réinstaller la 13.42.1 (release GitHub v13.42.1). Comme l'ancienne
   mémoire n'est jamais effacée, la 13 retrouve les secours **tels qu'ils étaient avant la mise à
   jour** ; ce qui a été saisi avec la 14 serait à reprendre par « Exporter Tout » (14) puis
