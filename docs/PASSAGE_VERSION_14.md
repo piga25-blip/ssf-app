@@ -1,15 +1,15 @@
 # Passage de la version réseau en version officielle (14.0.0)
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
-Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** et **14.0.3 publié le 16/10/2026** (voir §6).
-Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, kits en 14.0.3).
+Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026** (voir §6).
+Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, kits en 14.0.4).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
 
 | Dossier | Branche | Rôle |
 |---|---|---|
-| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.3)** : contient désormais le code réseau. Les corrections futures se font ici. |
+| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.4)** : contient désormais le code réseau. Les corrections futures se font ici. |
 | `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
@@ -185,11 +185,39 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   - `dist/Kit-essai-Mac-14/` : `Application-SSF-14.0.3-arm64.dmg` et `Application-SSF-14.0.3.dmg` ;
   - fiches `docs/essai-terrain` et `docs/essai-mac` en 14.0.3, PDF refaits ; anciens
     installateurs 14.0.2 retirés.
+- **Liste des sauveteurs depuis la base nationale** (16/10/2026), autre remarque des conseillers
+  techniques ; l'import CSV reste disponible, en complément :
+  - **« 📊 Importer la base nationale (Excel) »** (commit `af53de1`) : lit le fichier « Export au
+    format Excel » de sauveteurs.speleo-secours-francais.fr (une colonne 0/1 par spécialité).
+    Correspondances : CPT → Artificier, Gestion → Gestion PC, Eaux vives → Flottaison (rangée en
+    Logistique), Pompage, Ventilation, Logistique → Logistique ; chefs d'équipe évacuation et ASV.
+    Les sauveteurs non opérationnels ou non fédérés sont importés avec la mention « NON
+    OPÉRATIONNEL ». Téléphones non repris. SSF lu dans le nom du fichier (modifiable). Aperçu
+    (nouveaux, mis à jour, retirés), puis la liste est **remplacée** (action
+    `SAUVETEURS/LISTE_REMPLACER`), en gardant les sauveteurs déjà arrivés sur le secours.
+    Essai sur un vrai export (99 sauveteurs) ; le fichier, avec ses données personnelles, a été
+    supprimé ensuite ;
+  - **« 🌐 Récupérer depuis la base nationale »** (commit `dbd270b`, `serveur/base-nationale.js`) :
+    ouvre le site dans une fenêtre de l'application (session séparée `persist:base-nationale`,
+    navigation limitée au site). L'utilisateur s'identifie lui-même, clique sur « Export au
+    format Excel » : le fichier est intercepté, passe par le même aperçu, puis est supprimé du
+    disque. Connexion gardée, « Se déconnecter de la base » l'oublie. Test
+    `tests/verif-base-nationale.js` (faux site local) dans `npm test` ; essai réel concluant.
+- **Version 14.0.4 publiée** (16/10/2026, release `v14.0.4` « Latest », Windows et Mac, commit
+  `0307b3d`) avec ces deux ajouts. Notice mise à jour (puce « Nouveautés de la 14.0.4 », ligne du
+  tableau, section « Nouveau : la liste depuis la base nationale »), Word copié dans les kits.
+- **Kits passés en 14.0.4** (16/10/2026) : `Application-SSF-Setup-14.0.4.exe` dans
+  `dist/Kit-essai-terrain-14/`, `Application-SSF-14.0.4-arm64.dmg` et `Application-SSF-14.0.4.dmg`
+  (téléchargés depuis la release) dans `dist/Kit-essai-Mac-14/` ; fiches `docs/essai-terrain` et
+  `docs/essai-mac` en 14.0.4, PDF refaits ; installateurs 14.0.3 retirés.
 
 ## 7. Reste à faire
 
+- **Scénario de formation** : ajouter la récupération depuis la base nationale (à faire plus tard,
+  à la demande de l'utilisateur).
 - **Films** : à retourner une fois les remarques des conseillers techniques traitées (bouton
-  renommé, nouvelle liste, tri par spécialité) ; les scripts sont déjà à jour.
+  renommé, nouvelle liste, tri par spécialité, base nationale) ; les scripts sont à jour sauf
+  pour la base nationale.
 - **Essai sur un vrai Mac**, avec le kit `dist/Kit-essai-Mac-14/` : ni l'application 14 (serveur
   intégré, reprise des données, pare-feu macOS — partie Mac de `serveur/parefeu.js`) ni le
   bootstrapper Mac n'ont été essayés sur un Mac.
@@ -207,7 +235,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 ## 8. Retour en arrière, en cas de problème
 
 - La mise à jour automatique ne sait pas revenir à une version plus ancienne : un problème se
-  corrige en publiant une nouvelle version, par exemple **14.0.4** (depuis `C:\Projets\SSF`, `main`).
+  corrige en publiant une nouvelle version, par exemple **14.0.5** (depuis `C:\Projets\SSF`, `main`).
 - En urgence sur un PC : réinstaller la 13.42.1 (release GitHub v13.42.1). Comme l'ancienne
   mémoire n'est jamais effacée, la 13 retrouve les secours **tels qu'ils étaient avant la mise à
   jour** ; ce qui a été saisi avec la 14 serait à reprendre par « Exporter Tout » (14) puis
