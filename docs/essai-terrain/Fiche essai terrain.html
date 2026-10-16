@@ -92,6 +92,7 @@
 <h2>3. Mise en place sur le terrain</h2>
 <ol>
   <li>Allumer le routeur. Connecter <strong>tous les appareils</strong> au même Wi-Fi.</li>
+  <li>PC principal, <strong>la première fois sur ce Wi-Fi</strong> (nouveau routeur ou nouveau PC) : Paramètres › Réseau et Internet › Wi-Fi › nom du réseau › <strong>Profil réseau : Privé</strong>. En « Public », Windows refuse les autres postes. Windows retient ce choix pour ce Wi-Fi : à ne faire qu'une fois. Si l'application était déjà en mode réseau, désactiver puis réactiver <span class="bouton">🌐 Mode réseau</span>.</li>
   <li>PC principal : ouvrir l'application, créer un dossier <strong>EXERCICE</strong>, choisir <strong>PC de Terrain</strong>, indiquer le secrétaire.</li>
   <li>Cliquer sur <span class="bouton">🌐 Mode réseau</span> puis <span class="bouton">Activer le mode réseau</span>.<br>
       L'application vérifie le pare-feu et l'autorise elle-même si besoin. L'ordinateur peut demander confirmation :
@@ -218,6 +219,13 @@
   <ul>
     <li>Une <strong>page de résultats de recherche</strong> s'affiche au lieu de l'application : l'adresse a été tapée dans une recherche Google ou sans <code>http://</code>. La retaper <strong>en entier, avec <code>http://</code>, dans la barre d'adresse du navigateur</strong> — ou scanner le code QR.</li>
     <li>Le poste n'arrive pas à ouvrir l'adresse (« Ce site est inaccessible ») : vérifier qu'il est sur le <strong>même Wi-Fi</strong> (pas le Wi-Fi invité de la box, pas la 4G) ; vérifier sur le PC principal que la fenêtre <span class="bouton">🌐 Mode réseau</span> affiche « 🛡️ Pare-feu … autorisés », sinon <span class="bouton">🛡️ Autoriser dans le pare-feu</span> ou l'encadré « Pare-feu » ; vérifier l'adresse dans <span class="bouton">🌐 Mode réseau</span>.</li>
+    <li><strong>Routeur de terrain</strong> (le Wi-Fi fonctionne mais aucun poste n'ouvre l'application) — dans l'ordre :
+      <ol>
+        <li>Sur la tablette, ouvrir la page du routeur (souvent <code>http://192.168.0.1</code> ou <code>http://192.168.1.1</code>, voir l'étiquette sous le routeur). Elle s'affiche : le Wi-Fi est bon, le blocage vient du PC principal (étapes suivantes). Elle ne s'affiche pas : vérifier dans le routeur (Sans fil › Paramètres avancés) que <strong>« Client Isolation » / « AP Isolation » est décoché</strong> et que le <strong>serveur DHCP est activé</strong>.</li>
+        <li>PC principal : Wi-Fi en <strong>Profil réseau : Privé</strong> (voir partie 3), puis désactiver et réactiver <span class="bouton">🌐 Mode réseau</span>. C'est la cause la plus fréquente.</li>
+        <li>Sur le PC principal, taper l'adresse dans son propre navigateur. L'application s'affiche : le serveur fonctionne, c'est un pare-feu qui bloque. Rien ne s'affiche : noter le message et prévenir.</li>
+        <li>Sécurité Windows › Pare-feu et protection du réseau › Réseau privé, puis Réseau public : la case <strong>« Bloque toutes les connexions entrantes… »</strong> doit être <strong>décochée</strong>. Un antivirus avec son propre pare-feu (Norton, Kaspersky, Avast, Bitdefender, ESET…) : déclarer ce Wi-Fi comme réseau de confiance / domestique.</li>
+      </ol></li>
     <li>Plusieurs adresses affichées (PC avec câble et Wi-Fi) : essayer celle qui commence comme l'adresse Wi-Fi du poste (souvent 192.168.…).</li>
     <li>« Code incorrect » : reprendre le code affiché <em>actuellement</em> sur le PC principal (il change avec « Changer le code »).</li>
   </ul>
