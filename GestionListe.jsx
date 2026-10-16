@@ -1,7 +1,7 @@
 ﻿// ============================================
 // MODAL - LISTE PRÉFECTORALE
 // ============================================
-let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, onClose }) => {
+let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, sauveteurPermanentNumbers, onClose }) => {
     const [nouveauSauveteur, setNouveauSauveteur] = useState({ id: '', nom: '', prenom: '', role: '', ssf: '' });
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
@@ -243,6 +243,100 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
         e.target.value = null;
     };
 
+    // ===== Import de l'export Excel de la base nationale (sauveteurs.speleo-secours-francais.fr) =====
+    // Une colonne par spécialité (0/1) : convertie en texte dans « Rôle ». Les coordonnées
+    // (adresse, téléphones, e-mail) et les autres colonnes ne sont pas reprises. Après un aperçu,
+    // la liste est REMPLACÉE par celle du fichier (les sauveteurs déjà venus sont conservés).
+    const [apercuBase, setApercuBase] = useState(null);
+    const SPECIALITES_BASE = [
+        // [colonne (titre normalisé), texte si 1, colonne qui la remplace si elle vaut 1]
+        ['gestion', 'Gestion PC'],
+        ['chefequipeevac', 'CE évacuation'],
+        ['evacuation', 'Eq évacuation', 'chefequipeevac'],
+        ['chefequipeasv', 'CE assistance victime'],
+        ['asv', 'Eq assistance victime', 'chefequipeasv'],
+        ['medecin', 'Médecin'],
+        ['infirmier', 'Infirmier'],
+        ['transmission', 'Eq transmission'],
+        ['desobstruction', 'Eq désob'],
+        ['cpt', 'Artificier'],
+        ['plongee', 'Plongeur'],
+        ['eauxvives', 'Flottaison'],
+        ['pompage', 'Pompage'],
+        ['ventilation', 'Ventilation'],
+        ['logistique', 'Logistique'],
+        ['mines', 'Mines'],
+    ];
+    const lireExportBaseNationale = (octets, nomFichier) => {
+        const classeur = XLSX.read(octets, { type: 'array' });
+        const lignes = XLSX.utils.sheet_to_json(classeur.Sheets[classeur.SheetNames[0]], { header: 1, defval: '', raw: false });
+        const normaliser = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+        const entetes = (lignes[0] || []).map(normaliser);
+        if (!['id', 'nom', 'prenom'].every(c => entetes.includes(c)) || !entetes.includes('chefequipeevac')) return null;
+        const departement = (String(nomFichier).match(/SSF[-_ ]?(\d{2,3}|2A|2B)(?![0-9A-Za-z])/i) || [])[1] || '';
+        const sauveteurs = [];
+        lignes.slice(1).forEach(cellules => {
+            const v = (col) => { const i = entetes.indexOf(col); return i >= 0 ? String(cellules[i] ?? '').trim() : ''; };
+            const oui = (col) => /^(1|oui|x|vrai|true)$/i.test(v(col));
+            const id = v('id'), nom = v('nom'), prenom = v('prenom');
+            if (!id || !(nom || prenom)) return;
+            const roles = [];
+            if (v('fonction ct')) roles.push(v('fonction ct'));
+            SPECIALITES_BASE.forEach(([col, texte, remplacee]) => { if (oui(col) && !(remplacee && oui(remplacee))) roles.push(texte); });
+            const nonOperationnel = entetes.includes('operationnel') && !oui('operationnel');
+            const nonFedere = entetes.includes('federe a date') && !oui('federe a date');
+            if (nonOperationnel || nonFedere) roles.unshift(nonFedere ? 'NON OPÉRATIONNEL (non fédéré)' : 'NON OPÉRATIONNEL');
+            sauveteurs.push({ id, name: [nom.toUpperCase(), prenom].filter(Boolean).join(' '), role: roles.join(', '), SSF: departement });
+        });
+        const ignorees = (lignes[0] || []).filter((t, i) => !['id', 'nom', 'prenom', 'fonction ct', 'operationnel', 'federe a date', ...SPECIALITES_BASE.map(s => s[0])].includes(entetes[i]));
+        return { sauveteurs, departement, ignorees };
+    };
+
+    const handleImportBaseNationale = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const lu = lireExportBaseNationale(new Uint8Array(event.target.result), file.name);
+                if (!lu) {
+                    alert('Ce fichier n\'est pas un export de la base nationale.\n\nSur sauveteurs.speleo-secours-francais.fr : « Export de la liste » › « Export au format Excel », puis importer le fichier téléchargé.\n\nPour une liste préparée à la main, utiliser « 📂 Importer CSV ».');
+                    return;
+                }
+                if (lu.sauveteurs.length === 0) { alert('Aucun sauveteur trouvé dans ce fichier.'); return; }
+                setApercuBase({ ...lu, fichier: file.name });
+            } catch (error) {
+                alert('Ce fichier Excel ne peut pas être lu.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        e.target.value = null;
+    };
+
+    // Ce que l'import changera, pour l'aperçu
+    const bilanApercu = (() => {
+        if (!apercuBase) return null;
+        const actuels = new Map(masterSauveteursList.map(s => [s.id, s]));
+        const dansFichier = new Set(apercuBase.sauveteurs.map(s => s.id));
+        const venus = new Set([...(activeSauveteurIds || []), ...Object.keys(sauveteurPermanentNumbers || {})]);
+        const absents = masterSauveteursList.filter(s => !dansFichier.has(s.id));
+        return {
+            nouveaux: apercuBase.sauveteurs.filter(s => !actuels.has(s.id)).length,
+            misAJour: apercuBase.sauveteurs.filter(s => actuels.has(s.id)).length,
+            nomsDifferents: apercuBase.sauveteurs.filter(s => actuels.has(s.id) && actuels.get(s.id).name !== s.name),
+            retires: absents.filter(s => !venus.has(s.id)),
+            conserves: absents.filter(s => venus.has(s.id)),
+            nonOperationnels: apercuBase.sauveteurs.filter(s => s.role.startsWith('NON OPÉRATIONNEL')).length,
+        };
+    })();
+
+    const confirmerImportBase = () => {
+        const ssf = apercuBase.departement.trim();
+        actions.remplacerSauveteursListe(apercuBase.sauveteurs.map(s => ({ ...s, SSF: ssf })));
+        alert(`${apercuBase.sauveteurs.length} sauveteur(s) importé(s) depuis la base nationale : la liste est remplacée.`);
+        setApercuBase(null);
+    };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-overlay">
             <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-auto">
@@ -276,8 +370,46 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
                             📂 Importer CSV
                             <input type="file" accept=".csv,.txt" onChange={handleImportCSV} className="hidden" />
                         </label>
+                        <label className="ml-2 bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 cursor-pointer" title="Fichier « Export au format Excel » de sauveteurs.speleo-secours-francais.fr : remplace la liste">
+                            📊 Importer la base nationale (Excel)
+                            <input type="file" accept=".xlsx,.xls" onChange={handleImportBaseNationale} className="hidden" />
+                        </label>
                         <p className="text-xs mt-2">Format : 1re ligne = titres, puis une ligne par sauveteur : ID;Nom;Prénom;Rôle;SSF (séparateur point-virgule) — plusieurs spécialités dans Rôle, séparées par des virgules (« NOM Prénom » en une colonne aussi accepté)</p>
+                        <p className="text-xs mt-1">Base nationale : sur sauveteurs.speleo-secours-francais.fr, « Export de la liste » › « Export au format Excel ». La liste est <strong>remplacée</strong> (aperçu avant) ; adresses, téléphones et e-mails ne sont pas repris.</p>
                     </div>
+
+                    {apercuBase && bilanApercu && (
+                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-auto p-6">
+                                <h3 className="text-xl font-bold mb-1">📊 Import de la base nationale — aperçu</h3>
+                                <p className="text-sm text-gray-600 mb-4">Fichier : {apercuBase.fichier}</p>
+                                <ul className="text-sm space-y-1 mb-4">
+                                    <li><strong>{apercuBase.sauveteurs.length}</strong> sauveteurs dans le fichier : <strong>{bilanApercu.nouveaux}</strong> nouveaux, <strong>{bilanApercu.misAJour}</strong> mis à jour</li>
+                                    {bilanApercu.nonOperationnels > 0 && <li>⚠️ <strong>{bilanApercu.nonOperationnels}</strong> marqués « NON OPÉRATIONNEL » (non opérationnels ou non fédérés à date)</li>}
+                                    <li><strong>{bilanApercu.retires.length}</strong> retirés de la liste (absents du fichier){bilanApercu.retires.length > 0 && ` : ${bilanApercu.retires.slice(0, 8).map(s => s.name).join(', ')}${bilanApercu.retires.length > 8 ? '…' : ''}`}</li>
+                                    {bilanApercu.conserves.length > 0 && <li><strong>{bilanApercu.conserves.length}</strong> conservés car déjà venus sur ce secours : {bilanApercu.conserves.map(s => s.name).join(', ')}</li>}
+                                    {bilanApercu.nomsDifferents.length > 0 && <li className="text-orange-700">⚠️ Même ID, nom différent : {bilanApercu.nomsDifferents.map(s => `${s.id} → ${s.name}`).join(', ')}</li>}
+                                </ul>
+                                <label className="block text-sm font-semibold mb-1">SSF (département) appliqué à tous :</label>
+                                <input
+                                    type="text"
+                                    value={apercuBase.departement}
+                                    onChange={(e) => setApercuBase({ ...apercuBase, departement: e.target.value })}
+                                    placeholder="ex. 25"
+                                    className="px-3 py-2 border rounded mb-4 w-32"
+                                />
+                                <p className="text-xs text-gray-600 mb-1">Exemples de rôles obtenus :</p>
+                                <ul className="text-xs text-gray-700 mb-4 list-disc pl-5">
+                                    {apercuBase.sauveteurs.filter(s => s.role).slice(0, 3).map(s => <li key={s.id}>{s.role}</li>)}
+                                </ul>
+                                {apercuBase.ignorees.length > 0 && <p className="text-xs text-gray-500 mb-4">Colonnes non reprises : {apercuBase.ignorees.join(', ')}</p>}
+                                <div className="flex gap-3 justify-end">
+                                    <button onClick={() => setApercuBase(null)} className="px-4 py-2 rounded-lg border font-semibold">Annuler</button>
+                                    <button onClick={confirmerImportBase} className="px-4 py-2 rounded-lg bg-blue-700 text-white hover:bg-blue-800 font-semibold">✓ Remplacer la liste ({apercuBase.sauveteurs.length})</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="flex justify-between items-center mb-3">

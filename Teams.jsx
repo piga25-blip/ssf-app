@@ -157,18 +157,19 @@ let GestionEquipesModal = ({
         'Désobstruction': { libelle: 'désobstruction', motif: /\b(desob\w*|artificiers?)\b/ },
         'Plongée': { libelle: 'plongée', motif: /\b(plong\w*)\b/ },
         'Logistique': { libelle: 'logistique', motif: /\b(gestion materiel|logistique|pompage|ventilation|flottaison)\b/ },
-        'Gestion': { libelle: 'gestion', motif: /\b(gestion pc|ct)\b/ },
+        'Gestion': { libelle: 'gestion', motif: /\b(gestion pc|ct|ctdsa?)\b/ },
         'Équipement': { libelle: 'équipement', motif: /\b(equipement|equipeurs?)\b/ },
     };
     const [specialiteTri, setSpecialiteTri] = useState('auto'); // 'auto' = selon le type de mission, '' = sans tri
     // 1 = chef d'équipe de la spécialité, 2 = équipier de la spécialité, 3 = autre
     const rangSpecialite = (role, specialite) => {
         const texte = normaliserTexte(role).replace(/['’]/g, ' ');
-        const morceaux = texte.replace(/\b(ce|eq|eqp|equipiers?|chefs?|ct)\b/g, '|$1').split(/\||\s{2,}|[,;\/\n\t+]+/);
+        if (/non operationnel/.test(texte)) return 3; // marqué à l'import de la base nationale
+        const morceaux = texte.replace(/\b(ce|eq|eqp|equipiers?|chefs?|ct|ctdsa?)\b/g, '|$1').split(/\||\s{2,}|[,;\/\n\t+]+/);
         let rang = 3;
         for (const m of morceaux.map(x => x.trim()).filter(Boolean)) {
             if (!specialite.motif.test(m)) continue;
-            rang = Math.min(rang, /^(ce|chefs?|ct)\b/.test(m) ? 1 : 2);
+            rang = Math.min(rang, /^(ce|chefs?|ct|ctdsa?)\b/.test(m) ? 1 : 2);
         }
         return rang;
     };

@@ -50,7 +50,7 @@ executer('_verif-defauts', 'vérification', async (t) => {
     await entree.setInputFiles(invalide);
     await p.waitForTimeout(800);
     controler('CSV sans ligne valide : message explicatif', (await messages()).includes('Aucun sauveteur importé'));
-    controler('Format affiché à l\'écran corrigé', (await p.evaluate(() => document.body.innerText)).includes('ID ; NOM Prénom ; Rôle ; SSF'));
+    controler('Format affiché à l\'écran corrigé', (await p.evaluate(() => document.body.innerText)).includes('ID;Nom;Prénom;Rôle;SSF'));
     await t.clic(t.bouton(/^Fermer$/, { dernier: true }));
     await P.arrivees(t, ['MARTIN Alice', 'DUBOIS Chloé', 'BERNARD Bruno', 'THOMAS David', 'ROBERT Emma']);
     await vider();

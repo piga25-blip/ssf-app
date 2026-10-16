@@ -249,6 +249,16 @@ const ACTIONS_DONNEES = {
         return { ...etat, masterSauveteursList: [...conserves, ...sauveteurs] };
     },
 
+    // Import de l'export Excel de la base nationale : la liste est REMPLACÉE par celle du fichier.
+    // Les sauveteurs absents du fichier mais déjà venus sur ce secours (arrivée enregistrée, n°
+    // permanent) sont conservés : le planning, les équipes et la main courante y font référence.
+    'SAUVETEURS/LISTE_REMPLACER'(etat, { sauveteurs }) {
+        const dansFichier = new Set(sauveteurs.map(s => s.id));
+        const venus = new Set([...etat.activeSauveteurIds, ...Object.keys(etat.sauveteurPermanentNumbers || {})]);
+        const conserves = etat.masterSauveteursList.filter(s => !dansFichier.has(s.id) && venus.has(s.id));
+        return { ...etat, masterSauveteursList: [...sauveteurs, ...conserves] };
+    },
+
     // ===== Sauveteurs : arrivée et départ =====
 
     // Arrivée sur site : activation, n° permanent, créneau « disponible » au planning,
@@ -754,6 +764,7 @@ const creerActionsDonnees = (dispatch) => {
         supprimerSauveteurListe: (id) => dispatch({ type: 'SAUVETEURS/LISTE_SUPPRIMER', id }),
         supprimerSauveteursInactifs: () => dispatch({ type: 'SAUVETEURS/LISTE_SUPPRIMER_INACTIFS' }),
         importerSauveteursListe: (sauveteurs) => dispatch({ type: 'SAUVETEURS/LISTE_IMPORTER', sauveteurs }),
+        remplacerSauveteursListe: (sauveteurs) => dispatch({ type: 'SAUVETEURS/LISTE_REMPLACER', sauveteurs }),
         arriveeSauveteurs: (ids) => dispatch({ type: 'SAUVETEURS/ARRIVEE', ids, ...ligneMC() }),
         departSauveteurs: (ids) => dispatch({ type: 'SAUVETEURS/DEPART', ids, ...ligneMC() }),
         numeroterSauveteursManquants: () => dispatch({ type: 'SAUVETEURS/NUMEROTER_MANQUANTS' }),

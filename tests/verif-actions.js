@@ -79,6 +79,10 @@ const base = () => {
     verifier('Arrivée : « disponible » au créneau 10 h 15 (n° 9)', e.planning.S1[9] === 'disponible' && e.planning.S1[8] === 'nondef', e.planning.S1.slice(7, 11));
     verifier('Arrivée : ligne groupée', e.events.length === 1 && e.events[0].evenement === 'Arrivée de : ALPHA Anne, BRAVO Robert' && e.events[0].numero === '001' && e.events[0].secretaire === 'Système');
 
+    // Base nationale : la liste est remplacée ; S1 et S2, déjà arrivés, restent même absents du fichier
+    const r = appliquer(e, { type: 'SAUVETEURS/LISTE_REMPLACER', sauveteurs: [{ id: 'S3', name: 'CHARLIE Mis à jour' }, { id: 'N9', name: 'NOUVEAU Né' }] });
+    verifier('Liste : remplacement (fichier + sauveteurs déjà venus ; DELTA absent du fichier retiré)', r.masterSauveteursList.map(s => s.id + ':' + s.name).join('|') === 'S3:CHARLIE Mis à jour|N9:NOUVEAU Né|S1:ALPHA Anne|S2:BRAVO Robert', r.masterSauveteursList);
+
     e = appliquer(e, { type: 'SAUVETEURS/LISTE_SUPPRIMER_INACTIFS' });
     verifier('Liste : suppression des inactifs', e.masterSauveteursList.map(s => s.id).join('|') === 'S1|S2');
     e = appliquer(e, { type: 'SAUVETEURS/LISTE_SUPPRIMER', id: 'S2' });

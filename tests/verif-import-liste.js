@@ -126,6 +126,47 @@ const FICHIERS = [
         await p.locator('select:visible', { has: p.locator('option', { hasText: 'Selon le type de mission' }) }).selectOption('');
         const sans = await ordre();
         controler('« Sans tri » : ordre alphabétique, sans titres de groupes', !sans.some(x => /^(👑|Équipiers|Autres)/i.test(x)));
+
+        // ===== Export Excel de la base nationale (mêmes colonnes que le vrai, noms fictifs) =====
+        const XLSX = require(path.join(RACINE, 'libs', 'xlsx.full.min.js'));
+        const titresBase = ['ID', 'Nom', 'Prenom', 'Sexe', 'Adresse', 'CPVille', 'Telperso', 'Teltravail', 'TelPortable', 'Email', 'Fonction CT',
+            'ChefEquipeEvac', 'ChefEquipeASV', 'Medecin', 'Infirmier', 'Gestion', 'ASV', 'Transmission', 'Evacuation', 'Desobstruction', 'CPT',
+            'Plongee', 'Pompage', 'Ventilation', 'Logistique', 'EauxVives', 'Mines', 'Operationnel', 'SpecialiteMedicale', 'Licence', 'Divers', 'TAGS', 'ID_AVEN2', 'Fédéré à date'];
+        //            CTDS   CE-Ev CE-ASV Méd Inf Gest ASV Trans Evac Désob CPT Plong Pomp Vent Log EV Mines Op Fédéré
+        const ligneBase = (id, nom, prenom, ct, drapeaux, op = 1, federe = 1) => {
+            const [ceEv, ceAsv, med, inf, gest, asv, tr, ev, des, cpt, pl, po, ve, lo, eaux, mi] = drapeaux;
+            return [id, nom, prenom, 1, '1 rue Fictive', '25000 Besançon', '', '', '0600000000', 'fictif@exemple.fr', ct,
+                ceEv, ceAsv, med, inf, gest, asv, tr, ev, des, cpt, pl, po, ve, lo, eaux, mi, op, '', 'L-' + id, '', '', 'A' + id, federe];
+        };
+        const feuille = XLSX.utils.aoa_to_sheet([titresBase,
+            ligneBase(5001, 'Gaillard', 'Hervé', 'CTDSA', [1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0]),
+            ligneBase(5002, 'Hubert', 'Inès', '', [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0]),
+            ligneBase(5003, 'Jacob', 'Jules', '', [0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0),
+            ligneBase(5004, 'Klein', 'Karima', '', [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0], 1, 0),
+        ]);
+        const classeur = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(classeur, feuille, 'Liste');
+        const fichierBase = path.join(fichiers, 'Liste_SSF-25_16_10_2026.xlsx');
+        fs.writeFileSync(fichierBase, XLSX.write(classeur, { type: 'buffer', bookType: 'xlsx' }));
+
+        await b(/^Fermer$/).last().click();
+        await b('Liste des sauveteurs').click();
+        await p.locator('input[type="file"][accept=".xlsx,.xls"]').setInputFiles(fichierBase);
+        await p.waitForTimeout(800);
+        const apercu = await p.locator('h3:visible', { hasText: 'Import de la base nationale' }).locator('..').innerText();
+        console.log('   Aperçu :', apercu.split('\n').filter(l => /sauveteurs dans le fichier|NON OPÉRATIONNEL|retirés|conservés/.test(l)).join(' / '));
+        controler('Aperçu : 4 sauveteurs, 4 nouveaux, 2 non opérationnels, les 6 déjà arrivés conservés',
+            apercu.includes('4 sauveteurs dans le fichier : 4 nouveaux, 0 mis à jour') && apercu.includes('2 marqués « NON OPÉRATIONNEL »') && apercu.includes('6 conservés car déjà venus'));
+        controler('Aperçu : SSF « 25 » repris du nom du fichier, coordonnées non reprises',
+            (await p.locator('input[placeholder="ex. 25"]').inputValue()) === '25' && /Colonnes non reprises : .*Adresse.*TelPortable.*Email/.test(apercu));
+        await b(/Remplacer la liste \(4\)/).click();
+        await p.waitForTimeout(600);
+        const apres = await p.locator('body').innerText();
+        controler('Rôles convertis : « CTDSA, Gestion PC, CE évacuation, Artificier »', apres.includes('GAILLARD Hervé') && apres.includes('CTDSA, Gestion PC, CE évacuation, Artificier'));
+        controler('Rôles convertis : « Eq évacuation, Eq assistance victime, Eq transmission, Flottaison »', apres.includes('Eq évacuation, Eq assistance victime, Eq transmission, Flottaison'));
+        controler('Non opérationnel / non fédéré marqués', apres.includes('NON OPÉRATIONNEL, CE assistance victime, Médecin') && apres.includes('NON OPÉRATIONNEL (non fédéré), Eq évacuation, Plongeur, Pompage, Ventilation, Logistique'));
+        controler('Liste remplacée : sauveteurs importés avant et jamais venus retirés (AUBÉ Hélène), déjà venus conservés (ALBA André)',
+            !apres.includes('AUBÉ Hélène') && !apres.includes('GIRARD Gilles') && apres.includes('ALBA André') && apres.includes('Liste complète (10)'));
     } catch (e) {
         controler('Erreur : ' + e.message.split('\n')[0], false);
     } finally {
