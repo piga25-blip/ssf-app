@@ -11,23 +11,23 @@ const RACINE = path.join(__dirname, '..', '..', '..');
 const CSV = path.join(__dirname, '..', 'sortie', 'tutoriels', 'liste-formation.csv');
 const CROQUIS = path.join(__dirname, 'croquis-P40.png');
 fs.mkdirSync(path.dirname(CSV), { recursive: true });
-fs.writeFileSync(CSV, `ID;Nom Prénom;Rôle;SSF
-25-001;GIRARD Antoine;Directeur secours souterrain;25
-25-002;MARTIN Alice;Chef d'équipe;25
-25-003;BERNARD Bruno;Secouriste;25
-25-004;DUBOIS Chloé;Médecin;25
-25-005;THOMAS David;Secouriste;25
-25-006;ROBERT Emma;Plongeur;25
-25-007;PETIT Félix;Secouriste;25
-25-008;DURAND Gaëlle;ASV;25
-25-009;LEROY Hugo;Désobstruction;25
-25-010;MOREAU Inès;Transmission;25
-39-001;SIMON Julien;Conseiller technique;39
-39-002;LAURENT Karine;Secouriste;39
-70-001;LEFEBVRE Léo;Équipier;70
-90-001;MICHEL Manon;Transmission;90
-G-001;ROUX Pierre;Gendarme PGHM;Gendarmerie
-P-001;GARCIA Nora;Infirmière;Pompier
+fs.writeFileSync(CSV, `ID;Nom;Prénom;Rôle;SSF
+25-001;GIRARD;Antoine;CT, Gestion PC;25
+25-002;MARTIN;Alice;CE évacuation, Eq assistance victime;25
+25-003;BERNARD;Bruno;Eq évacuation, Eq transmission;25
+25-004;DUBOIS;Chloé;CE assistance victime, Médecin;25
+25-005;THOMAS;David;Eq évacuation;25
+25-006;ROBERT;Emma;Plongeur;25
+25-007;PETIT;Félix;Eq assistance victime, Eq évacuation;25
+25-008;DURAND;Gaëlle;Eq assistance victime, Infirmier;25
+25-009;LEROY;Hugo;Eq désob, Artificier;25
+25-010;MOREAU;Inès;CE transmission;25
+39-001;SIMON;Julien;CT, Eq transmission;39
+39-002;LAURENT;Karine;Eq évacuation;39
+70-001;LEFEBVRE;Léo;CE évacuation, Eq transmission;70
+90-001;MICHEL;Manon;Eq transmission;90
+G-001;ROUX;Pierre;Gendarme PGHM, Gestion matériel;Gendarmerie
+P-001;GARCIA;Nora;Infirmière;Pompier
 `, 'utf8');
 
 const PP = { F: 'F - Parking — Poste médical avancé', A: 'A - Entrée de la cavité', B: 'B - Tête du P40', C: 'C - Base du P40', E: 'E - Point victime', G: 'G - Hôpital de Pontarlier', PC: 'PC - Poste de Commandement' };
@@ -179,7 +179,7 @@ PHASES.push(async (t, o) => {
     const p = t.page;
     await t.chapitre('La liste des sauveteurs');
     await t.dire(dicte('Chargez la liste des sauveteurs du département : fichier liste-formation sur le Bureau.'),
-        'Le fichier CSV : une ligne de titres, puis ID ; NOM Prénom ; Rôle ; SSF. Point-virgule, virgule ou tabulation, accents d\'Excel acceptés.');
+        'Le fichier CSV : une ligne de titres, puis ID ; Nom ; Prénom ; Rôle ; SSF, séparés par des points-virgules. Dans la case Rôle, plusieurs spécialités séparées par des virgules.');
     await t.clic(t.bouton('Liste des sauveteurs'));
     await t.fichier(t.bouton('Importer CSV'), p.locator('input[type="file"][accept*=".csv"]'), CSV);
     await t.dire(dicte('Retrouvez MOREAU Inès, puis triez la liste par SSF.'));

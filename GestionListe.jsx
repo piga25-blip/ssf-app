@@ -276,7 +276,7 @@ let GestionListeModal = ({ masterSauveteursList, actions, activeSauveteurIds, on
                             📂 Importer CSV
                             <input type="file" accept=".csv,.txt" onChange={handleImportCSV} className="hidden" />
                         </label>
-                        <p className="text-xs mt-2">Format : 1re ligne = titres, puis une ligne par sauveteur : ID ; NOM Prénom ; Rôle ; SSF (séparateur ; , ou tabulation)</p>
+                        <p className="text-xs mt-2">Format : 1re ligne = titres, puis une ligne par sauveteur : ID;Nom;Prénom;Rôle;SSF (séparateur point-virgule) — plusieurs spécialités dans Rôle, séparées par des virgules (« NOM Prénom » en une colonne aussi accepté)</p>
                     </div>
 
                     <div className="bg-gray-50 p-4 rounded-lg">

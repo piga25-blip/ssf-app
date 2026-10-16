@@ -24,23 +24,23 @@ const TELECHARGEMENTS = path.join(SORTIE, 'telechargements');
 fs.mkdirSync(TELECHARGEMENTS, { recursive: true });
 
 // Liste de l'annexe du scénario
-const CSV = `ID;Nom Prénom;Rôle;SSF
-25-001;GIRARD Antoine;Directeur secours souterrain;25
-25-002;MARTIN Alice;Chef d'équipe;25
-25-003;BERNARD Bruno;Secouriste;25
-25-004;DUBOIS Chloé;Médecin;25
-25-005;THOMAS David;Secouriste;25
-25-006;ROBERT Emma;Plongeur;25
-25-007;PETIT Félix;Secouriste;25
-25-008;DURAND Gaëlle;ASV;25
-25-009;LEROY Hugo;Désobstruction;25
-25-010;MOREAU Inès;Transmission;25
-39-001;SIMON Julien;Conseiller technique;39
-39-002;LAURENT Karine;Secouriste;39
-70-001;LEFEBVRE Léo;Équipier;70
-90-001;MICHEL Manon;Transmission;90
-G-001;ROUX Pierre;Gendarme PGHM;Gendarmerie
-P-001;GARCIA Nora;Infirmière;Pompier
+const CSV = `ID;Nom;Prénom;Rôle;SSF
+25-001;GIRARD;Antoine;CT, Gestion PC;25
+25-002;MARTIN;Alice;CE évacuation, Eq assistance victime;25
+25-003;BERNARD;Bruno;Eq évacuation, Eq transmission;25
+25-004;DUBOIS;Chloé;CE assistance victime, Médecin;25
+25-005;THOMAS;David;Eq évacuation;25
+25-006;ROBERT;Emma;Plongeur;25
+25-007;PETIT;Félix;Eq assistance victime, Eq évacuation;25
+25-008;DURAND;Gaëlle;Eq assistance victime, Infirmier;25
+25-009;LEROY;Hugo;Eq désob, Artificier;25
+25-010;MOREAU;Inès;CE transmission;25
+39-001;SIMON;Julien;CT, Eq transmission;39
+39-002;LAURENT;Karine;Eq évacuation;39
+70-001;LEFEBVRE;Léo;CE évacuation, Eq transmission;70
+90-001;MICHEL;Manon;Eq transmission;90
+G-001;ROUX;Pierre;Gendarme PGHM, Gestion matériel;Gendarmerie
+P-001;GARCIA;Nora;Infirmière;Pompier
 `;
 const FICHIER_CSV = path.join(SORTIE, 'liste-formation.csv');
 fs.writeFileSync(FICHIER_CSV, CSV, 'utf8');
@@ -469,6 +469,12 @@ const ecrireRapport = () => {
         await champ('Titre (ex: Reconnaissance Zone Nord)').fill('Transmission, pose du TPS jusqu\'à la Salle du Chaos');
         const choix = p.locator('select:visible', { has: p.locator('option', { hasText: 'Sélectionner un type' }) });
         const val = await choix.inputValue();
+        // Tri par spécialité (14.0.3) : chefs d'équipe transmission, puis équipiers transmission
+        const liste = (await p.locator('div.max-h-60:visible').first().innerText()).toUpperCase();
+        const pos = (t) => liste.indexOf(t.toUpperCase());
+        verifier(pos("👑 Chefs d'équipe transmission") >= 0 && pos("👑 Chefs d'équipe transmission") < pos('MOREAU Inès') && pos('MOREAU Inès') < pos('Équipiers transmission')
+            && pos('Équipiers transmission') < pos('BERNARD Bruno') && pos('BERNARD Bruno') < pos('SIMON Julien') && pos('SIMON Julien') < pos('Autres sauveteurs'),
+            'liste non rangée par spécialité (chefs transmission, équipiers transmission, autres)');
         for (const n of ['MOREAU Inès', 'SIMON Julien']) await p.locator('label:visible', { hasText: n }).last().locator('input[type="checkbox"]').check();
         await annulerProchaine();
         await p.locator('label:visible', { hasText: 'BERNARD Bruno' }).last().locator('input[type="checkbox"]').click();
