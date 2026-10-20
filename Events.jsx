@@ -1127,6 +1127,10 @@ let MainCouranteTab = ({
             const departMsg = 'Départ du PC - ' + lieuLabel;
             messageComplet = messageComplet ? messageComplet + '\n' + departMsg : departMsg;
         }
+        // Ajouter mention Retour PC dans le libellé si coché
+        if (formData.retourPC && !messageComplet.toLowerCase().includes('retour')) {
+            messageComplet = messageComplet ? messageComplet + '\nRetour au PC' : 'Retour au PC';
+        }
         // Ajouter mention sens entrée cavité dans le libellé
         if (formData.pointPhone) {
             const ppId3b = formData.pointPhone.indexOf(' - ') >= 0 ? formData.pointPhone.split(' - ')[0].trim() : formData.pointPhone.trim();
@@ -1190,7 +1194,7 @@ let MainCouranteTab = ({
         // MISE À JOUR PLANNING DEPUIS MC
         // ============================================================
         (function() {
-            var ppEff = (formData.pointPhone || '').trim() || (formData.departDuPC ? 'PC' : '');
+            var ppEff = (formData.pointPhone || '').trim() || (formData.departDuPC || formData.retourPC ? 'PC' : '');
             if (!ppEff || !formData.equipe) return;
             var ppId2 = ppEff.indexOf(' - ') >= 0 ? ppEff.split(' - ')[0].trim() : ppEff;
             var ppObj2 = null;
@@ -1199,10 +1203,10 @@ let MainCouranteTab = ({
                 if ((typeof pp2 === 'object' ? pp2.lettre : pp2) === ppId2) { ppObj2 = pp2; break; }
             }
             var texte2 = (formData.evenement || '').toLowerCase();
-            var estDepart2 = formData.departDuPC ||
-                ['depart','départ','part ','quitte','engagement','deploye','descend'].some(function(m){return texte2.indexOf(m)>=0;});
-            var estRetour2 = !estDepart2 &&
-                ['retour','revient','arrive','remonte','sorti'].some(function(m){return texte2.indexOf(m)>=0;});
+            var estDepart2 = !formData.retourPC && (formData.departDuPC ||
+                ['depart','départ','part ','quitte','engagement','deploye','descend'].some(function(m){return texte2.indexOf(m)>=0;}));
+            var estRetour2 = formData.retourPC || (!estDepart2 &&
+                ['retour','revient','arrive','remonte','sorti'].some(function(m){return texte2.indexOf(m)>=0;}));
             var numEq = (formData.equipe.match(/(\d+)/) || [])[1] || '';
             var teamTrouve = null;
             // Priorité 1 : correspondance exacte du nom
@@ -1281,7 +1285,7 @@ let MainCouranteTab = ({
              if (sauveteurCible || teamTrouve) {
                  var initSelec = sauveteurCible ? [sauveteurCible.id] : (teamTrouve ? teamTrouve.members.slice() : []);
                  setMembresSelectionnes(initSelec);
-                 setModalSelectionMembres({ team: teamTrouve, sauveteurCible: sauveteurCible, activite: activite2, slotP: slotP });
+                 setModalSelectionMembres({ team: teamTrouve, sauveteurCible: sauveteurCible, activite: activite2, slotP: slotP, retourPC: !!formData.retourPC && !!teamTrouve });
              }
         })();
 
@@ -2025,13 +2029,14 @@ let MainCouranteTab = ({
                     </div>
                     <div className="col-span-2">
                         <label className="block text-xs font-semibold mb-1">S'agissant d'une progression choisir un point phone</label>
-                        <div className="flex items-center pb-1">
+                        <div className="flex items-center pb-1" style={{flexWrap:'wrap',gap:'4px'}}>
                         <label style={{cursor:"pointer",padding:"4px 8px",borderRadius:"4px",fontSize:"12px",fontWeight:"600",border:"1px solid",backgroundColor:formData.departDuPC?"#16a34a":"#fff",color:formData.departDuPC?"#fff":"#4b5563",borderColor:formData.departDuPC?"#16a34a":"#d1d5db",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"4px"}}><input type="checkbox" checked={formData.departDuPC} onChange={(e) => {
                                 const checked = e.target.checked;
                                 const pcPP = pointsPhone.find(function(pp){ return (typeof pp === 'object' ? pp.lettre : pp) === 'PC'; });
                                 const pcLabel = pcPP ? 'PC - ' + pcPP.nom : 'PC - Poste de Commandement';
                                 setFormData(Object.assign({}, formData, {
                                     departDuPC: checked,
+                                    retourPC: checked ? false : formData.retourPC,
                                     pointPhone: checked ? pcLabel : (formData.pointPhone === pcLabel ? '' : formData.pointPhone),
                                     destinataire: checked ? '' : formData.destinataire,
                                     categorie: checked ? 'progression' : (formData.destinataire ? 'communication' : 'progression')
@@ -2053,6 +2058,19 @@ let MainCouranteTab = ({
                                 })}
                             </div>
                         )}
+                        {/* Retour PC : membres de l'équipe revenus au PC (choisis après l'enregistrement) ;
+                            ils quittent l'équipe, dissoute si tous sont revenus */}
+                        <label title="Retour au PC des membres de l'équipe : ils deviennent disponibles et quittent l'équipe (dissoute s'ils sont tous revenus)" style={{cursor:"pointer",padding:"4px 8px",borderRadius:"4px",fontSize:"12px",fontWeight:"600",border:"1px solid",backgroundColor:formData.retourPC?"#0369a1":"#fff",color:formData.retourPC?"#fff":"#4b5563",borderColor:formData.retourPC?"#0369a1":"#d1d5db",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"4px"}}><input type="checkbox" checked={!!formData.retourPC} onChange={(e) => {
+                                const checked = e.target.checked;
+                                const pcPP = pointsPhone.find(function(pp){ return (typeof pp === 'object' ? pp.lettre : pp) === 'PC'; });
+                                const pcLabel = pcPP ? 'PC - ' + pcPP.nom : 'PC - Poste de Commandement';
+                                setFormData(Object.assign({}, formData, {
+                                    retourPC: checked,
+                                    departDuPC: checked ? false : formData.departDuPC,
+                                    pointPhone: checked ? pcLabel : (formData.pointPhone === pcLabel ? '' : formData.pointPhone),
+                                    categorie: checked ? 'progression' : formData.categorie
+                                }));
+                            }} style={{display:"none"}} />🏠 Retour PC</label>
                         </div>
                     </div>
                     <div className="col-span-4">
@@ -2118,12 +2136,16 @@ let MainCouranteTab = ({
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
             <div style={{background:'#fff',borderRadius:'10px',padding:'24px',minWidth:'320px',maxWidth:'480px',width:'90%',boxShadow:'0 10px 40px rgba(0,0,0,0.3)'}}>
                 <h3 style={{fontWeight:'700',fontSize:'16px',marginBottom:'8px'}}>
-                    {modalSelectionMembres.pointPhoneOnly
+                    {modalSelectionMembres.retourPC
+                        ? `🏠 Retour au PC — ${modalSelectionMembres.team.name}`
+                        : modalSelectionMembres.pointPhoneOnly
                         ? `📍 Qui est au point phone ? (${modalSelectionMembres.team?.name || ''})`
                         : `Mise à jour planning — ${modalSelectionMembres.activite}`}
                 </h3>
                 <p style={{fontSize:'12px',color:'#6b7280',marginBottom:'12px'}}>
-                    Sélectionnez les membres à mettre à jour :
+                    {modalSelectionMembres.retourPC
+                        ? 'Cochez les membres revenus au PC : ils deviennent disponibles et quittent l\'équipe. S\'ils sont tous revenus, l\'équipe est dissoute (fin de mission).'
+                        : 'Sélectionnez les membres à mettre à jour :'}
                 </p>
                 {/* Case "Toute l'équipe" */}
                 {modalSelectionMembres.team && (
@@ -2217,6 +2239,28 @@ let MainCouranteTab = ({
                         };
                         // Ligne de main courante + planning des membres (créneaux vides précédents complétés)
                         actions.affecterPlanningDepuisMC(newMcEvent, ids, act, slot);
+                        // Retour PC : les membres revenus quittent l'équipe ; tous revenus → fin de mission
+                        // (mêmes lignes de main courante que dans la gestion des équipes)
+                        var equipeRetour = modal.retourPC && teams.find(function(t){ return t.id === modal.team.id && t.status !== 'dissolved'; });
+                        if (equipeRetour) {
+                            var horodatageR = new Date().toISOString();
+                            var ppPC = pointsPhone.find(function(pp){ return (typeof pp === 'object' ? pp.lettre : pp) === 'PC'; });
+                            var libellePC = ppPC && typeof ppPC === 'object' ? 'PC - ' + (ppPC.nom || 'Poste de Commandement') : 'PC - Poste de Commandement';
+                            var ligneR = function(texte) {
+                                if (mcMode && mcMode !== 'principale') return null;
+                                return { id: nouvelId(), isoTimestamp: horodatageR, secretaire: 'Système', dateHeure: new Date(horodatageR).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: texte, pointPhone: libellePC, equipe: equipeRetour.name, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false };
+                            };
+                            var restants = equipeRetour.members.filter(function(id){ return ids.indexOf(id) < 0; });
+                            if (restants.length === 0) {
+                                var nomsMembres = equipeRetour.members.map(function(id){ var s = masterSauveteursList.find(function(x){ return x.id === id; }); return s ? s.name : id; }).join(', ');
+                                actions.dissoudreEquipe(equipeRetour.id, horodatageR, ligneR('🔚 Dissolution ' + equipeRetour.name + '\nMembres: ' + nomsMembres));
+                            } else {
+                                ids.forEach(function(id) {
+                                    var s = masterSauveteursList.find(function(x){ return x.id === id; });
+                                    if (equipeRetour.members.indexOf(id) >= 0) actions.libererMembre(equipeRetour.id, id, horodatageR, ligneR('↩️ ' + (s ? s.name : id) + ' libéré de ' + equipeRetour.name + ' vers PC'));
+                                });
+                            }
+                        }
                         setModalSelectionMembres(null);
                         setMembresSelectionnes([]);
                     }}
