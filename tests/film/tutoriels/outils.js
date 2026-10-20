@@ -65,6 +65,12 @@ const scriptPage = () => {
             d.innerHTML = `<b>${titre}</b><br>`; d.appendChild(document.createTextNode(texte));
             d.dataset.vie = Math.round(ms / 500); document.getElementById('__film_messages').appendChild(d);
         },
+        // Repère de synchronisation (12 px dans le coin) : rouge, vert, bleu à tour de rôle ; voir synchroniser
+        balise: (i) => {
+            let b = document.getElementById('__film_balise');
+            if (!b) { b = document.createElement('div'); b.id = '__film_balise'; b.style.cssText = 'position:fixed;left:0;top:0;width:12px;height:12px;z-index:2147483647;pointer-events:none'; document.body.appendChild(b); }
+            b.style.background = ['#ff0000', '#00ff00', '#0000ff'][i % 3];
+        },
         // Appelé toutes les 500 ms depuis le test (l'horloge de la page est arrêtée : pas de setTimeout)
         vieillir: (tout) => document.querySelectorAll('.__film_message, .__film_onde').forEach(e => {
             e.dataset.vie = tout ? 0 : Number(e.dataset.vie) - 1;
@@ -115,9 +121,16 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
     let app = await lancer(dossierVideo, debut);
     let page = await fenetrePrincipale(app);
 
-    const journal = { id, videoDebut: Date.now(), marques: [] };
+    const journal = { id, videoDebut: Date.now(), marques: [], balises: [] };
     const vieillir = (pg) => setInterval(() => pg.evaluate(() => window.__film && window.__film.vieillir()).catch(() => {}), 500);
     let minuterie = vieillir(page);
+    // Repère de synchronisation de la vidéo principale toutes les 2 s (heure notée une fois affiché)
+    let nBalise = 0;
+    const baliseur = setInterval(() => {
+        const i = nBalise++, envoi = Date.now();
+        page.evaluate((n) => window.__film && window.__film.balise(n), i)
+            .then(() => journal.balises.push({ t: Math.round((envoi + Date.now()) / 2), i })).catch(() => {});
+    }, 2000);
     let video = page.video();
     const t = new Tuto(page, journal);
     t.app = app;
@@ -182,11 +195,15 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
         }
         if (journal.postes.length === 1) journal.tablette = journal.postes[0];
         clearInterval(minuterie);
+        clearInterval(baliseur);
         journal.video = video ? await video.path() : null;
         journal.fin = Date.now();
         await app.close().catch(() => {});
         journal.fermeture = Date.now();   // la vidéo se termine ici (sert à caler les explications)
         if (segments.length && journal.video) assembler(journal, segments, dossierVideo);
+        if (journal.video) {
+            try { synchroniser(journal); } catch (e) { console.error('synchronisation impossible :', e.message); }
+        }
         fs.writeFileSync(path.join(dossierVideo, 'journal.json'), JSON.stringify(journal, null, 1));
         try { fs.rmSync(donnees, { recursive: true, force: true }); } catch (e) { /* encore verrouillé : dossier temporaire laissé */ }
     };
@@ -195,14 +212,54 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
 
 // Film avec fermeture / réouverture : une seule vidéo (lancement 1, noir, lancement 2…) ; les
 // heures des marques de chaque lancement suivant sont décalées pour suivre l'assemblage
-const assembler = (journal, segments, dossierVideo) => {
-    const { execFileSync } = require('child_process');
-    const paquets = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Packages');
-    const gyan = fs.existsSync(paquets) && fs.readdirSync(paquets).find(d => d.startsWith('Gyan.FFmpeg'));
-    const build = gyan && fs.readdirSync(path.join(paquets, gyan)).find(d => d.startsWith('ffmpeg-'));
-    const FF = process.env.FFMPEG_DIR ? process.env.FFMPEG_DIR + path.sep : build ? path.join(paquets, gyan, build, 'bin') + path.sep : '';
-    const duree = f => Number(execFileSync(FF + 'ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]).toString().trim());
+const { execFileSync } = require('child_process');
+const paquetsWinget = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Packages');
+const gyan = fs.existsSync(paquetsWinget) && fs.readdirSync(paquetsWinget).find(d => d.startsWith('Gyan.FFmpeg'));
+const buildFfmpeg = gyan && fs.readdirSync(path.join(paquetsWinget, gyan)).find(d => d.startsWith('ffmpeg-'));
+const FF = process.env.FFMPEG_DIR ? process.env.FFMPEG_DIR + path.sep : buildFfmpeg ? path.join(paquetsWinget, gyan, buildFfmpeg, 'bin') + path.sep : '';
+const duree = f => Number(execFileSync(FF + 'ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]).toString().trim());
 
+// L'enregistrement vidéo prend du retard sur l'application (plusieurs secondes quand la page
+// est chargée) : on retrouve dans la vidéo chaque changement de couleur du repère (balises),
+// puis l'heure de chaque marque est recalée par interpolation entre les balises voisines.
+// Les marques sont ainsi exprimées dans le temps de la vidéo (calculs de monter.js et voix.js
+// inchangés : debutVideo = fermeture − durée).
+const synchroniser = (journal) => {
+    const dv = duree(journal.video);
+    const debutVideo = journal.fermeture - dv * 1000;
+    const IPS = 25;
+    const brut = execFileSync(FF + 'ffmpeg', ['-v', 'error', '-i', journal.video, '-vf', `fps=${IPS},crop=4:4:4:4,scale=1:1`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1 << 30 });
+    const couleur = (r, g, b) => r > 150 && g < 100 && b < 100 ? 0 : g > 150 && r < 100 && b < 100 ? 1 : b > 150 && r < 100 && g < 100 ? 2 : -1;
+    const changements = [];
+    let avant = -1;
+    for (let k = 0; k < brut.length / 3; k++) {
+        const c = couleur(brut[3 * k], brut[3 * k + 1], brut[3 * k + 2]);
+        if (c >= 0 && c !== avant) changements.push({ v: k / IPS, c });
+        if (c >= 0) avant = c;
+    }
+    // Appariement dans l'ordre : chaque changement vu ↔ la prochaine balise de même couleur
+    const balises = [...journal.balises].sort((a, b) => a.t - b.t);
+    const paires = [];
+    let j = 0;
+    for (const ch of changements) {
+        let k = j;
+        while (k < balises.length && k < j + 3 && balises[k].i % 3 !== ch.c) k++;
+        if (k < balises.length && balises[k].i % 3 === ch.c) { paires.push({ t: balises[k].t, v: ch.v }); j = k + 1; }
+    }
+    if (paires.length < 2) return;
+    const video = (t) => {
+        let a = paires[0], b = paires[1];
+        for (let k = 1; k < paires.length && paires[k - 1].t < t; k++) { a = paires[k - 1]; b = paires[k]; }
+        if (t <= paires[0].t) return paires[0].v + (t - paires[0].t) / 1000;
+        if (t >= paires[paires.length - 1].t) { const z = paires[paires.length - 1]; return z.v + (t - z.t) / 1000; }
+        return a.v + (b.v - a.v) * (t - a.t) / (b.t - a.t);
+    };
+    const retards = paires.map(p => p.v - (p.t - debutVideo) / 1000);
+    for (const m of journal.marques) m.t = Math.round(debutVideo + video(m.t) * 1000);
+    journal.synchro = { balises: paires.length, retardMin: Math.min(...retards).toFixed(2), retardMax: Math.max(...retards).toFixed(2) };
+};
+
+const assembler = (journal, segments, dossierVideo) => {
     const parties = [...segments, { video: journal.video, fermeture: journal.fermeture, noir: 0 }]
         .map(s => ({ ...s, duree: duree(s.video) }));
     parties.forEach(p => { p.debutReel = p.fermeture - p.duree * 1000; });
@@ -212,7 +269,7 @@ const assembler = (journal, segments, dossierVideo) => {
         const prec = parties[i - 1];
         parties[i].decalage = prec.fermeture + prec.decalage + prec.noir * 1000 - parties[i].debutReel;
     }
-    for (const m of journal.marques) {
+    for (const m of [...journal.marques, ...journal.balises]) {
         const i = parties.findIndex(p => m.t < p.fermeture);
         const p = parties[i < 0 ? parties.length - 1 : i];
         // Marque pendant le redémarrage (avant le début de la vidéo suivante) : sur l'écran noir
