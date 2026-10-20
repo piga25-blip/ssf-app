@@ -7,7 +7,7 @@ const GROUPES = [
 ];
 
 const TUTORIELS = [
-    ['00-demarrer', 'Démarrer un secours', "Créer le dossier d'un secours ou d'un exercice, choisir le mode d'utilisation, indiquer le secrétaire, corriger les informations du secours.", 'logiciel'],
+    ['00-demarrer', 'Démarrer un secours', "Créer le dossier d'un secours ou d'un exercice, choisir le mode d'utilisation, indiquer le secrétaire, corriger les informations et le délai d'alerte, puis fermer et rouvrir l'application sans rien perdre.", 'logiciel'],
     ['01-sauveteurs', 'Inscrire les sauveteurs', "Charger la liste des sauveteurs depuis un fichier CSV, ajouter un sauveteur qui n'est pas sur la liste, puis enregistrer les arrivées et les départs sur site.", 'logiciel'],
     ['02-points-phone', 'Inscrire les points phones', "Déclarer les points phones de la cavité (lettre, nom, type de lieu, position), les modifier ou les supprimer.", 'logiciel'],
     ['03-equipes', 'Gérer les équipes', "Créer une équipe, ajouter un membre, scinder l'équipe, déplacer un membre dans une autre équipe, terminer la mission.", 'logiciel'],

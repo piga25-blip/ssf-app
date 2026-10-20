@@ -90,31 +90,57 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
     fs.rmSync(dossierVideo, { recursive: true, force: true });
     fs.mkdirSync(dossierVideo, { recursive: true });
     const donnees = fs.mkdtempSync(path.join(os.tmpdir(), 'ssf-tuto-'));
-    const app = await electron.launch({
-        args: [RACINE], cwd: RACINE,
-        env: { ...process.env, SSF_TEST_USER_DATA: donnees, SSF_PORT: '0', ...env },
-        recordVideo: { dir: dossierVideo, size: { width: 1400, height: 900 } },
-    });
     // Téléchargements (exports, pièces jointes…) enregistrés sans fenêtre « Enregistrer sous »
     const telechargements = fs.mkdtempSync(path.join(os.tmpdir(), 'ssf-tuto-dl-'));
     const sansDialogue = (a) => a.evaluate(({ session }, d) => {
         session.defaultSession.on('will-download', (e, item) => item.setSavePath(d + '\\' + Date.now() + '-' + item.getFilename()));
     }, telechargements);
-    await sansDialogue(app);
-    const page = await fenetrePrincipale(app);
-    await app.context().addInitScript(scriptPage);
-    // debut: 'reel' : horloge réelle (films réseau : les autres postes sont datés par le PC principal à l'heure réelle)
-    if (debut !== 'reel') await page.clock.install({ time: debut });
-    await page.reload();
-    await page.waitForFunction(() => document.querySelector('#root')?.children.length > 0, null, { timeout: 60000 });
-    await page.waitForTimeout(1500);
+    // Lancement de l'application (aussi pour la rouvrir en cours de film : même dossier de données)
+    const lancer = async (dossier, heure) => {
+        const a = await electron.launch({
+            args: [RACINE], cwd: RACINE,
+            env: { ...process.env, SSF_TEST_USER_DATA: donnees, SSF_PORT: '0', ...env },
+            recordVideo: { dir: dossier, size: { width: 1400, height: 900 } },
+        });
+        await sansDialogue(a);
+        const pg = await fenetrePrincipale(a);
+        await a.context().addInitScript(scriptPage);
+        // debut: 'reel' : horloge réelle (films réseau : les autres postes sont datés par le PC principal à l'heure réelle)
+        if (heure !== 'reel') await pg.clock.install({ time: heure });
+        await pg.reload();
+        await pg.waitForFunction(() => document.querySelector('#root')?.children.length > 0, null, { timeout: 60000 });
+        await pg.waitForTimeout(1500);
+        return a;
+    };
+    let app = await lancer(dossierVideo, debut);
+    let page = await fenetrePrincipale(app);
 
     const journal = { id, videoDebut: Date.now(), marques: [] };
-    const minuterie = setInterval(() => page.evaluate(() => window.__film && window.__film.vieillir()).catch(() => {}), 500);
-    const video = page.video();
+    const vieillir = (pg) => setInterval(() => pg.evaluate(() => window.__film && window.__film.vieillir()).catch(() => {}), 500);
+    let minuterie = vieillir(page);
+    let video = page.video();
     const t = new Tuto(page, journal);
     t.app = app;
     t.telechargements = telechargements;
+
+    // Fermer l'application puis la rouvrir (les données restent) : chaque lancement a sa vidéo,
+    // assemblées à la fin avec un court écran noir entre les deux (voir assembler)
+    const segments = [];
+    t.fermerEtRouvrir = async ({ minutes = 1, noir = 2 } = {}) => {
+        const heure = debut === 'reel' ? 'reel' : await page.evaluate(() => Date.now()) + minutes * 60000;
+        await pause(1.5);   // le serveur finit d'écrire
+        clearInterval(minuterie);
+        const v = await video.path();
+        await app.close().catch(() => {});
+        segments.push({ video: v, fermeture: Date.now(), noir });
+        app = await lancer(path.join(dossierVideo, 'relance-' + segments.length), heure);
+        page = await fenetrePrincipale(app);
+        minuterie = vieillir(page);
+        video = page.video();
+        t.page = page;
+        t.app = app;
+        return page;
+    };
 
     // Un autre poste qui ouvre `url` (fenêtre de navigateur, comme Chrome sur un autre appareil),
     // filmé lui aussi ; `nom` est l'étiquette affichée sous sa vidéo au montage.
@@ -160,14 +186,63 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
         journal.fin = Date.now();
         await app.close().catch(() => {});
         journal.fermeture = Date.now();   // la vidéo se termine ici (sert à caler les explications)
+        if (segments.length && journal.video) assembler(journal, segments, dossierVideo);
         fs.writeFileSync(path.join(dossierVideo, 'journal.json'), JSON.stringify(journal, null, 1));
         try { fs.rmSync(donnees, { recursive: true, force: true }); } catch (e) { /* encore verrouillé : dossier temporaire laissé */ }
     };
     return t;
 };
 
+// Film avec fermeture / réouverture : une seule vidéo (lancement 1, noir, lancement 2…) ; les
+// heures des marques de chaque lancement suivant sont décalées pour suivre l'assemblage
+const assembler = (journal, segments, dossierVideo) => {
+    const { execFileSync } = require('child_process');
+    const paquets = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Packages');
+    const gyan = fs.existsSync(paquets) && fs.readdirSync(paquets).find(d => d.startsWith('Gyan.FFmpeg'));
+    const build = gyan && fs.readdirSync(path.join(paquets, gyan)).find(d => d.startsWith('ffmpeg-'));
+    const FF = process.env.FFMPEG_DIR ? process.env.FFMPEG_DIR + path.sep : build ? path.join(paquets, gyan, build, 'bin') + path.sep : '';
+    const duree = f => Number(execFileSync(FF + 'ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]).toString().trim());
+
+    const parties = [...segments, { video: journal.video, fermeture: journal.fermeture, noir: 0 }]
+        .map(s => ({ ...s, duree: duree(s.video) }));
+    parties.forEach(p => { p.debutReel = p.fermeture - p.duree * 1000; });
+    // Décalage de chaque partie : elle commence juste après la précédente et son écran noir
+    parties[0].decalage = 0;
+    for (let i = 1; i < parties.length; i++) {
+        const prec = parties[i - 1];
+        parties[i].decalage = prec.fermeture + prec.decalage + prec.noir * 1000 - parties[i].debutReel;
+    }
+    for (const m of journal.marques) {
+        const i = parties.findIndex(p => m.t < p.fermeture);
+        const p = parties[i < 0 ? parties.length - 1 : i];
+        // Marque pendant le redémarrage (avant le début de la vidéo suivante) : sur l'écran noir
+        if (i > 0 && m.t < p.debutReel) m.t = parties[i - 1].fermeture + parties[i - 1].decalage;
+        else m.t += p.decalage;
+    }
+    const entrees = [], noms = [];
+    let graphe = '';
+    for (const p of parties) {
+        entrees.push('-i', p.video);
+        graphe += `[${noms.length}:v]scale=1400:900,fps=25,setsar=1[v${noms.length}];`;
+        noms.push(`[v${noms.length}]`);
+        if (p.noir) {
+            entrees.push('-f', 'lavfi', '-t', String(p.noir), '-i', 'color=c=black:s=1400x900:r=25');
+            graphe += `[${noms.length}:v]setsar=1[v${noms.length}];`;
+            noms.push(`[v${noms.length}]`);
+        }
+    }
+    graphe += noms.join('') + `concat=n=${noms.length}:v=1:a=0[sortie]`;
+    const sortie = path.join(dossierVideo, 'assemble.mp4');
+    execFileSync(FF + 'ffmpeg', ['-v', 'error', '-y', ...entrees, '-filter_complex', graphe, '-map', '[sortie]',
+        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', sortie]);
+    const derniere = parties[parties.length - 1];
+    journal.video = sortie;
+    journal.fin += derniere.decalage;
+    journal.fermeture += derniere.decalage;
+};
+
 class Tuto {
-    constructor(page, journal) { this.page = page; this.journal = journal; this.enPreparation = true; this.nChap = 0; }
+    constructor(page, journal) { this.page = page; this.journal = journal; this.enPreparation = true; this.nChap = 0; this.cadence = 1; }
 
     noter(type, texte, extra = {}) { this.journal.marques.push({ t: Date.now(), type, texte, ...extra }); }
 
@@ -195,6 +270,13 @@ class Tuto {
 
     async rythme(s) { if (!this.enPreparation) await pause(s); else await pause(0.1); }
 
+    // Actions enchaînées plus vite (pauses entre les actions × facteur), le temps de fn
+    async vite(fn, facteur = 0.5) {
+        const avant = this.cadence;
+        this.cadence = facteur;
+        try { await fn(); } finally { this.cadence = avant; }
+    }
+
     // Pointeur sur l'élément + contour, puis action
     async viser(locator) {
         await locator.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
@@ -204,7 +286,7 @@ class Tuto {
             const x = b.x + Math.min(b.width / 2, 40), y = b.y + b.height / 2;
             await this.page.evaluate(([x, y]) => window.__film && window.__film.curseur(x, y), [x, y]).catch(() => {});
             await locator.first().evaluate(el => { el.__o = el.style.outline; el.__oo = el.style.outlineOffset; el.style.outline = '4px solid #ff2d55'; el.style.outlineOffset = '2px'; }).catch(() => {});
-            await pause(RYTHME.avantAction);
+            await pause(RYTHME.avantAction * this.cadence);
             await locator.first().evaluate(el => { el.style.outline = el.__o || ''; el.style.outlineOffset = el.__oo || ''; }).catch(() => {});
             return { x, y };
         }
@@ -217,14 +299,14 @@ class Tuto {
         const p = await this.viser(locator);
         await this.onde(p);
         await locator.first().click(options);
-        await this.rythme(RYTHME.apresAction);
+        await this.rythme(RYTHME.apresAction * this.cadence);
     }
 
     async cocher(locator) {
         const p = await this.viser(locator);
         await this.onde(p);
         await locator.first().check();
-        await this.rythme(1.2);
+        await this.rythme(1.2 * this.cadence);
     }
 
     // options.iso : valeur à utiliser sans frappe (champs date / heure : la frappe suit le format affiché)
@@ -234,8 +316,8 @@ class Tuto {
         await locator.first().click();
         if (!options.iso) await locator.first().fill('');
         if (this.enPreparation || RAPIDE) await locator.first().fill(String(options.iso || texte));
-        else await locator.first().pressSequentially(String(texte), { delay: RYTHME.lettre * 1000 });
-        await this.rythme(1.2);
+        else await locator.first().pressSequentially(String(texte), { delay: RYTHME.lettre * Math.min(1, this.cadence * 1.4) * 1000 });
+        await this.rythme(1.2 * this.cadence);
     }
 
     // Glisser d'un élément à un autre (sélection de cases, poignée de recopie…)
@@ -250,9 +332,9 @@ class Tuto {
         }
         if (arrivee.first) await arrivee.first().hover({ steps: 12 });
         else await this.page.mouse.move(arrivee.x, arrivee.y, { steps: 12 });
-        await this.rythme(0.9);
+        await this.rythme(0.9 * this.cadence);
         await this.page.mouse.up();
-        await this.rythme(RYTHME.apresAction);
+        await this.rythme(RYTHME.apresAction * this.cadence);
         return a;
     }
 
@@ -263,22 +345,22 @@ class Tuto {
         await locator.first().click();
         await locator.first().press('Control+End');
         if (this.enPreparation || RAPIDE) await locator.first().fill((await locator.first().inputValue()) + texte);
-        else await locator.first().pressSequentially(texte, { delay: RYTHME.lettre * 1000 });
-        await this.rythme(1.2);
+        else await locator.first().pressSequentially(texte, { delay: RYTHME.lettre * Math.min(1, this.cadence * 1.4) * 1000 });
+        await this.rythme(1.2 * this.cadence);
     }
 
     async choisir(locator, valeur) {
         const p = await this.viser(locator);
         await this.onde(p);
         await locator.first().selectOption(valeur);
-        await this.rythme(1.5);
+        await this.rythme(1.5 * this.cadence);
     }
 
     async fichier(locatorVisible, inputFichier, chemin) {
         const p = await this.viser(locatorVisible);
         await this.onde(p);
         await inputFichier.setInputFiles(chemin);
-        await this.rythme(RYTHME.apresAction);
+        await this.rythme(RYTHME.apresAction * this.cadence);
     }
 
     // Raccourcis
