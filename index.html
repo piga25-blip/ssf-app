@@ -524,6 +524,13 @@
             }
         }
         
+        /* Impression de la synthèse : seule la zone de la synthèse est imprimée */
+        @media print {
+            body.impression-synthese * { visibility: hidden; }
+            body.impression-synthese .zone-synthese, body.impression-synthese .zone-synthese * { visibility: visible; }
+            body.impression-synthese .zone-synthese { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+
         /* Classes de contrôle pour l'impression sélective */
         body.print-synthese-only .section-detail,
         body.print-detail-only .section-synthese {

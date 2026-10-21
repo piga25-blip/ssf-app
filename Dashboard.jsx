@@ -88,12 +88,14 @@ let SyntheseTab = ({
             document.body.classList.remove('print-synthese-only', 'print-detail-only');
         }
         
+        // Seule la synthèse est imprimée (pas l'en-tête, les onglets ni les boutons de l'application)
+        document.body.classList.add('impression-synthese');
         // Lancer l'impression
         window.print();
         
         // Nettoyer après impression
         setTimeout(() => {
-            document.body.classList.remove('print-synthese-only', 'print-detail-only');
+            document.body.classList.remove('print-synthese-only', 'print-detail-only', 'impression-synthese');
         }, 100);
     };
 
@@ -145,10 +147,10 @@ let SyntheseTab = ({
     };
 
     return (
-        <div className="p-6">
+        <div className="p-6 zone-synthese">
             <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <h2 className="text-2xl font-bold text-blue-700 mb-6 no-print">
-                    Synthèse de la Situation sur les Affectations (V10.36)
+                    Synthèse de la Situation sur les Affectations
                 </h2>
 
                 {/* Contrôle de l'heure de référence */}
@@ -206,7 +208,7 @@ let SyntheseTab = ({
                 {/* Titre pour l'impression uniquement */}
                 <div className="print-only" style={{display: 'none'}}>
                     <h1 style={{fontSize: '18pt', fontWeight: 'bold', marginBottom: '10mm', color: '#1d4ed8'}}>
-                        Synthèse de la Situation sur les Affectations (V10.36)
+                        Synthèse de la Situation sur les Affectations
                     </h1>
                     <p style={{fontSize: '14pt', fontWeight: 'bold', marginBottom: '10mm', color: '#2563eb'}}>
                         Heure de référence : {formatReferenceTimeAsInterval(referenceTime)}
