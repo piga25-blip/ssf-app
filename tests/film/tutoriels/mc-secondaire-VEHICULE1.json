@@ -1,0 +1,33 @@
+{
+  "version": "14.0.4",
+  "exportType": "events_only",
+  "timestamp": "2026-03-14T08:00:00.000Z",
+  "mcIdentifiant": "VEHICULE1",
+  "mcMode": "secondaire",
+  "mcRecopie": null,
+  "events": [
+    {
+      "id": "VEHICULE1-1",
+      "numero": "VEHICULE1-001",
+      "secretaire": "Marc GIRAUD",
+      "isoTimestamp": "2026-03-14T07:05:00.000Z",
+      "dateHeure": "14/03/2026 08:05:00",
+      "categorie": "logistique",
+      "evenement": "Départ du dépôt avec le matériel de pompage.",
+      "messageImportant": false,
+      "fait": false
+    },
+    {
+      "id": "VEHICULE1-2",
+      "numero": "VEHICULE1-002",
+      "secretaire": "Marc GIRAUD",
+      "isoTimestamp": "2026-03-14T07:40:00.000Z",
+      "dateHeure": "14/03/2026 08:40:00",
+      "categorie": "logistique",
+      "evenement": "Arrivée au parking de la cavité, matériel déchargé.",
+      "messageImportant": false,
+      "fait": false
+    }
+  ],
+  "nextEventNumber": 3
+}

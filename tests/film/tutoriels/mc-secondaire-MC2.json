@@ -1,0 +1,33 @@
+{
+  "version": "14.0.4",
+  "exportType": "events_only",
+  "timestamp": "2026-03-14T08:00:00.000Z",
+  "mcIdentifiant": "MC2",
+  "mcMode": "secondaire",
+  "mcRecopie": null,
+  "events": [
+    {
+      "id": "MC2-1",
+      "numero": "MC2-001",
+      "secretaire": "Julie FAURE",
+      "isoTimestamp": "2026-03-14T07:10:00.000Z",
+      "dateHeure": "14/03/2026 08:10:00",
+      "categorie": "communication",
+      "evenement": "Message de : CODIS pour PC Base Arrière\nDeux renforts du SSF voisin en route, arrivée prévue vers 9 h 30.",
+      "messageImportant": false,
+      "fait": false
+    },
+    {
+      "id": "MC2-2",
+      "numero": "MC2-002",
+      "secretaire": "Julie FAURE",
+      "isoTimestamp": "2026-03-14T07:25:00.000Z",
+      "dateHeure": "14/03/2026 08:25:00",
+      "categorie": "logistique",
+      "evenement": "Matériel de pompage chargé dans le véhicule, départ vers le site.",
+      "messageImportant": false,
+      "fait": false
+    }
+  ],
+  "nextEventNumber": 3
+}
