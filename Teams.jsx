@@ -232,6 +232,15 @@ let GestionEquipesModal = ({
             return;
         }
 
+        // Membres déjà dans une autre équipe : choisis ici en connaissance de cause, ou mis dans
+        // cette autre équipe entre-temps sur un autre poste. On le redit avant de les déplacer.
+        const deplaces = selectedMembres
+            .filter(id => membersInTeams.has(id))
+            .map(id => ({ nom: masterSauveteursList.find(s => s.id === id)?.name || id, equipe: membersInTeams.get(id).name }));
+        if (deplaces.length > 0 && !window.confirm(`⚠️ Déjà dans une autre équipe (peut-être ajouté entre-temps sur un autre poste) :\n${deplaces.map(d => `• ${d.nom} — ${d.equipe}`).join('\n')}\n\nLe(s) retirer de cette équipe pour l'affecter à l'Équipe ${nouvelleEquipe.numero} ?\n(Annuler pour revoir les membres.)`)) {
+            return;
+        }
+
         const chefNom = masterSauveteursList.find(s => s.id === selectedMembres[0])?.name || '';
         const membresNoms = selectedMembres.map(id => masterSauveteursList.find(s => s.id === id)?.name).filter(Boolean);
 
@@ -267,6 +276,8 @@ let GestionEquipesModal = ({
 
         const horodatage = new Date().toISOString();
         const evenements = [{ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: NUMERO_AUTO, fait: false }];
+        // L'équipe d'origine perd ces membres : c'est tracé
+        deplaces.forEach(d => evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `↪️ ${d.nom} retiré de ${d.equipe} pour l'Équipe ${nouvelleEquipe.numero}`, numero: NUMERO_AUTO, fait: false }));
 
         // Activité « Engagé » (« Gestion » pour une équipe de gestion) au quart d'heure actuel,
         // si l'heure est dans le planning : appliquée par l'action, avec sa ligne de main courante
