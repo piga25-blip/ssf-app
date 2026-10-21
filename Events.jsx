@@ -854,6 +854,17 @@ let MainCouranteTab = ({
         const messagesImportants = events.filter(e => e.messageImportant).length;
         const evenementsFaits = events.filter(e => e.fait).length;
         
+        // Même ordre que le tableau (plus récent en haut) : un événement inséré (002a) se range
+        // à sa place et non à la fin
+        const cleNumero = (num) => {
+            const m = String(num || '').match(/^(\d+)([a-z]*)$/i);
+            return m ? [parseInt(m[1], 10), m[2]] : [0, ''];
+        };
+        const eventsTries = [...events].sort((a, b) => {
+            const [na, sa] = cleNumero(a.numero), [nb, sb] = cleNumero(b.numero);
+            return na !== nb ? nb - na : sb.localeCompare(sa);
+        });
+
         // Construction du HTML pour l'impression
         const printContent = `
             <!DOCTYPE html>
@@ -1036,7 +1047,7 @@ let MainCouranteTab = ({
                         </tr>
                     </thead>
                     <tbody>
-                        ${events.map(event => {
+                        ${eventsTries.map(event => {
                             const localisation = [
                                 event.pointPhone ? '📍 ' + event.pointPhone : '',
                                 event.personneConcernee ? '👤 ' + event.personneConcernee : '',
@@ -1063,7 +1074,7 @@ let MainCouranteTab = ({
                 </table>
 
                 <div class="footer">
-                    <p>Document généré par Application SSF Unifiée V{APP_VERSION}</p>
+                    <p>Document généré par Application SSF Unifiée V${APP_VERSION}</p>
                     <p>${titre} - ${totalEvents} événement(s)</p>
                 </div>
             </body>
