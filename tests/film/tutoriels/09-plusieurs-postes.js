@@ -25,7 +25,7 @@ executer('09-plusieurs-postes', 'Plusieurs ordinateurs et tablettes en même tem
     };
 
     await t.chapitre('Une organisation à plusieurs postes');
-    await t.dire('Sur un gros secours, le PC n\'est pas tenu par une seule personne. Ici : le PC principal (Claire), un second ordinateur pour le secrétariat (Paul), une tablette pour la logistique (Lucas) et une tablette d\'affichage pour le COS.',
+    await t.dire('Sur un gros secours, le PC n\'est pas tenu par une seule personne. Ici : le PC principal (Claire), un second ordinateur pour le secrétariat (Paul), une tablette pour la logistique (Lucas) et une tablette d\'affichage pour le DSS, le directeur du secours souterrain, ou pour d\'autres personnes qu\'il autorise (le COS…).',
         'Chacun travaille sur le même secours, en même temps, depuis son appareil : plus d\'aller-retour de papiers ni de recopie, et tout le monde voit la même situation.');
 
     await t.chapitre('Préparer le PC principal');
@@ -48,27 +48,27 @@ executer('09-plusieurs-postes', 'Plusieurs ordinateurs et tablettes en même tem
     await pc2.page.waitForTimeout(2000);
     await t.dire('Les deux tablettes photographient le code QR affiché par le PC : elles se connectent directement, sans taper le code.');
     const tab1 = await ouvrir(`${adresse}/?code=${code}`, { nom: 'Tablette 1 (logistique)' }, 'Lucas BLANC');
-    const tab2 = await ouvrir(`${adresse}/?code=${code}`, { nom: 'Tablette 2 (affichage COS)' }, 'Affichage COS');
+    const tab2 = await ouvrir(`${adresse}/?code=${code}`, { nom: 'Tablette 2 (affichage DSS)' }, 'Affichage DSS');
     await t.rythme(2);
     await capture(tab1, 'tab1-connectee');
 
     await t.chapitre('Un rôle pour chaque poste');
-    await t.dire('Sur le PC principal, « Postes connectés » liste les trois appareils, nommés d\'après leur utilisateur. Tous sont en « Saisie » ; la tablette d\'affichage du COS passe en « Consultation ».',
+    await t.dire('Sur le PC principal, « Postes connectés » liste les trois appareils, nommés d\'après leur utilisateur. Tous sont en « Saisie » ; la tablette d\'affichage du DSS passe en « Consultation ».',
         'Un écran d\'affichage n\'a pas besoin de saisir : en consultation seule, une erreur de manipulation ne peut rien modifier.');
     await t.clic(t.bouton('🌐 Mode réseau'));
     await capture(t, 'pc-3-postes');
-    await t.choisir(p.locator('tr:visible', { hasText: 'Affichage COS' }).locator('select'), 'consultation');
+    await t.choisir(p.locator('tr:visible', { hasText: 'Affichage DSS' }).locator('select'), 'consultation');
     await t.clic(t.bouton(/^Fermer$/, { dernier: true }));
     await tab2.rythme(2);
 
     await t.chapitre('Saisir à plusieurs en même temps');
     await t.dire('Trois messages arrivent au même moment : chacun les tape sur son poste…');
-    await t.saisir(t.champ('Description...'), 'Appel du COS : renfort de 6 sauveteurs du 30 en route.');
+    await t.saisir(t.champ('Description...'), 'Appel du conseiller technique : renfort de 6 sauveteurs du 30 en route.');
     await pc2.saisir(pc2.champ('Description...'), 'Appel de la mairie : gymnase ouvert pour l\'hébergement.');
     await tab1.saisir(tab1.champ('Description...'), 'Livraison du groupe électrogène au PC.');
-    await t.dire('… et tous les trois valident EN MÊME TEMPS.');
+    await t.dire('… et tous les trois valident en même temps.');
     await simultane([[t, t.bouton(/^✓ ENREGISTRER$/)], [pc2, pc2.bouton(/^✓ ENREGISTRER$/)], [tab1, tab1.bouton(/^✓ ENREGISTRER$/)]]);
-    await t.dire('Les trois lignes reçoivent des numéros différents et qui se suivent, attribués par le PC principal dans l\'ordre d\'arrivée. Elles apparaissent sur TOUS les postes, y compris la tablette d\'affichage.',
+    await t.dire('Les trois lignes reçoivent des numéros différents et qui se suivent, attribués par le PC principal dans l\'ordre d\'arrivée. Elles apparaissent sur tous les postes, y compris la tablette d\'affichage.',
         'Jamais deux lignes avec le même numéro, jamais une ligne perdue : la main courante reste unique et fiable, même à plusieurs.');
     for (const poste of [t, pc2, tab1, tab2]) await poste.page.locator('table:visible').first().scrollIntoViewIfNeeded().catch(() => {});
     await t.rythme(5);
@@ -86,27 +86,41 @@ executer('09-plusieurs-postes', 'Plusieurs ordinateurs et tablettes en même tem
         for (const nom of membres) await poste.cocher(poste.etiquette(nom, { dernier: true }).locator('input[type="checkbox"]'));
     };
     const numero = (poste) => poste.page.locator('select:visible', { has: poste.page.locator('option[value="3"]') }).first();
-    await formulaire(t, 'Reconnaissance du P40', ['MARTIN Alice', 'BERNARD Bruno', 'DUBOIS Chloé'], 'Sous terre');
-    await formulaire(pc2, 'Logistique surface', ['ROBERT Emma', 'PETIT Félix'], 'Surface');
-    await t.dire("Paul valide le premier : son équipe devient l'équipe 1.");
+    await t.vite(() => formulaire(t, 'Reconnaissance du P40', ['MARTIN Alice', 'BERNARD Bruno', 'DUBOIS Chloé', 'PETIT Félix'], 'Sous terre'));
+    await t.dire('Claire prépare la reconnaissance du P40 avec MARTIN Alice, BERNARD Bruno, DUBOIS Chloé et PETIT Félix.');
+    await t.vite(() => formulaire(pc2, 'Logistique surface', ['ROBERT Emma', 'PETIT Félix'], 'Surface'));
+    await t.dire("Paul prépare la logistique de surface avec ROBERT Emma… et lui aussi PETIT Félix : par erreur, il est coché dans les deux équipes. Paul valide le premier : son équipe devient l'équipe 1.");
     await pc2.clic(pc2.bouton("Créer l'Équipe"));
     await t.viser(numero(t));
     await t.dire("Sur le PC principal, le formulaire de Claire, resté ouvert, est passé tout seul au numéro 2 : le numéro 1 vient d'être pris sur un autre poste.",
         "Si deux postes validaient exactement au même instant le même numéro, le PC principal n'en enregistrerait qu'un et l'autre poste recevrait un refus clair (« existe déjà »). Jamais deux « Équipe 1 » différentes.");
+    const petit = t.page.locator('label:visible', { hasText: 'PETIT Félix' }).last();
+    await petit.scrollIntoViewIfNeeded().catch(() => {});
+    await t.viser(petit);
+    await t.dire('Et dans la liste de Claire, PETIT Félix porte maintenant le badge « déjà en Équipe 1 ».');
     await capture(t, 'pc-numero-2');
+    // L'application demande s'il faut déplacer PETIT Félix : Claire répond « Annuler »
+    await p.evaluate(() => { window.__filmNon = 1; });
     await t.clic(t.bouton("Créer l'Équipe"));
-    await t.dire("Claire valide : son équipe devient l'équipe 2. Les deux équipes apparaissent sur tous les postes.");
+    await t.dire('Claire valide : l\'application l\'arrête. PETIT Félix est déjà dans l\'équipe 1, peut-être ajouté entre-temps sur un autre poste. Faut-il l\'en retirer ?',
+        'Si l\'on répond « OK », il passe dans la nouvelle équipe et une ligne de main courante note qu\'il a quitté l\'équipe 1. Sans cette question, l\'équipe 1 l\'aurait perdu sans que personne ne le sache.');
+    await t.dire('Claire répond « Annuler » : PETIT Félix reste dans l\'équipe 1. Elle le décoche, puis valide de nouveau.');
+    await t.vite(() => t.clic(petit.locator('input[type="checkbox"]')));
+    await t.clic(t.bouton("Créer l'Équipe"));
+    await t.dire("Son équipe devient l'équipe 2. Les deux équipes apparaissent sur tous les postes, chaque sauveteur dans une seule équipe.");
     for (const poste of [t, pc2]) await poste.clic(poste.bouton(/^Fermer$/, { dernier: true }));
 
     await t.chapitre('Saisir sur une tablette, suivre sur une autre');
-    await t.dire('Lucas (tablette 1) note le départ de l\'équipe 2 (reconnaissance du P40) : « Équipe 2 », bouton « Départ PC », puis il valide.');
+    await t.dire('Lucas (tablette 1) note le départ de l\'équipe 2 (reconnaissance du P40) : « Équipe 2 », puis le bouton « Départ PC ».',
+        'Pas besoin de texte : l\'équipe et le point phone suffisent. On n\'écrit que s\'il y a une information en plus sur ce départ, comme le matériel emporté.');
     await tab1.saisir(tab1.champ('T1...'), 'Équipe 2');
     await tab1.clic(tab1.etiquette('Départ PC'));
-    await tab1.saisir(tab1.champ('Description...'), 'Départ de l\'équipe 2 vers le P40.');
+    await t.dire('Ici, il y a une information en plus : l\'équipe emporte la pompe. Lucas la note, puis il valide.');
+    await tab1.saisir(tab1.champ('Description...'), 'Emporte la pompe et 200 m de tuyau.');
     await tab1.clic(tab1.bouton(/^✓ ENREGISTRER$/));
     await valider(tab1);
-    await t.dire('Sur la tablette d\'affichage, le COS ouvre la « Synthèse Affectations » : il voit combien de sauveteurs sont en approche, sous terre, disponibles… et qui.',
-        'Le COS suit la situation en direct, sans déranger le secrétariat.');
+    await t.dire('Sur la tablette d\'affichage, le DSS ouvre la « Synthèse Affectations » : il voit combien de sauveteurs sont en approche, sous terre, disponibles… et qui.',
+        'Le DSS suit la situation en direct, sans déranger le secrétariat.');
     await tab2.clic(tab2.bouton('Synthèse Affectations'));
     await tab2.rythme(5);
     await tab2.page.mouse.wheel(0, 500);
