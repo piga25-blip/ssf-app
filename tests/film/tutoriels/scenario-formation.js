@@ -120,6 +120,16 @@ const outils = (t) => {
     o.cases = (nom) => p.locator('tr', { hasText: nom }).locator('td.time-slot-cell');
     o.caseActuelle = (nom) => o.cases(nom).evaluateAll(tds => { const vide = td => /rgba\(0, 0, 0, 0\)|rgb\(255, 255, 255\)/.test(getComputedStyle(td).backgroundColor); let i = tds.length - 1; while (i > 0 && vide(tds[i])) i--; return i; });
     o.alerte = () => p.locator('h3:visible', { hasText: 'Alertes en attente' });
+    // Résultat d'une saisie : la ligne de main courante entourée, puis l'explication
+    o.voirLigne = async (texte, explication, pourquoi) => {
+        if (!(await p.locator('tbody tr:visible').count())) await t.vite(() => t.clic(t.bouton(/Main Courante/)));
+        const l = p.locator('tbody tr:visible', { hasText: texte }).first();
+        await l.scrollIntoViewIfNeeded().catch(() => {});
+        await t.viser(l);
+        if (process.env.FILM_RAPIDE) console.log('MC ▸ ' + (await l.innerText().catch(() => '?')).replace(/\s+/g, ' '));
+        if (explication) await t.dire(explication, pourquoi);
+        await p.evaluate(() => window.scrollTo(0, 0));
+    };
     return o;
 };
 
@@ -129,49 +139,83 @@ const PHASES = [];
 // Phase 1 — Alerte et ouverture du secours
 PHASES.push(async (t, o) => {
     const p = t.page;
+    // Après « Enregistrer les modifications », l'application peut redemander le mode d'utilisation
+    const reconfirmerMode = async () => {
+        if (await t.bouton('Confirmer et Démarrer', { dernier: true }).isVisible().catch(() => false)) {
+            await t.dire('L\'application redemande le mode d\'utilisation : on reconfirme « PC de Terrain ».');
+            await t.vite(async () => {
+                await t.clic(p.getByText('PC de Terrain', { exact: false }).last());
+                await t.clic(t.bouton('Confirmer et Démarrer', { dernier: true }));
+            });
+            await o.attendre(1500);
+            if (await t.bouton(/^✓ Enregistrer$/).isVisible().catch(() => false)) await t.clic(t.bouton(/^✓ Enregistrer$/));
+        }
+    };
+
     await t.chapitre('Ouvrir le dossier');
-    await t.dire(dicte('Le CTDS vous appelle : un spéléologue est bloqué au gouffre de la Combe Noire, à Nans-sous-Sainte-Anne. C\'est un exercice. Ouvrez le dossier.'),
-        'Onglet « Nouveau dossier » : on choisit EXERCICE (jamais SECOURS en formation), puis le nom de la cavité et la commune.');
+    await t.dire(dicte('Le conseiller technique vous appelle : un spéléologue est bloqué au gouffre de la Combe Noire, à Nans-sous-Sainte-Anne. C\'est un exercice. Ouvrez le dossier.'),
+        'Onglet « Nouveau dossier » : on choisit « Exercice » (jamais « Secours » en formation), puis le nom de la cavité et la commune.');
     await t.clic(p.getByText('EXERCICE', { exact: true }));
-    await t.saisir(t.champ('Ex: Gouffre de Padirac, Grotte de Clamouse...'), 'Gouffre de la Combe Noire');
-    await t.saisir(t.champ('Ex: Saint-Martin-de-Londres...'), 'Nans-sous-Sainte-Anne');
+    await t.vite(async () => {
+        await t.saisir(t.champ('Ex: Gouffre de Padirac, Grotte de Clamouse...'), 'Gouffre de la Combe Noire');
+        await t.saisir(t.champ('Ex: Saint-Martin-de-Londres...'), 'Nans-sous-Sainte-Anne');
+    });
     await t.dire('L\'application affiche l\'identifiant qu\'elle va donner au dossier : type, cavité et date.');
-    await t.dire(dicte('Le délai d\'alerte des temps d\'engagement est de 6 heures.'));
+    await t.dire(dicte('Le délai d\'alerte des temps d\'engagement est de 6 heures.'),
+        'Ce délai sert uniquement à penser à la relève : au-delà, l\'application signale le sauveteur engagé. Il se modifie à n\'importe quel moment du secours.');
     await t.choisir(p.locator('select:visible').filter({ has: p.locator('option[value="0"]') }).last(), '6');
     await t.clic(t.bouton('Créer le dossier et continuer'));
     await t.dire(dicte('Vous êtes le PC de terrain.'), 'Le PC de terrain numérote 001, 002… La base arrière, elle, préfixe ses numéros : on la verra en phase 8.');
     await t.clic(p.getByText('PC de Terrain', { exact: false }).last());
     await t.clic(t.bouton('Confirmer et Démarrer', { dernier: true }));
     await o.attendre(1500);
+
     await t.chapitre('Régler le poste');
     await t.dire(dicte('Le secrétaire de ce poste, c\'est vous.'), 'Le nom est mémorisé sur ce PC seulement ; il signe chaque ligne de main courante.');
-    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), 'Stagiaire UN'); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
-    else await o.secretaire('Stagiaire UN');
+    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), 'Stagiaire 1'); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
+    else await o.secretaire('Stagiaire 1');
+    await t.viser(p.locator('input:visible').filter({ has: p.locator('xpath=self::*[@value="Stagiaire 1"]') }).or(p.getByText('Secrétaire', { exact: true })).first());
+    await t.dire('Le nom du secrétaire est en haut du formulaire de main courante : il remplira la colonne « Secrétaire » de chaque ligne.');
     await t.dire(dicte('Mettez les sauvegardes automatiques toutes les 30 minutes.'));
     await t.clic(t.bouton('Sauvegardes auto'));
     await t.cocher(t.etiquette('30 min').locator('input'));
+    await t.dire('Une copie de sécurité du secours sera faite toutes les 30 minutes ; les copies apparaîtront dans cette fenêtre, avec leur heure.');
     await p.keyboard.press('Escape');
-    await t.dire('Le badge « 30mn » rappelle que les sauvegardes automatiques sont actives.');
-    await t.dire(dicte('Correction : le délai d\'alerte passe à 8 heures.'), '« Modifier » dans le bandeau jaune EXERCICE corrige les informations du secours, sans changer de dossier.');
+    await t.viser(t.bouton('Sauvegardes auto'));
+    await t.dire('Le badge « 30mn » sur le bouton rappelle que les sauvegardes automatiques sont actives.');
+    await t.dire(dicte('Correction : le délai d\'alerte passe à 8 heures.'), '« Modifier » dans le bandeau jaune de l\'exercice corrige les informations du secours, sans changer de dossier.');
     await t.clic(t.bouton('✏️ Modifier'));
     await t.choisir(p.locator('select:visible').filter({ has: p.locator('option[value="0"]') }).last(), '8');
     await t.clic(t.bouton('Enregistrer les modifications'));
-    await t.dire(dicte('Ajoutez FORMATION à la fin de l\'ID secours.'));
-    await t.completer(p.locator('input[placeholder="Ex: GouffreA_2025"]'), ' FORMATION');
+    await reconfirmerMode();
+    await t.dire(dicte('Ajoutez le mot « formation » à la fin de l\'ID secours.'));
+    const id = p.locator('input[placeholder="Ex: GouffreA_2025"]');
+    await t.completer(id, ' FORMATION');
     await t.clic(p.locator('button[title="Valider le nouvel ID"]'));
+    await t.viser(p.getByText(/Actuel/).first());
+    await t.dire('L\'identifiant du secours se termine maintenant par « Formation » : il est affiché à côté de « Actuel ».');
     await t.dire(dicte('Passez en plein écran, puis revenez.'));
     await t.clic(t.bouton('Plein écran'));
+    await t.rythme(1.5);
     await t.clic(t.bouton('📐 Quitter'));
+
     await t.chapitre('Premières lignes de main courante');
-    await t.dire(dicte('Message du CODIS : spéléologue bloqué à moins 150 mètres, au-delà du puits P40, jambe blessée. Victime : Lucas FAIVRE, 34 ans. C\'est important.'),
-        'Les mots « victime » et « blessée » font passer la catégorie à « Secours » toute seule (repère « ✨ Auto »). On coche « Important ».');
-    await o.ligne({ texte: 'Message du CODIS : spéléologue bloqué à moins 150 m, au-delà du puits P40, jambe blessée. Victime : Lucas FAIVRE, 34 ans.', important: true });
-    await t.dire(dicte('Le matériel de secours est demandé au dépôt de Besançon.'), 'Le mot « matériel » donne la catégorie « Logistique ».');
+    await t.dire(dicte('Message du CODIS pour le PC : « Spéléologue bloqué à moins 150 mètres, au-delà du puits P40, jambe blessée. Victime : Lucas FAIVRE, 34 ans. » C\'est important.'),
+        'C\'est un message : on remplit « Message venant de » et « Message à destination de », puis le texte mot pour mot, sans le résumer. On coche « Important ».');
+    await t.vite(() => o.ligne({ venant: 'CODIS', dest: 'PC', texte: 'Spéléologue bloqué à moins 150 m, au-delà du puits P40, jambe blessée. Victime : Lucas FAIVRE, 34 ans.', important: true }), 0.35);
+    await o.voirLigne('Lucas FAIVRE',
+        'La ligne 001 apparaît en haut du tableau : « Message de : CODIS pour : PC », le texte exact et le point d\'exclamation rouge du message important.',
+        'La catégorie est « Secours » : les mots « victime » et « blessée » l\'emportent sur « Communication ». On peut toujours la changer dans la liste avant d\'enregistrer.');
+    await t.dire(dicte('Le matériel de secours est demandé au dépôt de Besançon.'), 'Ce n\'est pas un message échangé : on écrit simplement l\'événement. Le mot « matériel » donne la catégorie « Logistique ».');
     await o.ligne({ texte: 'Le matériel de secours est demandé au dépôt de Besançon.' });
+    await o.voirLigne('dépôt de Besançon', 'La ligne est enregistrée en « Logistique », avec l\'heure et le secrétaire.');
     await t.dire(dicte('Le PC est installé au parking de la cavité.'), 'Aucun mot-clé ici : la catégorie reste « Autre » et l\'application le rappelle. On choisit « Administratif ».');
     await t.clic(t.champ('Description...'));
     await o.ligne({ texte: 'Le PC est installé au parking de la cavité.', categorie: 'administratif' });
-    await t.dire('En bas de page : le prochain numéro, le total des événements et les messages importants.');
+    await o.voirLigne('parking de la cavité', 'La ligne est rangée en « Administratif », la catégorie choisie.');
+    const prochain = t.bouton(/Imprimer main courante/).locator('xpath=..').locator('strong');
+    await t.viser(prochain);
+    await t.dire('À côté du bouton « Imprimer main courante », le prochain numéro de ligne. La main courante peut être imprimée à tout moment.');
 });
 
 // Phase 2 — Arrivée des sauveteurs
@@ -328,7 +372,7 @@ PHASES.push(async (t, o) => {
     await o.valeur(f.locator('input[type="time"]').last(), h2);
     await t.clic(f.locator('button', { hasText: 'Insérer l\'événement' }));
     await t.dire(dicte('Relève : votre binôme prend le clavier.'), 'Le bouton 🔄 change le secrétaire : les lignes suivantes portent son nom.');
-    await o.secretaire('Stagiaire DEUX');
+    await o.secretaire('Stagiaire 2');
     await t.dire(dicte('Retrouvez tout ce qui parle du P40.'), 'La recherche rapide filtre le tableau (secrétaire, texte, équipe, point phone).');
     await t.saisir(t.champ('Recherche rapide... (secrétaire, événement, équipe, point phone)'), 'P40');
     await t.clic(t.bouton(/^Effacer$/));
@@ -562,7 +606,7 @@ PHASES.push(async (t, o) => {
     await t.saisir(p.locator('input[placeholder="Ex: Martin DUPONT"]:visible').last(), 'ROUX Pierre');
     await t.clic(t.bouton('Confirmer et Démarrer', { dernier: true }));
     await o.attendre(1500);
-    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), 'Stagiaire DEUX'); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
+    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), 'Stagiaire 2'); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
     await t.dire('Pour chaque ligne du papier : l\'heure écrite, puis le texte. Les lignes se rangent dans l\'ordre chronologique et sont numérotées PCA-001, PCA-002…');
     const maintenant = await o.maintenant();
     for (const [min, txt] of [[-70, 'Route d\'accès fermée par la gendarmerie.'], [-100, 'Véhicule du SSF 25 arrivé au parking.'], [-30, 'Ambulance du SAMU arrivée au parking.']]) {
@@ -589,7 +633,7 @@ PHASES.push(async (t, o) => {
     await t.clic(p.getByText('PC de Terrain', { exact: false }).last());
     await t.clic(t.bouton('Confirmer et Démarrer', { dernier: true }));
     await o.attendre(1500);
-    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), 'Stagiaire DEUX'); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
+    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), 'Stagiaire 2'); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
     await t.dire(dicte('Intégrez la main courante papier.'), '« Importer MC (aperçu) » montre la fusion chronologique avant de confirmer. Les lignes recopiées portent « 📝 papier ».');
     await t.clic(t.bouton('Importer MC (aperçu)'));
     await t.fichier(p.getByText('Cliquez pour sélectionner un fichier'), p.locator('#mc-file-input'), fichierPCA);
