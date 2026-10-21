@@ -687,20 +687,22 @@
             const envoyerAction = useCallback((action) => {
                 const role = roleRef.current;
                 // Autre poste coupé du poste principal : saisie bloquée jusqu'au retour de la connexion
-                // (décision 1) ; rien n'est mis en attente
+                // (décision 1) ; rien n'est mis en attente. Renvoie false quand l'action n'est pas
+                // envoyée : la fenêtre de saisie garde alors ce qui a été tapé
                 if (role !== 'principal' && !connecteRef.current) {
-                    setNotification('🔴 Hors ligne : saisie impossible jusqu\'au retour de la connexion avec le poste principal.');
+                    setNotification('🔴 Hors ligne : saisie impossible jusqu\'au retour de la connexion avec le poste principal. Le texte tapé est conservé.');
                     setTimeout(() => setNotification(null), 6000);
-                    return;
+                    return false;
                 }
                 if (role === 'principal' || (role === 'saisie' && ACTIONS_SAISIE_DISTANTE.includes(action.type))) {
                     connexion.envoyer({ type: 'action', action });
-                    return;
+                    return true;
                 }
                 setNotification(role === 'saisie'
                     ? '⛔ Poste de saisie : cette action est réservée au poste principal.'
                     : '⛔ Poste en consultation seule : modification impossible.');
                 setTimeout(() => setNotification(null), 4000);
+                return false;
             }, []);
 
             // Numéros de main courante : attribués par donnees.js quand l'action est appliquée, dans

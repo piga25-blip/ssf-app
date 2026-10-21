@@ -1187,7 +1187,7 @@ let MainCouranteTab = ({
             const rangees = rangerRecopie([...events, newEvent]);
             const place = rangees.find(e => e.id === newEvent.id);
             const derniere = rangees[rangees.length - 1].id === newEvent.id;
-            actions.recopierLigneMC(newEvent);
+            if (actions.recopierLigneMC(newEvent) === false) return; // pas envoyée : le formulaire est gardé
             setInfoRecopie((derniere ? '✓ Ligne N°' : '↕️ Ligne rangée à sa place chronologique : N°') + place.numero + ' — ' + place.dateHeure);
             setFormData({
                 secretaire: formData.secretaire, messageImportant: false, categorie: 'autre', fichier: null,
@@ -1199,7 +1199,8 @@ let MainCouranteTab = ({
             return; // recopie après coup : pas de mise à jour du planning
         }
 
-        actions.ajouterLigneMC(newEvent);
+        // Ligne non envoyée (poste hors ligne ou sans droit de saisie) : le formulaire est gardé
+        if (actions.ajouterLigneMC(newEvent) === false) return;
 
         // ============================================================
         // MISE À JOUR PLANNING DEPUIS MC
