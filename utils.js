@@ -130,6 +130,19 @@ class ModalErrorBoundary extends React.Component {
 
 const getTotalSlots = (totalDays) => totalDays * SLOTS_PER_DAY;
 
+// Nombre de créneaux du planning commencés à l'heure actuelle (créneau en cours compris).
+// J1 commence à startHour le jour de la première ligne de main courante (la veille si cette
+// ligne est avant startHour) ; sans main courante, pas de limite.
+const creneauxEcoules = (startHour, events) => {
+    const heures = (events || []).map(e => Date.parse(e && e.isoTimestamp)).filter(Number.isFinite);
+    if (heures.length === 0) return Infinity;
+    const premier = new Date(Math.min(...heures));
+    const debut = new Date(premier);
+    debut.setHours(startHour, 0, 0, 0);
+    if (debut > premier) debut.setDate(debut.getDate() - 1);
+    return Math.floor((Date.now() - debut.getTime()) / (15 * 60000)) + 1;
+};
+
 const indexToTime = (index, startHour, totalDays) => {
     const totalSlots = getTotalSlots(totalDays);
     const safeIndex = Math.min(index, totalSlots - 1);

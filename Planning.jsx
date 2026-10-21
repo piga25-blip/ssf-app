@@ -319,6 +319,35 @@ let PlanningTab = ({
                     });
                     
                     actions.recopierPlanning(copies);
+
+                    // Comme pour la palette, la modification est tracée en main courante
+                    const parActivite = {};
+                    copies.forEach(({ id, idSource, slotSource }) => {
+                        const act = (planning[idSource] || [])[slotSource];
+                        if (!act || act === 'nondef' || act === 'effacer') return;
+                        const nom = masterSauveteursList.find(s => s.id === id)?.name;
+                        if (!nom) return;
+                        (parActivite[act] = parActivite[act] || new Set()).add(nom);
+                    });
+                    Object.entries(parActivite).forEach(([act, noms]) => {
+                        const activite = ACTIVITIES.find(a => a.id === act);
+                        // Même catégorie que pour la palette
+                        const categorie = ['mission_surface', 'approche', 'souterre', 'brancardage', 'plongee'].includes(act) ? 'progression'
+                            : ['engage', 'conseiller_technique', 'directeur_souterrain', 'gestion', 'mission_hors_site'].includes(act) ? 'equipe'
+                            : (['repos_site', 'repos_domicile'].includes(act) || act.includes('repas')) ? 'intendance'
+                            : ['disponible', 'quitter_secours'].includes(act) ? 'personnel' : 'autre';
+                        actions.ajouterLigneMC({
+                            id: nouvelId(),
+                            isoTimestamp: new Date().toISOString(),
+                            secretaire: 'Système',
+                            dateHeure: new Date().toLocaleString('fr-FR'),
+                            messageImportant: false,
+                            categorie,
+                            evenement: `📅 Activité "${activite ? activite.name : act}" prolongée (recopie) pour : ${[...noms].join(', ')}`,
+                            numero: NUMERO_AUTO,
+                            fait: false
+                        });
+                    });
                 }
             }
             // Nettoyer les états du mode poignée
@@ -346,7 +375,7 @@ let PlanningTab = ({
         
         setIsDragging(false);
         console.log('=== END handleMouseUp ===\n');
-    }, [isDragging, isFilling, selectedCells, fillPreviewCells, selectedActivityId, sauveteurToTeamMap, totalSlots, setSelectedCells, setLastSelectedCell, setIsDragging, setFillPreviewCells, setFillStartCell, setIsFilling, activeSauveteursDetails, sauveteurIdToIndexMap]);
+    }, [isDragging, isFilling, selectedCells, fillPreviewCells, selectedActivityId, sauveteurToTeamMap, totalSlots, setSelectedCells, setLastSelectedCell, setIsDragging, setFillPreviewCells, setFillStartCell, setIsFilling, activeSauveteursDetails, sauveteurIdToIndexMap, planning, masterSauveteursList, actions]);
 
     useEffect(() => {
         const handleGlobalMouseUp = () => handleMouseUp();
@@ -412,6 +441,8 @@ let PlanningTab = ({
 
     const fillHandlePos = getFillHandlePosition();
 
+    const limiteEcoulee = creneauxEcoules(startHour, events);
+
     const renderStatutCells = (sauveteurId, hasSelectedCells = false) => {
         const rowData = planning[sauveteurId] || [];
         const categories = {
@@ -421,9 +452,11 @@ let PlanningTab = ({
             pc: ['directeur_souterrain', 'conseiller_technique', 'gestion']
         };
 
-        // Calculer le CUMUL de tous les slots renseignés
+        // Calculer le CUMUL des slots renseignés jusqu'à l'heure actuelle (une activité posée à
+        // l'avance ne compte qu'une fois son heure passée)
         let sousTerreCount = 0, reposCount = 0, enSurfaceCount = 0, pcCount = 0;
-        rowData.forEach(function(activity) {
+        rowData.forEach(function(activity, slot) {
+            if (slot >= limiteEcoulee) return;
             if (!activity || activity === 'nondef' || activity === 'effacer') return;
             if (categories.sousTerre.includes(activity)) sousTerreCount++;
             else if (categories.repos.includes(activity)) reposCount++;

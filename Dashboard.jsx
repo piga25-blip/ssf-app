@@ -411,7 +411,9 @@ let DashboardTab = ({
     };
 
     const totalSlots = getTotalSlots(totalDays);
-    
+    // Les activités posées à l'avance dans le planning ne comptent qu'une fois leur heure passée
+    const limiteEcoulee = creneauxEcoules(startHour, events);
+
     // Calcul des statistiques temps réel
     const calculateStatistics = () => {
         const stats = {
@@ -449,7 +451,7 @@ let DashboardTab = ({
                     const activities = planning[sauveteurId];
                     if (Array.isArray(activities)) {
                         activities.forEach((activityId, slot) => {
-                            if (activityId && activityId !== 'nondef' && activityId !== 'effacer') {
+                            if (slot < limiteEcoulee && activityId && activityId !== 'nondef' && activityId !== 'effacer') {
                                 totalHeures += TIME_PER_SLOT;
                                 activiteTemps[activityId] = (activiteTemps[activityId] || 0) + TIME_PER_SLOT;
 
@@ -462,7 +464,7 @@ let DashboardTab = ({
                     }
                 } else {
                     // FORMAT CLÉ : planning["sauveteurId|slot"] = activity
-                    for (let slot = 0; slot < totalSlots; slot++) {
+                    for (let slot = 0; slot < Math.min(totalSlots, limiteEcoulee); slot++) {
                         const key = `${sauveteurId}|${slot}`;
                         const activityId = planning[key];
 
