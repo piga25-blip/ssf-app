@@ -35,7 +35,7 @@ P-001;GARCIA;Nora;Infirmière;Pompier
 R-001;BOYER;Marc;Radioamateur;ADRASEC 25
 `, 'utf8');
 
-const PP = { F: 'F - Parking — Poste médical avancé', A: 'A - Entrée de la cavité', B: 'B - Tête du P40', C: 'C - Base du P40', E: 'E - Point victime', G: 'G - TPS de surface, relais radio', PC: 'PC - Poste de Commandement' };
+const PP = { F: 'F - Parking — Poste médical avancé', A: 'A - Entrée de la cavité', B: 'B - Tête du P40', C: 'C - Base du P40', E: 'E - Point victime', G: 'G - TPS de surface (plateau de Nans-sous-Sainte-Anne)', PC: 'PC - Poste de Commandement' };
 // Les secrétaires du PC (dans la liste des sauveteurs, en « Gestion - PC » dès leur arrivée)
 const SECRETAIRE_1 = 'Claire VIDAL', SECRETAIRE_2 = 'Paul MOREL', SECRETAIRE_3 = 'Sarah NICOLAS';
 const dicte = (s) => `Le formateur dicte : « ${s} »`;
@@ -345,52 +345,117 @@ PHASES.push(async (t, o) => {
     await o.voirLigne('Mis en alerte', 'La ligne garde la trace de qui a été alerté, et à quelle heure.');
 });
 
-// Phase 3 — Points phones et premières équipes
+// Phase 3 — Premières équipes et points phones
 PHASES.push(async (t, o) => {
     const p = t.page;
-    await t.chapitre('Les points phones');
-    await t.dire(dicte('Voici les points phones de la cavité : F parking, A entrée, B tête du P40, C base du P40, D salle du Chaos, E point victime, G TPS de surface, relais radio vers le PC.'),
-        'Chaque point : une lettre, un nom, une position (ordre dans le diagramme) et un type de lieu. Le type décide de l\'activité au planning quand une équipe y passe.');
-    await t.clic(t.bouton('Points Phone'));
-    for (const [l, nom, type, pos] of [['F', 'Parking — Poste médical avancé', '🌿 Surface', '1'], ['A', 'Entrée de la cavité', '🚪 Entrée cavité', '2'], ['B', 'Tête du P40', '🪨 Sous terre', '3'],
-        ['C', 'Base du P40', '🪨 Sous terre', '4'], ['D', 'Salle du Chaos', '🪨 Sous terre', '5'], ['E', 'Point victime', '🪨 Sous terre', '6'], ['G', 'TPS de surface, relais radio', '🌿 Surface', '7']])
-        await o.ajouterPoint(l, nom, type, pos);
-    await t.dire(dicte('Correction : D s\'appelle Salle du Chaos amont.'));
-    await o.modifierPoint('Salle du Chaos', 'Salle du Chaos amont');
-    await t.dire('« Vider tout » efface toute la liste : on ne s\'en sert jamais pendant une opération.');
-    await o.fermer();
+    // Fenêtres de Windows (enregistrer un fichier) : elles ne peuvent pas être filmées, un message dit ce qui s'ouvre
+    const windows = (texte) => p.evaluate((x) => window.__film && window.__film.message('💻 Fenêtre de Windows', x, 7000), texte);
     await t.chapitre('Créer les équipes');
     await o.equipes();
     await t.dire(dicte('Équipe 1 : MARTIN Alice chef, BERNARD Bruno, ROBERT Emma. Titre : Reconnaissance jusqu\'à la victime. Sous terre.'),
         'Le premier coché devient le chef. Le type de mission est détecté dans le titre (« Reconnaissance »). L\'ordre de mission détaille la tâche.');
-    await o.creerEquipe({ lieu: '🪨 Sous terre', titre: 'Reconnaissance jusqu\'à la victime', ordre: 'Descendre jusqu\'au point victime, faire le bilan, rendre compte par TPS à chaque point phone.', membres: ['MARTIN Alice', 'BERNARD Bruno', 'ROBERT Emma'] });
+    await t.vite(() => o.creerEquipe({ lieu: '🪨 Sous terre', titre: 'Reconnaissance jusqu\'à la victime', ordre: 'Descendre jusqu\'au point victime, faire le bilan, rendre compte par TPS à chaque point phone.', membres: ['MARTIN Alice', 'BERNARD Bruno', 'ROBERT Emma'] }), 0.5);
+    await t.viser(o.carte('Équipe 1'));
+    await t.dire('L\'équipe 1 apparaît à droite, dans « Équipes Actives » : le lieu, le titre, la cheffe MARTIN Alice 👑 et le nombre de membres.');
+    await o.fermer();
+    await o.voirLigne('Création Équipe 1',
+        'En main courante, l\'application a écrit seule la création : numéro, chef, mission et membres.');
+    await o.voirLigne('"Engagé" affectée à : MARTIN Alice',
+        'Juste après, une seconde ligne : « Activité "Engagé" affectée à : MARTIN Alice, BERNARD Bruno, ROBERT Emma ».');
+    await o.voirPlanning('MARTIN Alice',
+        'Au planning, les trois membres passent en « Engagé » (vert clair) ; la colonne « Équipe » affiche leur numéro d\'équipe, 1.');
+    await o.equipes();
     await t.dire(dicte('Équipe 2 : DUBOIS Chloé chef, DURAND Gaëlle, PETIT Félix. Titre : ASV et médicalisation de la victime. Sous terre.'), 'Le numéro suivant (2) est proposé tout seul.');
-    await o.creerEquipe({ lieu: '🪨 Sous terre', titre: 'ASV et médicalisation de la victime', membres: ['DUBOIS Chloé', 'DURAND Gaëlle', 'PETIT Félix'] });
-    await t.dire(dicte('Équipe 3 : MOREAU Inès chef, SIMON Julien. Titre : Transmission, pose du TPS. Ajoutez aussi BERNARD Bruno.'),
-        'BERNARD est déjà dans l\'équipe 1 : l\'application demande s\'il faut l\'en retirer. Ici on répond « Annuler » : il reste en équipe 1.');
+    await t.vite(() => o.creerEquipe({ lieu: '🪨 Sous terre', titre: 'ASV et médicalisation de la victime', membres: ['DUBOIS Chloé', 'DURAND Gaëlle', 'PETIT Félix'] }), 0.5);
+    await t.dire(dicte('Équipe 3 : MOREAU Inès chef, SIMON Julien. Titre : Transmission, pose du TPS. Ajoutez aussi BERNARD Bruno.'));
     await t.clic(t.etiquette('🪨 Sous terre'));
     await t.saisir(t.champ('Titre (ex: Reconnaissance Zone Nord)'), 'Transmission, pose du TPS jusqu\'à la Salle du Chaos');
     for (const n of ['MOREAU Inès', 'SIMON Julien']) await t.cocher(p.locator('label:visible', { hasText: n }).last().locator('input[type="checkbox"]'));
+    const bernard = p.locator('label:visible', { hasText: 'BERNARD Bruno' }).last();
+    await t.viser(bernard);
+    if (process.env.FILM_RAPIDE) await t.decrire('S3-bernard');
+    await t.dire('À côté de BERNARD Bruno, l\'application indique « déjà en Équipe 1 ».',
+        'Si on le coche, elle demande s\'il faut le retirer de l\'équipe 1. Ici on répond « Annuler » : il reste en équipe 1.');
     await o.annulerProchaine();
-    await t.clic(p.locator('label:visible', { hasText: 'BERNARD Bruno' }).last().locator('input[type="checkbox"]'));
+    await t.clic(bernard.locator('input[type="checkbox"]'));
     const choix = p.locator('select:visible', { has: p.locator('option', { hasText: 'Sélectionner un type' }) });
     if (!(await choix.inputValue())) await t.choisir(choix, { index: 1 });
     await t.clic(t.bouton('Créer l\'Équipe (2)'));
+    await t.viser(o.carte('Équipe 3'));
+    await t.dire('L\'équipe 3 est créée avec MOREAU Inès et SIMON Julien ; BERNARD Bruno est toujours dans l\'équipe 1.');
     await t.dire(dicte('Équipe 4 : BLANC Olivier. Titre : Logistique, acheminement du matériel en surface. Surface.'));
     await o.creerEquipe({ lieu: '🌿 Surface', titre: 'Logistique, acheminement du matériel en surface', membres: ['BLANC Olivier'] });
+    await t.viser(o.carte('Équipe 4'));
+    await t.dire('Quatre équipes actives. Chaque création a sa ligne en main courante, et ses membres passent en « Engagé » au planning.');
+
     await t.chapitre('Lire, imprimer, exporter');
-    await t.dire('Dans « Équipes Actives », l\'en-tête montre le lieu, le titre, le chef 👑 et le nombre de membres ; un clic déplie l\'équipe.');
+    await t.dire('Dans « Équipes Actives », un clic sur l\'en-tête déplie l\'équipe : ses membres, son ordre de mission et ses boutons.');
     await o.deplier('Équipe 1');
-    await t.dire(dicte('Imprimez la fiche de l\'équipe 1 pour la chef d\'équipe, puis exportez la liste des équipes en PDF et en Excel.'),
-        'La fiche imprimée reprend l\'ordre de mission et la composition. Les exports servent au COS et aux comptes rendus.');
-    const avant = t.app.windows().length;
+    await t.dire(dicte('Imprimez la fiche de l\'équipe 1 pour la cheffe d\'équipe, puis exportez la liste des équipes en PDF et en Excel.'));
+    // La fiche s'ouvre d'habitude dans une nouvelle fenêtre : pour le film, elle est affichée par-dessus l'application
+    await p.evaluate(() => {
+        window.open = () => {
+            let html = '';
+            const cadre = document.createElement('div');
+            cadre.id = 'film-apercu';
+            cadre.style.cssText = 'position:fixed;inset:30px 60px;z-index:99999;background:#fff;box-shadow:0 0 0 9999px rgba(0,0,0,.45);border-radius:8px;overflow:hidden';
+            return {
+                document: {
+                    write: (s) => { html += s; },
+                    close: () => {
+                        const f = document.createElement('iframe');
+                        f.style.cssText = 'width:100%;height:100%;border:0';
+                        f.srcdoc = html;
+                        cadre.appendChild(f);
+                        document.body.appendChild(cadre);
+                    },
+                },
+                focus: () => {},
+            };
+        };
+    });
     await t.clic(o.carte('Équipe 1').locator('button[title="Imprimer"]'));
-    await o.attendre(2500);
-    for (const w of t.app.windows().slice(avant)) await w.close().catch(() => {});
+    await t.dire('La fiche de l\'équipe s\'ouvre : son titre, son ordre de mission et sa composition, avec le chef en tête.',
+        'Le bouton « Imprimer » de cette fenêtre l\'envoie à l\'imprimante. La fiche est remise au chef d\'équipe avant le départ.');
+    if (process.env.FILM_RAPIDE) await t.decrire('S3-fiche');
+    await p.evaluate(() => { const c = document.getElementById('film-apercu'); if (c) c.remove(); });
+    await windows('« Enregistrer sous » : on choisit où ranger le fichier. Nom proposé : equipes_' + o.date(await o.maintenant()) + '.pdf');
     await t.clic(t.bouton('📄 Export PDF'));
+    await t.dire('Windows demande où enregistrer le fichier PDF ; l\'application confirme ensuite « Export PDF réussi ».',
+        'Le PDF liste toutes les équipes actives : titre, ordre de mission, membres et heure de création. Il sert au conseiller technique et aux comptes rendus.');
+    await windows('« Enregistrer sous » : nom proposé equipes_' + o.date(await o.maintenant()) + '.xlsx');
     await t.clic(t.bouton('📊 Export Excel'));
+    await t.dire('Même chose pour le fichier Excel, qu\'on peut retravailler dans un tableur.');
     await o.fermer();
-    await t.dire('La main courante a noté chaque création d\'équipe, et le planning met les membres en « Engagé ».');
+
+    await t.chapitre('Les points phones');
+    await t.dire(dicte('Voici les points phones : F parking, A entrée de la cavité, B tête du P40, C base du P40, D salle du Chaos, E point victime.'),
+        'Chaque point : une lettre, un nom, une position (ordre dans le diagramme) et un type de lieu. Le type décide de l\'activité au planning quand une équipe y passe.');
+    await t.clic(t.bouton('Points Phone'));
+    await t.vite(() => o.ajouterPoint('F', 'Parking — Poste médical avancé', '🌿 Surface', '1'), 0.5);
+    await t.viser(o.modale().getByText('Parking — Poste médical avancé').first());
+    await t.dire('F, le parking avec le poste médical avancé, est en surface : type « 🌿 Surface ». Il prend la position 1 dans le diagramme.');
+    await t.vite(() => o.ajouterPoint('A', 'Entrée de la cavité', '🚪 Entrée cavité', '2'), 0.5);
+    await t.dire('A, l\'entrée de la cavité : type « 🚪 Entrée cavité ». Une équipe qui y passe entre sous terre, ou en ressort.');
+    await t.vite(async () => {
+        for (const [l, nom, pos] of [['B', 'Tête du P40', '3'], ['C', 'Base du P40', '4'], ['D', 'Salle du Chaos', '5'], ['E', 'Point victime', '6']])
+            await o.ajouterPoint(l, nom, '🪨 Sous terre', pos);
+    }, 0.25);
+    await t.dire('B à E sont sous terre : type « 🪨 Sous terre ».');
+    await t.dire(dicte('Point G : TPS de surface, sur le plateau de Nans-sous-Sainte-Anne. Il sert de relais entre le fond et le PC.'),
+        'Le radioamateur de l\'ADRASEC s\'y installera : il transmet au PC, par radio (talkie-walkie), les messages venus du fond.');
+    await t.vite(() => o.ajouterPoint('G', 'TPS de surface (plateau de Nans-sous-Sainte-Anne)', '🌿 Surface', '7'), 0.4);
+    await t.viser(o.modale().getByText('TPS de surface (plateau de Nans-sous-Sainte-Anne)').first());
+    if (process.env.FILM_RAPIDE) await t.decrire('S3-point-G');
+    await t.dire('Le point G est sur le site : son type est « 🌿 Surface ».',
+        '« 🚗 Hors site » sert aux liaisons en dehors du site, par exemple pour aller chercher du matériel dans un lieu de stockage.');
+    await t.dire(dicte('Correction : D s\'appelle Salle du Chaos amont.'));
+    await o.modifierPoint('Salle du Chaos', 'Salle du Chaos amont');
+    await t.viser(o.modale().getByText('Salle du Chaos amont').first());
+    await t.dire('Le nom est corrigé dans la liste ; les lignes de main courante qui citeraient déjà le point D suivraient aussi.');
+    await t.dire('« Vider tout » efface toute la liste : on ne s\'en sert jamais pendant une opération.');
+    await o.fermer();
+    await t.dire('Les points phones servent maintenant partout : le champ « Point Phone » de la main courante, le diagramme de progression des équipes et le planning.');
 });
 
 // Phase 4 — Progression et main courante
