@@ -93,9 +93,15 @@ let GestionEquipesModal = ({
 
     // Fonction de détection automatique du type de mission
     const detectTypeMission = (missionText) => {
-        if (!missionText || missionText.trim() === '') {
+        // Sans mot-clé reconnu, seul un type proposé automatiquement est retiré : un type choisi
+        // à la main (ou celui d'une équipe en cours de modification) est gardé
+        const retirerSuggestion = () => {
+            if (!typeMissionSuggested) return;
             setTypeMission('');
             setTypeMissionSuggested(false);
+        };
+        if (!missionText || missionText.trim() === '') {
+            retirerSuggestion();
             return;
         }
 
@@ -120,8 +126,7 @@ let GestionEquipesModal = ({
         }
 
         // Aucun type trouvé
-        setTypeMission('');
-        setTypeMissionSuggested(false);
+        retirerSuggestion();
     };
 
     // Enlève les accents et met en minuscules, pour une recherche insensible à la casse/accents
