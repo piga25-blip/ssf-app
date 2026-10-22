@@ -179,7 +179,7 @@ const ETAPES = [
     }],
     ['06-points-phone', async () => {
         await clic('Points Phone');
-        const POINTS = [['A', 'Entrée de la cavité', '🚪 Entrée cavité'], ['B', 'Puits P40', '🪨 Sous terre'], ['C', 'Salle du Camp', '🪨 Sous terre']];
+        const POINTS = [['A', 'Entrée de la cavité', '🚪 Entrée cavité'], ['B', 'Puits P40', '🕳️ Sous terre'], ['C', 'Salle du Camp', '🕳️ Sous terre']];
         for (const [lettre, nom, type] of POINTS) {
             const ligne = page.locator('div.flex.gap-2:visible', { has: page.locator('input[placeholder="Pos."]') });
             await ligne.locator('select').selectOption(lettre);
@@ -191,7 +191,7 @@ const ETAPES = [
     }],
     ['07-creation-equipe-1', async () => {
         await clic(/^👥 Équipes$/);
-        await page.locator('label:visible', { hasText: '🪨 Sous terre' }).first().click();
+        await page.locator('label:visible', { hasText: '🕳️ Sous terre' }).first().click();
         await saisir('Titre (ex: Reconnaissance Zone Nord)', 'Reconnaissance réseau Nord');
         await saisir('Détaillez précisément ce que l\'équipe doit faire...', 'Descendre au P40 et reconnaître la galerie nord.');
         await page.locator('select:visible', { has: page.locator('option', { hasText: 'Sélectionner un type' }) }).selectOption({ index: 1 });

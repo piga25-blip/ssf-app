@@ -431,7 +431,7 @@ try {
     localStorage.setItem('ssf_current_secretaire', newName.trim());
     const enGestion = mettreEnGestion(sauveteurChoisi);
     alert(`✅ Secrétaire enregistré : ${newName.trim()}\n\nCe nom sera automatiquement utilisé pour vos prochains événements.`
-        + (enGestion ? `\n\n🟨 ${sauveteurChoisi.name} passe en « Gestion - PC » au planning.` : ''));
+        + (enGestion ? `\n\n👔 ${sauveteurChoisi.name} passe en « Gestion - PC » au planning.` : ''));
 } catch (error) {
     console.error('Erreur enregistrement secrétaire :', error);
     alert('⚠️ Une erreur est survenue, mais la fenêtre va se fermer.');
@@ -627,7 +627,7 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
                             </div>
                             <div onClick={() => setTypeSecours('exercice')}
                                 className={`p-4 border-4 rounded-xl cursor-pointer transition-all text-center ${typeSecours === 'exercice' ? 'border-amber-500 bg-amber-50 shadow-md' : 'border-gray-200 hover:border-amber-300'}`}>
-                                <div className="text-3xl">🟡</div>
+                                <div className="text-3xl">🎓</div>
                                 <div className="font-black text-lg text-amber-700 mt-1">EXERCICE</div>
                                 <div className="text-xs text-gray-500">Simulation / manœuvre</div>
                                 {typeSecours === 'exercice' && <div className="text-xl mt-1">✅</div>}
@@ -709,7 +709,7 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    {d.rescueId.toUpperCase().startsWith('EXERCICE') ? <span className="text-lg">🟡</span> : <span className="text-lg">🚨</span>}
+                                                    {d.rescueId.toUpperCase().startsWith('EXERCICE') ? <span className="text-lg">🎓</span> : <span className="text-lg">🚨</span>}
                                                     <span className="font-bold text-gray-800 truncate">{d.rescueId}</span>
                                                 </div>
                                                 <div className="text-xs text-gray-500 flex gap-4">

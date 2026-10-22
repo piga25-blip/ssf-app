@@ -21,7 +21,7 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
         { id: 'intendance', nom: '🍽️ Intendance', couleur: 'orange' },
         { id: 'incident', nom: '⚠️ Incident', couleur: 'yellow' },
         { id: 'administratif', nom: '📋 Administratif', couleur: 'gray' },
-        { id: 'personnel', nom: '🧑‍⚕️ Personnel', couleur: 'cyan' },
+        { id: 'personnel', nom: '👤 Personnel', couleur: 'cyan' },
         { id: 'autre', nom: '🎯 Autre', couleur: 'pink' }
     ];
 
@@ -672,7 +672,7 @@ let MainCouranteTab = ({
             return 'administratif';
         }
         
-        // 🧑‍⚕️ PERSONNEL - Mots-clés : arrivée, départ, sauveteur, relève
+        // 👤 PERSONNEL - Mots-clés : arrivée, départ, sauveteur, relève
         const motsClesPersonnel = ['arrivée', 'arrivee', 'départ', 'depart', 'sauveteur', 'relève', 'releve', 'équipier', 'equipier', 'présence', 'presence'];
         if (motsClesPersonnel.some(mot => texte.includes(mot))) {
             return 'personnel';
@@ -2057,7 +2057,7 @@ let MainCouranteTab = ({
                         {formData.departDuPC && (
                             <div style={{display:'flex',gap:'4px',marginLeft:'4px'}}>
                                 {[
-                                    {val:'souterre', label:'🪨', title:'Sous terre → Approche'},
+                                    {val:'souterre', label:'🕳️', title:'Sous terre → Approche'},
                                     {val:'surface', label:'🌿', title:'Surface → Mission surface'},
                                     {val:'horssite', label:'🚗', title:'Hors site → Mission hors site'}
                                 ].map(function(opt) {
@@ -2127,7 +2127,7 @@ let MainCouranteTab = ({
                                      </label>
                                      <label style={{cursor:'pointer',padding:'4px 8px',borderRadius:'5px',fontSize:'11px',fontWeight:'700',border:'1px solid',backgroundColor:formData.sensEntree===true?'#8b4513':'#fff',color:formData.sensEntree===true?'#fff':'#4b5563',borderColor:formData.sensEntree===true?'#8b4513':'#d1d5db'}} title="Planning → Sous terre">
                                          <input type="radio" checked={formData.sensEntree===true} onChange={function(){setFormData(Object.assign({},formData,{sensEntree:true}));}} style={{display:'none'}} />
-                                         🪨 Entre sous terre
+                                         🕳️ Entre sous terre
                                      </label>
                                      <label style={{cursor:'pointer',padding:'4px 8px',borderRadius:'5px',fontSize:'11px',fontWeight:'700',border:'1px solid',backgroundColor:formData.sensEntree==='surface'?'#15803d':'#fff',color:formData.sensEntree==='surface'?'#fff':'#4b5563',borderColor:formData.sensEntree==='surface'?'#15803d':'#d1d5db'}} title="Sort mais reste à l'entrée cavité — Planning → Surface">
                                          <input type="radio" checked={formData.sensEntree==='surface'} onChange={function(){setFormData(Object.assign({},formData,{sensEntree:'surface'}));}} style={{display:'none'}} />
@@ -2648,7 +2648,7 @@ let MainCouranteTab = ({
                                         {editFormData.departDuPC && (
                                             <div style={{display:'flex', gap:'6px', flexWrap:'wrap'}}>
                                                 {[
-                                                    {val:'souterre', label:'🪨 Sous terre', bg:'#8b4513', color:'white'},
+                                                    {val:'souterre', label:'🕳️ Sous terre', bg:'#8b4513', color:'white'},
                                                     {val:'surface', label:'🌿 Surface', bg:'#16a34a', color:'white'},
                                                     {val:'horssite', label:'🚗 Hors site', bg:'#6b7280', color:'white'}
                                                 ].map(opt => (

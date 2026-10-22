@@ -48,7 +48,7 @@ let GestionEquipesModal = ({
         { id: 'Transmission', nom: '📡 Transmission', keywords: ['transmission', 'radio', 'communication', 'liaison', 'tel', 'phone', 'TPS', 'SPL'] },
         { id: 'Équipement', nom: '⚙️ Équipement', keywords: ['équipement', 'installation', 'montage', 'câble', 'tyrolienne', 'balancier'] },
         { id: 'Désobstruction', nom: '🔨 Désobstruction', keywords: ['désobstruction', 'déblai', 'déblayage', 'éboulis', 'obstacle', 'tir'] },
-        { id: 'Plongée', nom: '🤿 Plongée', keywords: ['plongée', 'siphon', 'immersion', 'eau', 'aquatique'] },
+        { id: 'Plongée', nom: '🌊 Plongée', keywords: ['plongée', 'siphon', 'immersion', 'eau', 'aquatique'] },
         { id: 'Gestion', nom: '📋 Gestion', keywords: ['gestion', 'coordi', 'organisation', 'pc', 'direction'] },
         { id: 'Divers', nom: '🎯 Divers', keywords: [] }
     ];
@@ -884,7 +884,7 @@ let GestionEquipesModal = ({
                                         </p>
                                         <div className="flex gap-2">
                                             {[
-                                                {val:'souterre', label:'🪨 Sous terre'},
+                                                {val:'souterre', label:'🕳️ Sous terre'},
                                                 {val:'surface', label:'🌿 Surface'},
                                                 {val:'horssite', label:'🚗 Hors site'}
                                             ].map(function(opt) {
@@ -1063,7 +1063,7 @@ let GestionEquipesModal = ({
                                                     <span className="text-lg font-black text-blue-800 whitespace-nowrap">{team.name}</span>
                                                     {(() => {
                                                         const lieu = team.lieu || (team.sousTerre ? 'souterre' : null);
-                                                        if (lieu === 'souterre') return <span title="Sous terre" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#78350f',color:'white',whiteSpace:'nowrap'}}>🪨 S.Terre</span>;
+                                                        if (lieu === 'souterre') return <span title="Sous terre" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#78350f',color:'white',whiteSpace:'nowrap'}}>🕳️ S.Terre</span>;
                                                         if (lieu === 'surface') return <span title="Surface" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#15803d',color:'white',whiteSpace:'nowrap'}}>🌿 Surface</span>;
                                                         if (lieu === 'horssite') return <span title="Hors site" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#4b5563',color:'white',whiteSpace:'nowrap'}}>🚗 Hors site</span>;
                                                         return <span title="Lieu non défini" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#f97316',color:'white',whiteSpace:'nowrap'}}>❓ Lieu ?</span>;

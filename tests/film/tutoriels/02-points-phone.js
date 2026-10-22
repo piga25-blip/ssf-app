@@ -46,11 +46,11 @@ executer('02-points-phone', 'Inscrire les points phones', async (t) => {
     await t.dire('Le point A est ajouté. On continue avec les points sous terre, dans l\'ordre où les équipes les rencontrent.');
     await t.choisir(ligneAjout.locator('select'), 'B');
     await t.saisir(t.champ('Ex: Base du P80, Poste médical...'), 'Puits P40');
-    await t.clic(t.etiquette('🪨 Sous terre'));
+    await t.clic(t.etiquette('🕳️ Sous terre'));
     await t.clic(t.bouton('+ Ajouter'));
     await t.choisir(ligneAjout.locator('select'), 'C');
     await t.saisir(t.champ('Ex: Base du P80, Poste médical...'), 'Salle du Camp');
-    await t.clic(t.etiquette('🪨 Sous terre'));
+    await t.clic(t.etiquette('🕳️ Sous terre'));
     await t.clic(t.bouton('+ Ajouter'));
     await t.dire('Les lettres déjà prises sont grisées dans la liste déroulante : impossible de donner deux fois la même lettre.');
 
@@ -60,7 +60,7 @@ executer('02-points-phone', 'Inscrire les points phones', async (t) => {
     await t.choisir(ligneAjout.locator('select'), 'D');
     await t.saisir(t.champ('Ex: Base du P80, Poste médical...'), 'Méandre de la Cascade');
     await t.saisir(t.champ('Pos.'), '2.5');
-    await t.clic(t.etiquette('🪨 Sous terre'));
+    await t.clic(t.etiquette('🕳️ Sous terre'));
     await t.clic(t.bouton('+ Ajouter'));
     await t.dire('Dans la liste, D se range bien entre B et C. La case « Pos. » de chaque ligne reste modifiable à tout moment.');
 
@@ -96,7 +96,7 @@ executer('02-points-phone', 'Inscrire les points phones', async (t) => {
     await t.vite(async () => {
         await t.choisir(ligneAjout.locator('select'), 'Z');
         await t.saisir(t.champ('Ex: Base du P80, Poste médical...'), 'Point en trop');
-        await t.clic(t.etiquette('🪨 Sous terre'));
+        await t.clic(t.etiquette('🕳️ Sous terre'));
         await t.clic(t.bouton('+ Ajouter'));
     });
     const ligneZ = p.locator('div.flex.items-center.gap-2:visible', { hasText: 'Point en trop' }).last();

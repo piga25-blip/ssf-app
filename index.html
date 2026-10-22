@@ -645,7 +645,7 @@
                 { id: 'intendance', nom: '🍽️ Intendance', couleur: 'orange' },
                 { id: 'incident', nom: '⚠️ Incident', couleur: 'yellow' },
                 { id: 'administratif', nom: '📋 Administratif', couleur: 'gray' },
-                { id: 'personnel', nom: '🧑‍⚕️ Personnel', couleur: 'cyan' },
+                { id: 'personnel', nom: '👤 Personnel', couleur: 'cyan' },
                 { id: 'autre', nom: '🎯 Autre', couleur: 'pink' }
             ]);
 
@@ -1487,7 +1487,7 @@
                                 {missionInfo && missionInfo.nomCavite ? (
                                     <div className="flex items-center gap-2 ml-2 px-3 py-1 rounded-lg text-sm" style={{background: missionInfo.typeSecours === 'exercice' ? '#fef3c7' : '#fee2e2', border: `1px solid ${missionInfo.typeSecours === 'exercice' ? '#f59e0b' : '#ef4444'}`}}>
                                         <span style={{fontWeight:'700', color: missionInfo.typeSecours === 'exercice' ? '#92400e' : '#b91c1c'}}>
-                                            {missionInfo.typeSecours === 'exercice' ? '🟡 EXERCICE' : '🔴 SECOURS'}
+                                            {missionInfo.typeSecours === 'exercice' ? '🎓 EXERCICE' : '🔴 SECOURS'}
                                         </span>
                                         <span className="text-gray-700">— {missionInfo.nomCavite}</span>
                                         {missionInfo.commune && <span className="text-gray-500">({missionInfo.commune})</span>}

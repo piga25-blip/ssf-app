@@ -971,10 +971,10 @@ const PaletteActivites = ({
                     categorie = 'intendance';
                     icone = '🍽️';
                 }
-                // 🧑‍⚕️ Disponible
+                // 👤 Disponible
                 else if (activity.id === 'disponible') {
                     categorie = 'personnel';
-                    icone = '🧑‍⚕️';
+                    icone = '👤';
                 }
                 // 🚪 Quitter le secours
                 else if (activity.id === 'quitter_secours') {

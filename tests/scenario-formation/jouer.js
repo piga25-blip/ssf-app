@@ -432,8 +432,8 @@ const ecrireRapport = () => {
     });
 
     // ══ PHASE 3 ══════════════════════════════════════════════════════════
-    const POINTS = [['F', 'Parking — Poste médical avancé', '🌿 Surface', '1'], ['A', 'Entrée de la cavité', '🚪 Entrée cavité', '2'], ['B', 'Tête du P40', '🪨 Sous terre', '3'],
-        ['C', 'Base du P40', '🪨 Sous terre', '4'], ['D', 'Salle du Chaos', '🪨 Sous terre', '5'], ['E', 'Point victime', '🪨 Sous terre', '6'], ['G', 'Hôpital de Pontarlier', '🚗 Hors site', '7']];
+    const POINTS = [['F', 'Parking — Poste médical avancé', '🌿 Surface', '1'], ['A', 'Entrée de la cavité', '🚪 Entrée cavité', '2'], ['B', 'Tête du P40', '🕳️ Sous terre', '3'],
+        ['C', 'Base du P40', '🕳️ Sous terre', '4'], ['D', 'Salle du Chaos', '🕳️ Sous terre', '5'], ['E', 'Point victime', '🕳️ Sous terre', '6'], ['G', 'Hôpital de Pontarlier', '🚗 Hors site', '7']];
     await etape('3.0:50', 'Créer les 7 points phones (lettre, nom, type, position)', async () => {
         await ouvrirPoints();
         for (const [l, nom, type, pos] of POINTS) {
@@ -453,19 +453,19 @@ const ecrireRapport = () => {
     PP.D = 'D - Salle du Chaos amont';
     await etape('3.0:58', 'Équipe 1 : N°1, type Reconnaissance détecté, chef MARTIN', async () => {
         await equipes();
-        await creerEquipe({ lieu: '🪨 Sous terre', titre: 'Reconnaissance jusqu\'à la victime', ordre: 'Descendre jusqu\'au point victime, faire le bilan, rendre compte par TPS à chaque point phone.', membres: ['MARTIN Alice', 'BERNARD Bruno', 'ROBERT Emma'], typeAttendu: 'Reconnaissance' });
+        await creerEquipe({ lieu: '🕳️ Sous terre', titre: 'Reconnaissance jusqu\'à la victime', ordre: 'Descendre jusqu\'au point victime, faire le bilan, rendre compte par TPS à chaque point phone.', membres: ['MARTIN Alice', 'BERNARD Bruno', 'ROBERT Emma'], typeAttendu: 'Reconnaissance' });
         await contient('Équipe 1');
     });
     await etape('3.1:02', 'Équipe 2 : N°2 proposé, type ASV détecté', async () => {
         await equipes();
         const num = await p.locator('select:visible').filter({ has: p.locator('option', { hasText: 'déjà utilisé' }) }).first().inputValue();
         verifier(num === '2', `numéro proposé : ${num}`);
-        await creerEquipe({ lieu: '🪨 Sous terre', titre: 'ASV et médicalisation de la victime', membres: ['DUBOIS Chloé', 'DURAND Gaëlle', 'PETIT Félix'], typeAttendu: 'ASV' });
+        await creerEquipe({ lieu: '🕳️ Sous terre', titre: 'ASV et médicalisation de la victime', membres: ['DUBOIS Chloé', 'DURAND Gaëlle', 'PETIT Félix'], typeAttendu: 'ASV' });
     });
     await etape('3.1:04', 'Équipe 3 : BERNARD « déjà en Équipe 1 » → Annuler', async () => {
         await equipes();
         await viderMsgs();
-        await lab('🪨 Sous terre').click();
+        await lab('🕳️ Sous terre').click();
         await champ('Titre (ex: Reconnaissance Zone Nord)').fill('Transmission, pose du TPS jusqu\'à la Salle du Chaos');
         const choix = p.locator('select:visible', { has: p.locator('option', { hasText: 'Sélectionner un type' }) });
         const val = await choix.inputValue();
@@ -530,7 +530,7 @@ const ecrireRapport = () => {
     await etape('4.1:18', 'Venant de MARTIN (équipe auto), A, Entre sous terre', async () => {
         await p.locator('input[list="expediteurs-list"]:visible').fill('MARTIN Alice');
         const eq = await p.locator('input[list="equipe-list"]:visible').inputValue();
-        await ligne({ pp: PP.A, sens: '🪨 Entre sous terre', texte: 'Équipe 1 à l\'entrée, on entre.' });
+        await ligne({ pp: PP.A, sens: '🕳️ Entre sous terre', texte: 'Équipe 1 à l\'entrée, on entre.' });
         await fenetrePlanning({ titre: 'souterre' });
         verifier(eq === 'Équipe 1', `équipe remplie seule : « ${eq} »`);
         await attendreActivite('ROBERT Emma', 'Sous Terre');
@@ -689,7 +689,7 @@ const ecrireRapport = () => {
     });
     await etape('5.2:07', 'Équipe 2 Départ PC, entre sous terre', async () => {
         await ligne({ equipe: 'Équipe 2', depart: true, lieu: 'Sous terre' }); await fenetrePlanning();
-        await ligne({ equipe: 'Équipe 2', pp: PP.A, sens: '🪨 Entre sous terre' }); await fenetrePlanning();
+        await ligne({ equipe: 'Équipe 2', pp: PP.A, sens: '🕳️ Entre sous terre' }); await fenetrePlanning();
     });
     await etape('5.2:09', 'Scinder équipe 2 → 2B (PETIT seul)', async () => {
         await equipes(); await deplier('Équipe 2');
@@ -744,7 +744,7 @@ const ecrireRapport = () => {
         await p.locator('div.flex.gap-2:visible', { has: p.locator('input[placeholder="Pos."]') }).locator('select').selectOption('H');
         await champ('Ex: Base du P80, Poste médical...').fill('Étroiture');
         await champ('Pos.').fill('4.5');
-        await lab('🪨 Sous terre').click();
+        await lab('🕳️ Sous terre').click();
         await b('+ Ajouter').click(); await attendre(400);
         const ordre = await modale().innerText();
         const iC = ordre.indexOf('Base du P40'), iH = ordre.indexOf('Étroiture'), iD = ordre.indexOf('Salle du Chaos amont');

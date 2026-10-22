@@ -1128,7 +1128,7 @@ let DashboardTab = ({
                                 }`}
                             >
                                 <span className="text-2xl">
-                                    {alerte.type === 'danger' ? '🔴' : '🟠'}
+                                    {alerte.type === 'danger' ? '🔴' : '⚠️'}
                                 </span>
                                 <div className="flex-1">
                                     <div className="font-bold text-lg">{alerte.message}</div>

@@ -148,7 +148,7 @@ let GestionPointsPhoneModal = ({ pointsPhone, events, actions, onClose }) => {
                             <div className="flex flex-wrap gap-1">
                                 {[
                                     {val:'surface', label:'🌿 Surface'},
-                                    {val:'souterre', label:'🪨 Sous terre'},
+                                    {val:'souterre', label:'🕳️ Sous terre'},
                                     {val:'entree', label:'🚪 Entrée cavité'},
                                     {val:'sortie', label:'🚪 Sortie cavité'},
                                     {val:'horssite', label:'🚗 Hors site'}
@@ -200,7 +200,7 @@ let GestionPointsPhoneModal = ({ pointsPhone, events, actions, onClose }) => {
                                         const realIdx = pointsPhone.indexOf(pp);
                                         const ordreVal = typeof pp === 'object' && pp.ordre !== undefined ? pp.ordre : '';
                                         const typePP = typeof pp === 'object' ? (pp.typePP || (pp.sousTerre ? 'souterre' : '')) : '';
-                                        const typeBadge = typePP === 'souterre' ? {label:'🪨', bg:'#78350f'} : typePP === 'surface' ? {label:'🌿', bg:'#15803d'} : typePP === 'entree' ? {label:'🚪↓', bg:'#1d4ed8'} : typePP === 'sortie' ? {label:'🚪↑', bg:'#7c3aed'} : typePP === 'horssite' ? {label:'🚗', bg:'#4b5563'} : {label:'?', bg:'#9ca3af'};
+                                        const typeBadge = typePP === 'souterre' ? {label:'🕳️', bg:'#78350f'} : typePP === 'surface' ? {label:'🌿', bg:'#15803d'} : typePP === 'entree' ? {label:'🚪↓', bg:'#1d4ed8'} : typePP === 'sortie' ? {label:'🚪↑', bg:'#7c3aed'} : typePP === 'horssite' ? {label:'🚗', bg:'#4b5563'} : {label:'?', bg:'#9ca3af'};
                                         return (
                                             <div key={realIdx} className="flex items-center gap-2 p-2 bg-white rounded border hover:border-blue-200 transition-colors">
                                                 {editingIndex === realIdx ? (
@@ -220,7 +220,7 @@ let GestionPointsPhoneModal = ({ pointsPhone, events, actions, onClose }) => {
                                                             <div className="flex flex-wrap gap-1">
                                                                 {[
                                                                     {val:'surface', label:'🌿'},
-                                                                    {val:'souterre', label:'🪨'},
+                                                                    {val:'souterre', label:'🕳️'},
                                                                     {val:'entree', label:'🚪↓'},
                                                                     {val:'sortie', label:'🚪↑'},
                                                                     {val:'horssite', label:'🚗'}
