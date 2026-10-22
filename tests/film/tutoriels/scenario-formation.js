@@ -60,11 +60,12 @@ const outils = (t) => {
     // Champs date / heure : valeur posée d'un coup (la frappe chiffre par chiffre se place mal)
     o.valeur = async (loc, v) => { await t.viser(loc); await loc.first().fill(v); await t.rythme(1.5); };
     // Ligne de main courante
-    o.ligne = async ({ dest, venant, equipe, depart, lieu, pp, sens, texte, important, rappel, fichier, categorie } = {}) => {
+    o.ligne = async ({ dest, venant, equipe, depart, retour, lieu, pp, sens, texte, important, rappel, fichier, categorie } = {}) => {
         if (dest) await t.saisir(p.locator('input[list="destinataires-list"]:visible'), dest);
         if (venant) await t.saisir(p.locator('input[list="expediteurs-list"]:visible'), venant);
         if (equipe && !(venant && (await p.locator('input[list="equipe-list"]:visible').inputValue()) === equipe)) await t.saisir(p.locator('input[list="equipe-list"]:visible'), equipe);
         if (depart) { await t.clic(t.etiquette('🚀 Départ PC')); if (lieu) await t.clic(p.locator(`label[title^="${lieu}"]:visible`)); }
+        if (retour) await t.clic(t.etiquette('🏠 Retour PC'));
         if (pp) await t.saisir(p.locator('input[list="pointsphone-list"]:visible'), pp);
         if (sens) await t.clic(t.etiquette(sens));
         if (texte) await t.saisir(t.champ('Description...'), texte);
@@ -79,7 +80,7 @@ const outils = (t) => {
     };
     // Fenêtre « Mise à jour planning » / « Qui est au point phone ? »
     o.planning = async ({ toute = true, garder = null, texte = null } = {}) => {
-        const h = p.locator('h3:visible', { hasText: /Mise à jour planning|Qui est au point phone/ });
+        const h = p.locator('h3:visible', { hasText: /Mise à jour planning|Qui est au point phone|Retour au PC/ });
         await h.first().waitFor({ timeout: 5000 });
         const boite = p.locator('div:visible', { has: h }).last();
         if (texte) await t.dire(texte);
@@ -183,6 +184,7 @@ const outils = (t) => {
         await l.scrollIntoViewIfNeeded().catch(() => {});
         await t.viser(l);
         if (explication) await t.dire(explication, pourquoi);
+        if (process.env.FILM_PLANNING) await t.decrire(process.env.FILM_PLANNING + '-' + (o.nPl = (o.nPl || 0) + 1));
         await t.vite(() => t.clic(t.bouton(/Main Courante/)));
     };
     return o;
@@ -626,61 +628,101 @@ PHASES.push(async (t, o) => {
     await t.dire(dicte('Le bilan a été transmis au SAMU.'), 'La fenêtre d\'alertes se ferme par « × » (elle revient moins d\'une minute après) ; on peut aussi valider le rappel dans le tableau.');
     await t.clic(p.locator('button[title^="Fermer (réapparaîtra"]'));
     await t.clic(p.locator('table tbody tr', { hasText: 'Envoyez-nous un bilan médical' }).filter({ hasNotText: 'Rappel N°' }).first().locator('button', { hasText: '✓ Valider' }));
+    await o.voirLigne(['Rappel N°', 'famille'], 'La main courante note « Rappel N°… réalisé » pour le bilan du SAMU, et la ligne du rappel passe à « Réalisée ».');
+
     await t.chapitre('Scinder une équipe');
-    await t.dire(dicte('L\'équipe 2 part du PC et entre sous terre.'));
-    await o.ligne({ equipe: 'Équipe 2', depart: true, lieu: 'Sous terre' }); await o.planning();
-    await o.ligne({ equipe: 'Équipe 2', pp: PP.A, sens: '🕳️ Entre sous terre' }); await o.planning();
+    await t.dire(dicte('L\'équipe 2 part du PC et entre sous terre.'), 'Deux lignes : le départ du PC, puis le point A avec « Entre sous terre ».');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 2', depart: true, lieu: 'Sous terre' }), 0.5); await o.planning();
+    await o.voirPlanning('DUBOIS Chloé', 'Au planning, l\'équipe 2 passe en « Approche » (violet).');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 2', pp: PP.A, sens: '🕳️ Entre sous terre' }), 0.5); await o.planning();
+    await o.voirPlanning('DUBOIS Chloé', 'Puis en « Sous Terre » (marron) : DUBOIS, DURAND et PETIT sont dans la cavité.');
     await t.dire(dicte('L\'équipe 2 se divise : DUBOIS et DURAND restent avec la victime, PETIT remonte chercher la couverture chauffante.'),
         '« Scinder » : les membres cochés partent dans une nouvelle équipe (2B), qui hérite de la dernière position connue.');
     await o.equipes(); await o.deplier('Équipe 2');
     await t.clic(o.carte('Équipe 2').locator('button', { hasText: '✂️ Scinder' }));
+    await t.dire('Tous les membres sauf le chef sont cochés d\'office : on décoche DURAND Gaëlle, qui reste avec la victime.');
     await t.clic(p.locator('label:visible', { hasText: 'DURAND Gaëlle' }).last().locator('input'));
     await t.clic(t.bouton('Créer Équipe 2B'));
+    await t.viser(o.carte('Équipe 2B'));
+    await t.dire('L\'équipe 2B est créée avec PETIT Félix. Elle reprend la mission de l\'équipe 2 : « ASV et médicalisation de la victime ». Ce n\'est plus sa mission.',
+        'Un clic sur le titre de l\'équipe ouvre sa modification : on change l\'intitulé et l\'ordre de mission.');
+    await o.deplier('Équipe 2B');
+    await t.clic(o.carte('Équipe 2B').locator('div[title="Cliquer pour modifier"]'));
+    await t.saisir(t.champ('Titre (ex: Reconnaissance Zone Nord)'), 'Remonter chercher la couverture chauffante');
+    await t.saisir(t.champ('Détaillez précisément ce que l\'équipe doit faire...'), 'Remonter au PC chercher la couverture chauffante pour la victime.');
+    if (process.env.FILM_RAPIDE) await t.decrire('S5-modif-avant');
+    await t.clic(t.bouton('Sauvegarder les modifications'));
+    if (process.env.FILM_RAPIDE) await t.decrire('S5-modif-apres');
+    await t.viser(o.carte('Équipe 2B'));
+    await t.dire('La carte de l\'équipe 2B porte sa nouvelle mission.');
+    await o.fermer();
+    await o.voirLigne('Scission Équipe 2', 'En main courante : « Scission Équipe 2 → Équipe 2B », avec le membre détaché, PETIT Félix.');
+    await o.voirLigne('Position initiale', 'Puis la position de départ de l\'équipe 2B : le dernier point connu de l\'équipe 2, le point A.');
+    await o.voirLigne('Modification Équipe 2B', 'Et « Modification Équipe 2B », avec la nouvelle mission.');
+    await o.voirPlanning('PETIT Félix', 'Au planning, PETIT Félix reste « Sous Terre » : il est encore dans la cavité, avec le numéro d\'équipe 2B.');
+
     await t.chapitre('Renforts et mouvements');
-    await t.dire(dicte('THOMAS David rejoint l\'équipe 1.'));
-    await o.deplier('Équipe 1');
+    await t.dire(dicte('THOMAS David rejoint l\'équipe 1. Il part du PC.'), '« Ajouter des Membres » dans la carte de l\'équipe, puis une ligne de départ du PC pour lui seul.');
+    await o.equipes(); await o.deplier('Équipe 1');
     await t.clic(o.carte('Équipe 1').locator('button', { hasText: 'Ajouter des Membres' }));
     await t.cocher(p.locator('div.bg-emerald-50:visible label', { hasText: 'THOMAS David' }).locator('input'));
     await t.clic(t.bouton(/Ajouter \(1\) membre/));
-    await t.dire(dicte('BERNARD Bruno passe de l\'équipe 1 à l\'équipe 3. ROBERT Emma est libérée, elle remonte au PC.'),
-        '« Mouvement Individuel Rapide » : on tape la destination (T3) ou PC, puis « Déplacer ».');
-    await o.deplier('Équipe 1');
+    await o.fermer();
+    await o.voirPlanning('THOMAS David', 'Au planning, THOMAS David passe en « Engagé », avec le numéro d\'équipe 1.');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 1', depart: true, lieu: 'Sous terre' }), 0.5);
+    await o.planning({ toute: false, garder: ['THOMAS David'], texte: 'Dans la fenêtre de planning, on ne garde que THOMAS David : le reste de l\'équipe est déjà sous terre.' });
+    await o.voirPlanning('THOMAS David', 'Il passe en « Approche » (violet) : il descend rejoindre son équipe, déjà sous terre.');
+    await t.dire(dicte('BERNARD Bruno passe de l\'équipe 1 à l\'équipe 3. ROBERT Emma, fatiguée, remonte avec PETIT : elle passe dans l\'équipe 2B.'),
+        '« Mouvement Individuel Rapide » : on tape la destination (T3, 2B) ou PC, puis « Déplacer ».');
+    await o.equipes(); await o.deplier('Équipe 1');
     const lB = o.carte('Équipe 1').locator('div.flex.items-center.gap-2', { hasText: 'BERNARD Bruno' });
     await t.saisir(lB.locator('input[placeholder="ID Équipe / PC"]'), 'T3');
     await t.clic(lB.locator('button', { hasText: 'Déplacer' }));
     await o.deplier('Équipe 1');
     const lR = o.carte('Équipe 1').locator('div.flex.items-center.gap-2', { hasText: 'ROBERT Emma' });
-    await t.saisir(lR.locator('input[placeholder="ID Équipe / PC"]'), 'PC');
+    await t.saisir(lR.locator('input[placeholder="ID Équipe / PC"]'), '2B');
     await t.clic(lR.locator('button', { hasText: 'Déplacer' }));
     await t.dire(dicte('SIMON Julien devient chef de l\'équipe 3.'), 'On fait glisser son nom en tête de liste : le badge CHEF passe sur lui.');
     await o.deplier('Équipe 3');
     const membres = o.carte('Équipe 3').locator('div[draggable="true"]');
     await t.glisser(membres.filter({ hasText: 'SIMON Julien' }), membres.first());
-    await t.dire(dicte('L\'équipe 3 change de mission : transmission jusqu\'au point victime.'), 'Un clic sur le titre de l\'équipe ouvre sa modification.');
-    await t.clic(o.carte('Équipe 3').locator('div[title="Cliquer pour modifier"]'));
-    await t.saisir(t.champ('Titre (ex: Reconnaissance Zone Nord)'), 'Transmission jusqu\'au point victime');
-    await t.saisir(t.champ('Détaillez précisément ce que l\'équipe doit faire...'), 'Prolonger le TPS jusqu\'au point victime.');
-    await t.clic(t.bouton('Sauvegarder les modifications'));
     await o.fermer();
+    await o.voirLigne('BERNARD Bruno : Équipe 1', 'En main courante : « BERNARD Bruno : Équipe 1 → Équipe 3 », puis « ROBERT Emma : Équipe 1 → Équipe 2B ».');
+    await o.voirLigne('Changement de chef', 'Et « Changement de chef Équipe 3 », avec l\'ancien et le nouveau chef.');
+    await o.voirPlanning('ROBERT Emma', 'Au planning, ROBERT Emma porte maintenant le numéro d\'équipe 2B, BERNARD Bruno le 3. Ils restent « Sous Terre ».');
+
     await t.chapitre('Points phones en cours d\'opération');
     await t.dire(dicte('Nouveau point phone : H, Étroiture, entre C et D, sous terre.'), 'Depuis la main courante, le bouton ⚙️ ouvre les points phones. « Pos. » 4.5 le range entre C et D.');
     await t.clic(p.locator('button[title="Gérer les points phone"]'));
-    await o.ajouterPoint('H', 'Étroiture', '🕳️ Sous terre', '4.5');
+    await t.vite(() => o.ajouterPoint('H', 'Étroiture', '🕳️ Sous terre', '4.5'), 0.5);
     await t.dire(dicte('Correction : C s\'appelle désormais Base du P40, relais TPS.'), 'Les lignes de main courante qui citaient C sont mises à jour.');
     await o.modifierPoint('Base du P40', 'Base du P40, relais TPS');
     await o.fermer();
-    await t.chapitre('Sorties, hors site, fins de mission');
-    await t.dire(dicte('L\'équipe 2B est sortie de la cavité et rentre au PC. Puis : l\'équipe 2B revient au PC.'),
-        'Au point A, « Sort — rentre au PC » met l\'équipe en « Approche » ; au PC, le mot « revient » la met en « Disponible ».');
-    await o.ligne({ equipe: 'Équipe 2B', pp: PP.A, sens: '🏠 Sort — rentre au PC', texte: 'L\'équipe 2B est sortie de la cavité.' }); await o.planning();
-    await o.ligne({ equipe: 'Équipe 2B', pp: PP.PC, texte: 'L\'équipe 2B revient au PC.' }); await o.planning();
-    await t.dire(dicte('Équipe 5 : LEFEBVRE Léo chef, MICHEL Manon. Ils partent chercher la civière au dépôt de Besançon.'), 'Équipe « Hors site », puis départ du PC avec 🚗 : « Mission hors site » au planning.');
-    await o.equipes();
-    await o.creerEquipe({ lieu: '🚗 Hors site', titre: 'Chercher la civière au dépôt de Besançon', membres: ['LEFEBVRE Léo', 'MICHEL Manon'] });
-    await o.fermer();
-    await o.ligne({ equipe: 'Équipe 5', depart: true, lieu: 'Hors site' }); await o.planning();
+    await o.voirLigne('relais TPS', 'La ligne de l\'équipe 1 au point C porte le nouveau nom : « Base du P40, relais TPS ».');
 
-    await t.chapitre('Le TPS de surface et la liaison radio');
+    await t.chapitre('Les retours au PC');
+    await t.dire(dicte('L\'équipe 2B est sortie de la cavité, elle rentre au PC.'),
+        'Point A, sens « 🏠 Sort — rentre au PC ». Rien à écrire en plus.');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 2B', pp: PP.A, sens: '🏠 Sort — rentre au PC' }), 0.5);
+    await o.planning();
+    await o.voirLigne('rentre au PC', 'En main courante : point A, « Sort de sous terre — rentre au PC ».');
+    await o.voirPlanning('PETIT Félix', 'Au planning, PETIT Félix et ROBERT Emma repassent en « Approche » : ils marchent vers le PC.');
+    await t.dire(dicte('L\'équipe 2B est arrivée au PC.'),
+        'On tape l\'équipe et on clique « 🏠 Retour PC » : le point phone devient « PC ». Plus besoin d\'ouvrir la fenêtre des équipes.');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 2B', retour: true }), 0.5);
+    await o.planning({ texte: 'L\'application demande qui est revenu : toute l\'équipe est cochée. Les deux sont là : on valide.' });
+    await o.voirLigne('Dissolution Équipe 2B', 'En main courante : « Retour au PC », « Disponible » pour PETIT et ROBERT, puis « Dissolution Équipe 2B » : tous sont revenus, l\'équipe est dissoute.',
+        'Si une partie seulement de l\'équipe était revenue, on décocherait les absents : les présents quittent l\'équipe, qui continue avec les autres.');
+    await o.voirPlanning('PETIT Félix', 'Au planning, PETIT Félix et ROBERT Emma passent en « Disponible » (vert foncé) et n\'ont plus de numéro d\'équipe.');
+
+    await t.chapitre('Hors site, TPS de surface, fin de mission');
+    await t.dire(dicte('Équipe 5 : LEFEBVRE Léo chef, MICHEL Manon. Ils partent chercher la civière au dépôt de Besançon.'), 'Équipe « Hors site », puis départ du PC avec 🚗.');
+    await o.equipes();
+    await t.vite(() => o.creerEquipe({ lieu: '🚗 Hors site', titre: 'Chercher la civière au dépôt de Besançon', membres: ['LEFEBVRE Léo', 'MICHEL Manon'] }), 0.5);
+    await o.fermer();
+    await t.vite(() => o.ligne({ equipe: 'Équipe 5', depart: true, lieu: 'Hors site' }), 0.5); await o.planning();
+    await o.voirPlanning('LEFEBVRE Léo', 'Au planning, LEFEBVRE Léo et MICHEL Manon passent en « Mission hors site ».');
+
     await t.dire(dicte('Faites venir FAURE Lucie et BOYER Marc, de l\'ADRASEC, mis en alerte. Ils sont arrivés.'),
         'Ils installent un TPS de surface au point G. Le radioamateur de l\'ADRASEC fait la liaison radio entre ce TPS et le PC.');
     await t.clic(t.bouton('Enregistrement des sauveteurs'));
@@ -691,28 +733,42 @@ PHASES.push(async (t, o) => {
     await o.fermer();
     await t.dire(dicte('Équipe 6 : FAURE Lucie chef, BOYER Marc. Titre : Transmission, TPS de surface et relais radio vers le PC. Surface.'));
     await o.equipes();
-    await o.creerEquipe({ lieu: '🌿 Surface', titre: 'Transmission, TPS de surface et relais radio vers le PC', ordre: 'Installer le TPS de surface au point G et assurer la liaison radio avec le PC.', membres: ['FAURE Lucie', 'BOYER Marc'] });
+    await t.vite(() => o.creerEquipe({ lieu: '🌿 Surface', titre: 'Transmission, TPS de surface et relais radio vers le PC', ordre: 'Installer le TPS de surface au point G et assurer la liaison radio avec le PC.', membres: ['FAURE Lucie', 'BOYER Marc'] }), 0.5);
     await o.fermer();
-    await t.dire(dicte('L\'équipe 6 part du PC vers le point G.'), '« Départ PC », lieu « Surface » : l\'équipe passe en « Mission de surface » au planning.');
-    await o.ligne({ equipe: 'Équipe 6', depart: true, lieu: 'Surface' }); await o.planning();
+    await t.dire(dicte('L\'équipe 6 part du PC vers le point G.'), '« Départ PC », lieu « Surface ».');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 6', depart: true, lieu: 'Surface' }), 0.5); await o.planning();
+    await o.voirPlanning('FAURE Lucie', 'Au planning, FAURE Lucie et BOYER Marc passent en « Mission de surface » (orange).');
     await t.dire(dicte('Message de BOYER Marc pour le PC : « TPS de surface installé au point G, liaison radio établie avec le PC. »'),
         'C\'est un message : « Message venant de », « Message à destination de », le point G et le texte mot pour mot.');
-    await o.ligne({ venant: 'BOYER Marc', dest: 'PC', pp: PP.G, texte: 'TPS de surface installé au point G, liaison radio établie avec le PC.' });
+    await t.vite(() => o.ligne({ venant: 'BOYER Marc', dest: 'PC', pp: PP.G, texte: 'TPS de surface installé au point G, liaison radio établie avec le PC.' }), 0.5);
     await o.planning().catch(() => {});
+    await o.voirLigne('liaison radio établie', 'La ligne affiche « Message de : BOYER Marc pour : PC », au point G.');
 
-    await t.dire(dicte('L\'équipe 4 a terminé : fin de mission. … Erreur : c\'est l\'équipe 2B qui a terminé, pas la 4.'),
+    await t.dire(dicte('L\'équipe 4 a terminé : fin de mission. … Erreur : l\'équipe 4 n\'a pas terminé.'),
         '« Fin de mission » dissout l\'équipe ; « Réactiver » annule une fin de mission faite par erreur.');
     await o.equipes(); await o.deplier('Équipe 4');
     await t.clic(o.carte('Équipe 4').locator('button', { hasText: 'Fin de mission' }));
     await t.clic(p.locator('div.bg-white:visible', { hasText: 'DISSOUTE' }).filter({ hasText: 'Équipe 4' }).locator('button', { hasText: 'Réactiver' }));
-    await o.deplier('Équipe 2B');
-    await t.clic(o.carte('Équipe 2B').locator('button', { hasText: 'Fin de mission' }));
+    await t.viser(o.carte('Équipe 4'));
+    await t.dire('L\'équipe 4 est de nouveau active.');
     await o.fermer();
-    await t.dire(dicte('GARCIA Nora quitte le secours.'), '« Départ » : la main courante note « Départ de : … », le planning « Quitter le secours ».');
+    await o.voirLigne('Dissolution Équipe 4', 'En main courante, les deux lignes restent : « Dissolution Équipe 4 », puis sa réactivation. Rien n\'est effacé.');
+    await o.voirPlanning('BLANC Olivier', 'Au planning, BLANC Olivier est de nouveau « Engagé » dans l\'équipe 4.');
+
+    await t.avancer(40, 'Quarante minutes plus tard… Comme du temps a passé, l\'application propose de prolonger le planning de chacun jusqu\'à maintenant : on accepte.');
+    await t.dire(dicte('L\'équipe 5 est revenue au PC avec la civière.'), 'Il y a un renseignement en plus, la civière : on l\'écrit. Puis « 🏠 Retour PC ».');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 5', retour: true, texte: 'Civière rapportée du dépôt de Besançon.' }), 0.5);
+    await o.planning();
+    await o.voirLigne('Dissolution Équipe 5', 'En main courante, le retour au PC et la dissolution de l\'équipe 5.');
+    await o.voirPlanning('LEFEBVRE Léo', 'Au planning, LEFEBVRE Léo et MICHEL Manon repassent en « Disponible ».');
+
+    await t.dire(dicte('GARCIA Nora quitte le secours.'), '« Départ » dans l\'enregistrement des sauveteurs.');
     await t.clic(t.bouton('Enregistrement des sauveteurs'));
     await t.cocher(p.locator('label:visible', { hasText: 'GARCIA Nora' }).last().locator('input'));
     await t.clic(t.bouton('Départ (1)'));
     await o.fermer();
+    await o.voirLigne('Départ de : GARCIA', 'La main courante note « Départ de : GARCIA Nora ».');
+    await o.voirPlanning('GARCIA Nora', 'Au planning, elle passe en « Quitter le secours ».');
 });
 
 // Phase 6 — Mode réseau
