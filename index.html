@@ -1903,6 +1903,7 @@
                                     mcMode={mcMode}
                                     mcIdentifiant={mcIdentifiant}
                                     startHour={startHour}
+                                    currentSecretaire={currentSecretaire}
                                 />
                             </ModalErrorBoundary>
                         )}
@@ -2234,6 +2235,12 @@
                                     currentSecretaire={currentSecretaire}
                                     setCurrentSecretaire={setCurrentSecretaire}
                                     onClose={() => setShowSecretaireModal(false)}
+                                    masterSauveteursList={masterSauveteursList}
+                                    activeSauveteurIds={activeSauveteurIdsPresents}
+                                    planning={planning}
+                                    startHour={startHour}
+                                    totalDays={totalDays}
+                                    actions={actions}
                                 />
                             </ModalErrorBoundary>
                         )}

@@ -130,6 +130,25 @@ class ModalErrorBoundary extends React.Component {
 
 const getTotalSlots = (totalDays) => totalDays * SLOTS_PER_DAY;
 
+// Texte en minuscules sans accents (comparaison des rôles et des noms)
+const sansAccents = (texte) => (texte || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+// Fonction de surface lue dans la colonne « Rôle » de la liste des sauveteurs :
+// gestion (secrétariat, matériel, logistique) et conseiller technique (CT, CTDS, CTDSA)
+const fonctionsDuRole = (role) => {
+    const r = sansAccents(role).replace(/['’]/g, ' ');
+    return {
+        gestion: /\b(gestion|secretaires?|secretariat|materiel|logistique)\b/.test(r),
+        conseiller: /\b(ct|ctdsa?|conseill\w* technique)\b/.test(r),
+    };
+};
+
+// Même personne : « Claire VIDAL » et « VIDAL Claire » (mots dans n'importe quel ordre, sans accents)
+const memePersonne = (a, b) => {
+    const mots = (t) => sansAccents(t).split(/[\s,;.-]+/).filter(Boolean).sort().join(' ');
+    return !!mots(a) && mots(a) === mots(b);
+};
+
 // Nombre de créneaux du planning commencés à l'heure actuelle (créneau en cours compris).
 // J1 commence à startHour le jour de la première ligne de main courante (la veille si cette
 // ligne est avant startHour) ; sans main courante, pas de limite.

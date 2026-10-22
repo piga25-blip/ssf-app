@@ -102,7 +102,7 @@ executer('_verif-defauts', 'vérification', async (t) => {
     await vider();
     const cases = p.locator('tr', { hasText: 'THOMAS David' }).locator('td.time-slot-cell');
     await t.glisser(cases.nth(5), cases.nth(6));
-    await t.clic(t.bouton('Gestion - PC'));
+    await t.clic(t.bouton('Sous Terre'));
     controler('Activité 👥 sur un sauveteur sans équipe : message', (await messages()).includes('activité d\'équipe'));
 
     fs.rmSync(dossier, { recursive: true, force: true });

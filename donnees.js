@@ -263,8 +263,10 @@ const ACTIONS_DONNEES = {
 
     // Arrivée sur site : activation, n° permanent, créneau « disponible » au planning,
     // une ligne groupée de main courante. Un sauveteur déjà venu (parti puis revenu)
-    // garde son n° et sa ligne de planning.
+    // garde son n° et sa ligne de planning. a.activites : { id: 'gestion' | 'conseiller_technique' }
+    // pour ceux qui arrivent dans cette fonction (une ligne de main courante par fonction).
     'SAUVETEURS/ARRIVEE'(etat, a) {
+        const activites = a.activites || {};
         const totalSlots = getTotalSlots(etat.totalDays);
         const slot = indexCreneau(etat, a.horodatage);
         const dansPlanning = slot >= 0 && slot < totalSlots;
@@ -276,12 +278,12 @@ const ACTIONS_DONNEES = {
                 sauveteurPermanentNumbers = { ...sauveteurPermanentNumbers, [id]: nextPermanentNumber };
                 nextPermanentNumber++;
                 const ligne = Array(totalSlots).fill('nondef');
-                if (dansPlanning) ligne[slot] = 'disponible';
+                if (dansPlanning) ligne[slot] = activites[id] || 'disponible';
                 planning[id] = ligne;
             } else if (dansPlanning) {
                 const ligne = planning[id] ? [...planning[id]] : Array(totalSlots).fill('nondef');
                 while (ligne.length < totalSlots) ligne.push('nondef');
-                ligne[slot] = 'disponible';
+                ligne[slot] = activites[id] || 'disponible';
                 planning[id] = ligne;
             }
         });
@@ -290,9 +292,19 @@ const ACTIONS_DONNEES = {
             categorie: 'personnel',
             evenement: etat.mcMode === 'secondaire' ? `Sauveteurs requis : ${noms}` : `Arrivée de : ${noms}`,
         });
+        // Arrivée en gestion ou comme conseiller technique : ligne « 👔 Activité … affectée à »
+        const lignesFonction = dansPlanning ? ['gestion', 'conseiller_technique'].map((act, i) => {
+            const ids = a.ids.filter(id => activites[id] === act);
+            if (ids.length === 0) return null;
+            const nom = act === 'gestion' ? 'Gestion - PC' : 'Conseiller technique';
+            return evenementSysteme(etat, { ...a, idEvenement: a.idEvenement + '-' + (i + 1) }, {
+                categorie: 'equipe',
+                evenement: `👔 Activité "${nom}" affectée à : ${nomsSauveteurs(etat, ids).join(', ')}`,
+            });
+        }).filter(Boolean) : [];
         return {
             ...etat, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber, planning,
-            events: [...etat.events, evenement],
+            events: [...etat.events, evenement, ...lignesFonction],
         };
     },
 
@@ -765,7 +777,7 @@ const creerActionsDonnees = (dispatch) => {
         supprimerSauveteursInactifs: () => dispatch({ type: 'SAUVETEURS/LISTE_SUPPRIMER_INACTIFS' }),
         importerSauveteursListe: (sauveteurs) => dispatch({ type: 'SAUVETEURS/LISTE_IMPORTER', sauveteurs }),
         remplacerSauveteursListe: (sauveteurs) => dispatch({ type: 'SAUVETEURS/LISTE_REMPLACER', sauveteurs }),
-        arriveeSauveteurs: (ids) => dispatch({ type: 'SAUVETEURS/ARRIVEE', ids, ...ligneMC() }),
+        arriveeSauveteurs: (ids, activites = {}) => dispatch({ type: 'SAUVETEURS/ARRIVEE', ids, activites, ...ligneMC() }),
         departSauveteurs: (ids) => dispatch({ type: 'SAUVETEURS/DEPART', ids, ...ligneMC() }),
         numeroterSauveteursManquants: () => dispatch({ type: 'SAUVETEURS/NUMEROTER_MANQUANTS' }),
         // Points phones
