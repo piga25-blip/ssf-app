@@ -354,7 +354,7 @@ PHASES.push(async (t, o) => {
     await o.equipes();
     await t.dire(dicte('Équipe 1 : MARTIN Alice chef, BERNARD Bruno, ROBERT Emma. Titre : Reconnaissance jusqu\'à la victime. Sous terre.'),
         'Le premier coché devient le chef. Le type de mission est détecté dans le titre (« Reconnaissance »). L\'ordre de mission détaille la tâche.');
-    await t.vite(() => o.creerEquipe({ lieu: '🪨 Sous terre', titre: 'Reconnaissance jusqu\'à la victime', ordre: 'Descendre jusqu\'au point victime, faire le bilan, rendre compte par TPS à chaque point phone.', membres: ['MARTIN Alice', 'BERNARD Bruno', 'ROBERT Emma'] }), 0.5);
+    await t.vite(() => o.creerEquipe({ lieu: '🕳️ Sous terre', titre: 'Reconnaissance jusqu\'à la victime', ordre: 'Descendre jusqu\'au point victime, faire le bilan, rendre compte par TPS à chaque point phone.', membres: ['MARTIN Alice', 'BERNARD Bruno', 'ROBERT Emma'] }), 0.5);
     await t.viser(o.carte('Équipe 1'));
     await t.dire('L\'équipe 1 apparaît à droite, dans « Équipes Actives » : le lieu, le titre, la cheffe MARTIN Alice 👑 et le nombre de membres.');
     await o.fermer();
@@ -366,9 +366,9 @@ PHASES.push(async (t, o) => {
         'Au planning, les trois membres passent en « Engagé » (vert clair) ; la colonne « Équipe » affiche leur numéro d\'équipe, 1.');
     await o.equipes();
     await t.dire(dicte('Équipe 2 : DUBOIS Chloé chef, DURAND Gaëlle, PETIT Félix. Titre : ASV et médicalisation de la victime. Sous terre.'), 'Le numéro suivant (2) est proposé tout seul.');
-    await t.vite(() => o.creerEquipe({ lieu: '🪨 Sous terre', titre: 'ASV et médicalisation de la victime', membres: ['DUBOIS Chloé', 'DURAND Gaëlle', 'PETIT Félix'] }), 0.5);
+    await t.vite(() => o.creerEquipe({ lieu: '🕳️ Sous terre', titre: 'ASV et médicalisation de la victime', membres: ['DUBOIS Chloé', 'DURAND Gaëlle', 'PETIT Félix'] }), 0.5);
     await t.dire(dicte('Équipe 3 : MOREAU Inès chef, SIMON Julien. Titre : Transmission, pose du TPS. Ajoutez aussi BERNARD Bruno.'));
-    await t.clic(t.etiquette('🪨 Sous terre'));
+    await t.clic(t.etiquette('🕳️ Sous terre'));
     await t.saisir(t.champ('Titre (ex: Reconnaissance Zone Nord)'), 'Transmission, pose du TPS jusqu\'à la Salle du Chaos');
     for (const n of ['MOREAU Inès', 'SIMON Julien']) await t.cocher(p.locator('label:visible', { hasText: n }).last().locator('input[type="checkbox"]'));
     const bernard = p.locator('label:visible', { hasText: 'BERNARD Bruno' }).last();
@@ -439,9 +439,9 @@ PHASES.push(async (t, o) => {
     await t.dire('A, l\'entrée de la cavité : type « 🚪 Entrée cavité ». Une équipe qui y passe entre sous terre, ou en ressort.');
     await t.vite(async () => {
         for (const [l, nom, pos] of [['B', 'Tête du P40', '3'], ['C', 'Base du P40', '4'], ['D', 'Salle du Chaos', '5'], ['E', 'Point victime', '6']])
-            await o.ajouterPoint(l, nom, '🪨 Sous terre', pos);
+            await o.ajouterPoint(l, nom, '🕳️ Sous terre', pos);
     }, 0.25);
-    await t.dire('B à E sont sous terre : type « 🪨 Sous terre ».');
+    await t.dire('B à E sont sous terre : type « 🕳️ Sous terre ».');
     await t.dire(dicte('Point G : TPS de surface, sur le plateau de Nans-sous-Sainte-Anne. Il sert de relais entre le fond et le PC.'),
         'Le radioamateur de l\'ADRASEC s\'y installera : il transmet au PC, par radio (talkie-walkie), les messages venus du fond.');
     await t.vite(() => o.ajouterPoint('G', 'TPS de surface (plateau de Nans-sous-Sainte-Anne)', '🌿 Surface', '7'), 0.4);
@@ -467,7 +467,7 @@ PHASES.push(async (t, o) => {
     await o.planning({ texte: 'On garde « Toute l\'équipe » et on valide.' });
     await t.dire(dicte('De MARTIN Alice : équipe 1 à l\'entrée, on entre.'),
         '« Message venant de » remplit l\'équipe tout seul. Au point A (entrée), on choisit le sens « Entre sous terre » : l\'équipe passe « Sous terre » au planning.');
-    await o.ligne({ venant: 'MARTIN Alice', equipe: 'Équipe 1', pp: PP.A, sens: '🪨 Entre sous terre', texte: 'Équipe 1 à l\'entrée, on entre.' });
+    await o.ligne({ venant: 'MARTIN Alice', equipe: 'Équipe 1', pp: PP.A, sens: '🕳️ Entre sous terre', texte: 'Équipe 1 à l\'entrée, on entre.' });
     await o.planning({ texte: 'Seule MARTIN est cochée (c\'est elle qui appelle) : on coche « Toute l\'équipe ».' });
     await t.dire(dicte('L\'équipe 3 part du PC. Puis : équipe 3 au point A, seule MOREAU Inès s\'y arrête pour poser le TPS.'),
         '« Au point phone » = simple passage, sans changement de planning : l\'application demande qui est présent.');
@@ -560,7 +560,7 @@ PHASES.push(async (t, o) => {
     await t.chapitre('Scinder une équipe');
     await t.dire(dicte('L\'équipe 2 part du PC et entre sous terre.'));
     await o.ligne({ equipe: 'Équipe 2', depart: true, lieu: 'Sous terre' }); await o.planning();
-    await o.ligne({ equipe: 'Équipe 2', pp: PP.A, sens: '🪨 Entre sous terre' }); await o.planning();
+    await o.ligne({ equipe: 'Équipe 2', pp: PP.A, sens: '🕳️ Entre sous terre' }); await o.planning();
     await t.dire(dicte('L\'équipe 2 se divise : DUBOIS et DURAND restent avec la victime, PETIT remonte chercher la couverture chauffante.'),
         '« Scinder » : les membres cochés partent dans une nouvelle équipe (2B), qui hérite de la dernière position connue.');
     await o.equipes(); await o.deplier('Équipe 2');
@@ -596,7 +596,7 @@ PHASES.push(async (t, o) => {
     await t.chapitre('Points phones en cours d\'opération');
     await t.dire(dicte('Nouveau point phone : H, Étroiture, entre C et D, sous terre.'), 'Depuis la main courante, le bouton ⚙️ ouvre les points phones. « Pos. » 4.5 le range entre C et D.');
     await t.clic(p.locator('button[title="Gérer les points phone"]'));
-    await o.ajouterPoint('H', 'Étroiture', '🪨 Sous terre', '4.5');
+    await o.ajouterPoint('H', 'Étroiture', '🕳️ Sous terre', '4.5');
     await t.dire(dicte('Correction : C s\'appelle désormais Base du P40, relais TPS.'), 'Les lignes de main courante qui citaient C sont mises à jour.');
     await o.modifierPoint('Base du P40', 'Base du P40, relais TPS');
     await o.fermer();

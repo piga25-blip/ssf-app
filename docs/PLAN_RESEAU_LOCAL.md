@@ -267,7 +267,7 @@ Les échanges se font dans cet ordre :
 - **Affichage immédiat** de la modification, corrigé si le serveur la refuse.
 - **Reconnexion automatique** avec essais de plus en plus espacés, puis demande de ce qui a
   changé depuis la dernière version (ou de l'état complet).
-- **Témoin de connexion** toujours visible : 🟢 connecté, 🟠 reconnexion, 🔴 hors ligne.
+- **Témoin de connexion** toujours visible : ✅ connecté, ⚠️ reconnexion, 🔴 hors ligne.
 - **Saisies pendant une coupure** :
   - option simple : saisie impossible hors connexion ;
   - option avancée : saisies en attente envoyées au retour du réseau (en s'appuyant sur la

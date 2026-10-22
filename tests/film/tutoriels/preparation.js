@@ -14,7 +14,7 @@ const SAUVETEURS = [
     ['12-002', 'LEROY Hugo', 'Désobstruction', '12'],
 ];
 
-const POINTS = [['A', 'Entrée de la cavité', '🚪 Entrée cavité'], ['B', 'Puits P40', '🪨 Sous terre'], ['C', 'Salle du Camp', '🪨 Sous terre']];
+const POINTS = [['A', 'Entrée de la cavité', '🚪 Entrée cavité'], ['B', 'Puits P40', '🕳️ Sous terre'], ['C', 'Salle du Camp', '🕳️ Sous terre']];
 
 const creerDossier = async (t, { cavite = 'Gouffre de la Combe', commune = 'Lanville' } = {}) => {
     const p = t.page;
@@ -63,7 +63,7 @@ const pointsPhone = async (t, points = POINTS) => {
     await t.clic(t.bouton(/^Fermer$/, { dernier: true }));
 };
 
-const creerEquipe = async (t, { lieu = '🪨 Sous terre', titre, ordre = '', type = null, membres }) => {
+const creerEquipe = async (t, { lieu = '🕳️ Sous terre', titre, ordre = '', type = null, membres }) => {
     const p = t.page;
     await t.clic(t.bouton(/^👥 Équipes$/));
     await t.clic(t.etiquette(lieu));
