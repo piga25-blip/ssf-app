@@ -16,7 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { TUTORIELS, GROUPES } = require('./liste');
+const { TUTORIELS, GROUPES, numeroFilm } = require('./liste');
 
 const [moteur, ...args] = process.argv.slice(2);
 const groupeChoisi = args.includes('--groupe') ? args[args.indexOf('--groupe') + 1] : null;
@@ -48,7 +48,7 @@ fs.mkdirSync(TRAVAIL, { recursive: true });
 const index = TUTORIELS.findIndex(t => t[0] === id);
 const [, titre, , groupeId] = TUTORIELS[index];
 const groupe = GROUPES.find(g => g.id === groupeId);
-const numero = TUTORIELS.filter(t => t[3] === groupeId).findIndex(t => t[0] === id) + 1;
+const numero = numeroFilm(id);
 const nomFilm = `${groupe.prefixe}${String(numero).padStart(2, '0')} - ${titre.replace(/[\\/:*?"<>|]/g, '-')}`;
 const film = path.join(SORTIE, 'films', nomFilm + '.mp4');
 const journal = JSON.parse(fs.readFileSync(path.join(SORTIE, id, 'journal.json'), 'utf8'));
@@ -64,7 +64,7 @@ const ouverture = Math.max(8, 5 + chapitres.length * 1.2);   // durée du carton
 const parler = s => s
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{FE0F}]/gu, '')
     .replace(/[«»"›]/g, '').replace(/N°/g, 'numéro ').replace(/\s+/g, ' ').trim();
-const textes = [{ t: 0.8, texte: `Application SSF. Film numéro ${numero} : ${titre}.` }];
+const textes = [{ t: 0.8, texte: numero ? `Application SSF. Film numéro ${numero} : ${titre}.` : `Application SSF, ${groupe.serie}. ${titre}.` }];
 for (const m of marques) {
     if (m.type === 'chapitre') textes.push({ t: ouverture + m.s, texte: parler(m.texte) + '.' });
     if (m.type === 'dire') textes.push({ t: ouverture + m.s + 0.3, texte: parler(m.texte) + (m.pourquoi ? ' Pourquoi ? ' + parler(m.pourquoi) : '') });

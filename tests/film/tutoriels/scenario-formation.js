@@ -1109,6 +1109,50 @@ PHASES.push(async (t, o) => {
     await t.dire('Fin du scénario : place au débriefing.');
 });
 
+// ── Film de présentation (S00) ──────────────────────────────────────────
+// Courte explication de l'exercice. Le secours est d'abord joué jusqu'à la phase 5 (non filmé) :
+// pendant les explications, on voit quelques écrans de l'application remplie
+// Logo du Spéléo Secours Français (icône de l'application, 256 px), pour les remerciements
+const logoSSF = () => { try { return 'data:image/png;base64,' + require('child_process').execFileSync('ffmpeg', ['-v', 'error', '-i', require('path').join(__dirname, '../../../assets/SSF.ico'), '-map', '0:3', '-f', 'image2pipe', '-c:v', 'png', '-'], { maxBuffer: 1e7 }).toString('base64'); } catch (e) { return ''; } };
+const presentation = () => executer('S0-presentation', "Présentation de l'exercice", async (t) => {
+    const o = outils(t);
+    const p = t.page;
+    for (let k = 0; k < 5; k++) await PHASES[k](t, o);
+    await t.debutFilm();
+    const onglet = (nom) => t.vite(() => t.clic(t.bouton(nom)));
+    await t.chapitre('L\'exercice');
+    await t.viser(p.locator('text=/Gouffre de la Combe Noire/').first());
+    await t.dire('Exercice « Gouffre de la Combe Noire », à Nans-sous-Sainte-Anne, dans le Doubs. Un spéléologue, Lucas FAIVRE, est bloqué à moins 150 mètres, au-delà du puits P40, avec une jambe blessée.');
+    await t.viser(p.locator('tbody tr:visible').first());
+    await t.dire('Le formateur dicte les messages, le stagiaire les saisit dans l\'application. Le secours se déroule en huit phases, de l\'alerte à la clôture : un film par phase, de S01 à S08.',
+        'Le document « Scénario de formation des gestionnaires SSF » donne, phase par phase, ce que dit le formateur et ce que fait le stagiaire.');
+    await o.equipes();
+    await t.viser(p.locator('h2:visible', { hasText: 'Gestion des Équipes' }).first());
+    await t.dire('On y crée des équipes, on décrit la cavité par ses points phones, on suit la progression des équipes et on tient le planning des sauveteurs.');
+    await o.fermer();
+    await t.chapitre('Ce que cet exercice n\'est pas');
+    await onglet('Planning Opérationnel');
+    await t.viser(p.locator('.planning-table-wrapper').first());
+    await t.dire('Attention : cet exercice ne montre pas une façon de gérer un secours. Il sert seulement à apprendre : montrer toutes les possibilités de l\'application et son fonctionnement.',
+        'Pour passer par toutes les fonctions, les événements s\'enchaînent vite, et certains sont là exprès : des erreurs à corriger, une fin de mission annulée, une coupure du réseau.');
+    await onglet('Progression Équipes');
+    await t.rythme(2);
+    await t.dire('La conduite du secours reste l\'affaire du conseiller technique et du directeur des opérations : l\'application garde la trace de leurs décisions.');
+    await t.chapitre('Remerciements');
+    await onglet(/Main Courante/);
+    await p.evaluate((logo) => {
+        const c = document.createElement('div');
+        c.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.88);display:flex;align-items:center;justify-content:center';
+        c.innerHTML = `<div style="background:#fff;border-radius:18px;padding:36px 60px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5)">
+            <img src="${logo}" style="width:300px;height:300px;image-rendering:auto">
+            <div style="font:700 28px Arial;color:#1e3a8a;margin-top:14px">Spéléo Secours Français</div></div>`;
+        document.body.appendChild(c);
+    }, logoSSF());
+    await t.rythme(1);
+    await t.dire('Merci à PIGANEAU Patrick, du SSF 25, auteur de l\'application SSF.');
+    await t.dire('Films réalisés avec l\'aide de l\'intelligence artificielle Claude, d\'Anthropic ; voix de synthèse. Bonne formation !');
+}, { debut: (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d; })() });
+
 // ── Un film par phase ───────────────────────────────────────────────────
 const film = (n, id, titre) => executer(id, titre, async (t) => {
     const o = outils(t);
@@ -1128,4 +1172,4 @@ const film = (n, id, titre) => executer(id, titre, async (t) => {
 // précédentes avancent l'horloge d'environ 1 h 15), puis heure réelle.
 }, { debut: n >= 6 ? new Date(Date.now() - 150 * 60000) : (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d; })() });
 
-module.exports = { film, PHASES };
+module.exports = { film, presentation, PHASES };

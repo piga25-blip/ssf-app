@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { TUTORIELS, GROUPES } = require('./liste');
+const { TUTORIELS, GROUPES, numeroFilm } = require('./liste');
 
 const trouverFfmpeg = () => {
     if (process.env.FFMPEG_DIR) return path.join(process.env.FFMPEG_DIR) + path.sep;
@@ -75,7 +75,7 @@ const monter = (id, numero, titre, resume, groupe) => {
     // Carton d'ouverture : titre + programme
     const programme = chapitres.map((c, i) => `${i + 1}.  ${c.texte}`).join('\n');
     const ouverture = carton(`${id}-ouverture`, [
-        { texte: `Application SSF — ${groupe.serie}, film n° ${numero}`, taille: 36, couleur: '0x93c5fd', y: 170 },
+        { texte: `Application SSF — ${groupe.serie}, ${numero ? `film n° ${numero}` : 'présentation'}`, taille: 36, couleur: '0x93c5fd', y: 170 },
         { texte: titre, taille: 74, gras: true, y: 235 },
         { texte: couper(resume, 75), taille: 34, couleur: '0xe2e8f0', y: 360, interligne: 14 },
         { texte: 'Au programme :', taille: 34, gras: true, couleur: '0xfacc15', x: 330, y: 540 },
@@ -177,10 +177,10 @@ const choisis = args.filter((a, i) => a !== '--groupe' && args[i - 1] !== '--gro
 for (const groupe of GROUPES) {
     if (groupeChoisi && groupe.id !== groupeChoisi) continue;
     const morceaux = [];
-    TUTORIELS.filter(tu => tu[3] === groupe.id).forEach(([id, titre, resume], i) => {
+    TUTORIELS.filter(tu => tu[3] === groupe.id).forEach(([id, titre, resume]) => {
         if (choisis.length && !choisis.includes(id)) return;
         if (!fs.existsSync(path.join(SORTIE, id, 'journal.json'))) { console.log(`⚠️ ${id} : pas encore tourné`); return; }
-        morceaux.push(...monter(id, i + 1, titre, resume, groupe));
+        morceaux.push(...monter(id, numeroFilm(id), titre, resume, groupe));
     });
     if (!choisis.length && morceaux.length) {
         ecrire(`complet-${groupe.id}.txt`, morceaux.map(f => `file '${f}'`).join('\n'));

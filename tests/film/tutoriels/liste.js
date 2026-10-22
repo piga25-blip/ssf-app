@@ -1,4 +1,5 @@
-// Films de formation : fichier du tutoriel (sans .js), titre, résumé du carton d'ouverture, groupe.
+// Films de formation : fichier du tutoriel (sans .js), titre, résumé du carton d'ouverture, groupe,
+// et au besoin un numéro imposé (0 : film de présentation de la série, avant le n° 1).
 // Chaque groupe a sa numérotation et son propre film complet (indépendant des autres groupes).
 const GROUPES = [
     { id: 'logiciel', serie: 'formation au logiciel', prefixe: '', filmComplet: 'Film complet 1 - Le logiciel SSF' },
@@ -18,6 +19,7 @@ const TUTORIELS = [
     ['08-mode-reseau', 'Le mode réseau : connecter une tablette', "Ouvrir le secours aux autres postes du réseau local : activer le mode réseau, connecter une tablette avec le code de session, lui donner le droit de saisir, changer le code, et ce qui se passe si le réseau est coupé.", 'reseau'],
     ['09-plusieurs-postes', 'Plusieurs ordinateurs et tablettes en même temps', "Un PC principal, un second ordinateur et deux tablettes sur le même secours : un rôle par poste, des saisies simultanées sans doublon de numéro, des équipes créées sur deux postes, une progression suivie en direct, et les protections quand deux personnes modifient la même chose.", 'reseau'],
     ['10-pare-feu', 'Le pare-feu, réglé automatiquement', "Pourquoi le pare-feu du PC principal doit laisser passer les autres postes, comment l'application l'autorise elle-même à l'activation du mode réseau, que faire si l'autorisation disparaît, et la procédure manuelle en dernier recours.", 'reseau'],
+    ["S0-presentation", "Présentation de l'exercice", "L'exercice en quelques mots, ce qu'il n'est pas (une façon de gérer un secours), et les remerciements.", 'scenario', 0],
     ["S1-ouverture", "Phase 1 — Alerte et ouverture du secours", "Ouvrir le dossier d'exercice, régler le poste (secrétaire, sauvegardes, plein écran), corriger les informations du secours et écrire les premières lignes de main courante.", 'scenario'],
     ["S2-sauveteurs", "Phase 2 — Arrivée des sauveteurs", "Charger la liste des sauveteurs (CSV), la rechercher, la trier, la corriger, ajouter un sauveteur hors liste et enregistrer les arrivées.", 'scenario'],
     ["S3-equipes", "Phase 3 — Premières équipes et points phones", "Créer quatre équipes (titre, ordre de mission, lieu, chef), imprimer et exporter, puis décrire la cavité par ses points phones (dont le TPS de surface).", 'scenario'],
@@ -28,4 +30,11 @@ const TUTORIELS = [
     ["S8-fin", "Phase 8 — Fin de secours", "Évacuer la victime, recopier une main courante papier sur un PC de base arrière et la fusionner, sauvegarder, clôturer, rouvrir et sortir le rapport de fin de mission.", 'scenario'],
 ];
 
-module.exports = { TUTORIELS, GROUPES };
+// Numéro d'un film dans son groupe : le numéro imposé, sinon son rang parmi les films sans numéro imposé
+const numeroFilm = (id) => {
+    const film = TUTORIELS.find(t => t[0] === id);
+    if (film[4] !== undefined) return film[4];
+    return TUTORIELS.filter(t => t[3] === film[3] && t[4] === undefined).findIndex(t => t[0] === id) + 1;
+};
+
+module.exports = { TUTORIELS, GROUPES, numeroFilm };
