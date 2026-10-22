@@ -151,7 +151,7 @@ executer('04-progression', 'Suivre la progression d\'une équipe', async (t) => 
     await appel({
         pp: 'A',
         texte: 'De nouveau au point A, cette fois on choisit « Sort — rentre au PC ».',
-        pourquoi: '« Sort — reste entrée » mettrait l\'équipe en mission de surface (elle reste à l\'entrée) ; « Sort — rentre au PC » la met en « approche » pour le trajet retour.',
+        pourquoi: '« Reste à l\'entrée » mettrait l\'équipe en mission de surface (elle reste à l\'entrée) ; « Sort — rentre au PC » la met en « approche » pour le trajet retour.',
         sens: 'Sort — rentre au PC',
     });
     await valider();

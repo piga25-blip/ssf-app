@@ -131,13 +131,41 @@ const outils = (t) => {
     // Résultat d'une saisie : la ligne de main courante entourée, puis l'explication
     o.voirLigne = async (texte, explication, pourquoi) => {
         if (!(await p.locator('tbody tr:visible').count())) await t.vite(() => t.clic(t.bouton(/Main Courante/)));
-        const l = p.locator('tbody tr:visible', { hasText: texte }).first();
+        // texte : le texte cherché, ou [texte, texte absent de la ligne]
+        const [avec, sans] = Array.isArray(texte) ? texte : [texte];
+        const l = p.locator('tbody tr:visible', { hasText: avec }).filter(sans ? { hasNotText: sans } : {}).first();
         await l.scrollIntoViewIfNeeded().catch(() => {});
         await t.viser(l);
         if (process.env.FILM_RAPIDE) console.log('MC ▸ ' + (await l.innerText().catch(() => '?')).replace(/\s+/g, ' '));
         if (explication) await t.dire(explication, pourquoi);
         await p.evaluate(() => window.scrollTo(0, 0));
     };
+    // Impression : la page s'ouvre d'habitude dans une nouvelle fenêtre ; pour le film, elle est
+    // affichée par-dessus l'application (o.fermerApercu la retire)
+    o.apercu = () => p.evaluate(() => {
+        window.open = () => {
+            let html = '';
+            const cadre = document.createElement('div');
+            cadre.id = 'film-apercu';
+            cadre.style.cssText = 'position:fixed;inset:30px 60px;z-index:99999;background:#fff;box-shadow:0 0 0 9999px rgba(0,0,0,.45);border-radius:8px;overflow:hidden';
+            return {
+                document: {
+                    write: (s) => { html += s; },
+                    close: () => {
+                        const f = document.createElement('iframe');
+                        f.style.cssText = 'width:100%;height:100%;border:0';
+                        f.srcdoc = html;
+                        cadre.appendChild(f);
+                        document.body.appendChild(cadre);
+                    },
+                },
+                focus: () => {},
+            };
+        };
+    });
+    o.fermerApercu = () => p.evaluate(() => { const c = document.getElementById('film-apercu'); if (c) c.remove(); });
+    // Fenêtres de Windows (enregistrer un fichier) : elles ne peuvent pas être filmées, un message dit ce qui s'ouvre
+    o.windows = (texte) => p.evaluate((x) => window.__film && window.__film.message('💻 Fenêtre de Windows', x, 7000), texte);
     // Planning : grille défilée jusqu'à l'heure actuelle (à gauche de la palette), ligne entourée
     o.voirPlanning = async (nom, explication, pourquoi) => {
         await t.vite(() => t.clic(t.bouton('Planning Opérationnel')));
@@ -348,8 +376,6 @@ PHASES.push(async (t, o) => {
 // Phase 3 — Premières équipes et points phones
 PHASES.push(async (t, o) => {
     const p = t.page;
-    // Fenêtres de Windows (enregistrer un fichier) : elles ne peuvent pas être filmées, un message dit ce qui s'ouvre
-    const windows = (texte) => p.evaluate((x) => window.__film && window.__film.message('💻 Fenêtre de Windows', x, 7000), texte);
     await t.chapitre('Créer les équipes');
     await o.equipes();
     await t.dire(dicte('Équipe 1 : MARTIN Alice chef, BERNARD Bruno, ROBERT Emma. Titre : Reconnaissance jusqu\'à la victime. Sous terre.'),
@@ -392,38 +418,17 @@ PHASES.push(async (t, o) => {
     await t.dire('Dans « Équipes Actives », un clic sur l\'en-tête déplie l\'équipe : ses membres, son ordre de mission et ses boutons.');
     await o.deplier('Équipe 1');
     await t.dire(dicte('Imprimez la fiche de l\'équipe 1 pour la cheffe d\'équipe, puis exportez la liste des équipes en PDF et en Excel.'));
-    // La fiche s'ouvre d'habitude dans une nouvelle fenêtre : pour le film, elle est affichée par-dessus l'application
-    await p.evaluate(() => {
-        window.open = () => {
-            let html = '';
-            const cadre = document.createElement('div');
-            cadre.id = 'film-apercu';
-            cadre.style.cssText = 'position:fixed;inset:30px 60px;z-index:99999;background:#fff;box-shadow:0 0 0 9999px rgba(0,0,0,.45);border-radius:8px;overflow:hidden';
-            return {
-                document: {
-                    write: (s) => { html += s; },
-                    close: () => {
-                        const f = document.createElement('iframe');
-                        f.style.cssText = 'width:100%;height:100%;border:0';
-                        f.srcdoc = html;
-                        cadre.appendChild(f);
-                        document.body.appendChild(cadre);
-                    },
-                },
-                focus: () => {},
-            };
-        };
-    });
+    await o.apercu();
     await t.clic(o.carte('Équipe 1').locator('button[title="Imprimer"]'));
     await t.dire('La fiche de l\'équipe s\'ouvre : son titre, son ordre de mission et sa composition, avec le chef en tête.',
         'Le bouton « Imprimer » de cette fenêtre l\'envoie à l\'imprimante. La fiche est remise au chef d\'équipe avant le départ.');
     if (process.env.FILM_RAPIDE) await t.decrire('S3-fiche');
-    await p.evaluate(() => { const c = document.getElementById('film-apercu'); if (c) c.remove(); });
-    await windows('« Enregistrer sous » : on choisit où ranger le fichier. Nom proposé : equipes_' + o.date(await o.maintenant()) + '.pdf');
+    await o.fermerApercu();
+    await o.windows('« Enregistrer sous » : on choisit où ranger le fichier. Nom proposé : equipes_' + o.date(await o.maintenant()) + '.pdf');
     await t.clic(t.bouton('📄 Export PDF'));
     await t.dire('Windows demande où enregistrer le fichier PDF ; l\'application confirme ensuite « Export PDF réussi ».',
         'Le PDF liste toutes les équipes actives : titre, ordre de mission, membres et heure de création. Il sert au conseiller technique et aux comptes rendus.');
-    await windows('« Enregistrer sous » : nom proposé equipes_' + o.date(await o.maintenant()) + '.xlsx');
+    await o.windows('« Enregistrer sous » : nom proposé equipes_' + o.date(await o.maintenant()) + '.xlsx');
     await t.clic(t.bouton('📊 Export Excel'));
     await t.dire('Même chose pour le fichier Excel, qu\'on peut retravailler dans un tableur.');
     await o.fermer();
@@ -461,42 +466,82 @@ PHASES.push(async (t, o) => {
 // Phase 4 — Progression et main courante
 PHASES.push(async (t, o) => {
     const p = t.page;
-    await t.chapitre('Suivre la progression');
-    await t.dire(dicte('L\'équipe 1 part du PC vers la cavité.'), '« Départ PC » + l\'équipe : l\'application propose de mettre ses membres en « Approche » au planning.');
+    await t.chapitre('Le départ du PC');
+    await t.dire(dicte('L\'équipe 1 part du PC vers la cavité.'),
+        'On tape l\'équipe et on coche « 🚀 Départ PC », lieu « Sous terre ». Pas de texte à écrire : le départ suffit.');
     await o.ligne({ equipe: 'Équipe 1', depart: true, lieu: 'Sous terre' });
-    await o.planning({ texte: 'On garde « Toute l\'équipe » et on valide.' });
+    await o.planning({ texte: 'La fenêtre « Mise à jour planning » propose « Approche » pour toute l\'équipe : on valide.' });
+    await o.voirLigne('Départ du PC',
+        'En main courante : « Départ du PC - Sous-terre → Approche », avec « Équipe 1 » dans la colonne Équipe.');
+    await o.voirLigne('"Approche" affectée',
+        'Une seconde ligne, écrite par la mise à jour du planning : « Activité "Approche" affectée à : Toute l\'équipe (Équipe 1) ».');
+    await o.voirPlanning('MARTIN Alice',
+        'Au planning, MARTIN, BERNARD et ROBERT passent en « Approche » (violet) : ils marchent vers la cavité.');
+
+    await t.chapitre('Entrer sous terre');
     await t.dire(dicte('De MARTIN Alice : équipe 1 à l\'entrée, on entre.'),
-        '« Message venant de » remplit l\'équipe tout seul. Au point A (entrée), on choisit le sens « Entre sous terre » : l\'équipe passe « Sous terre » au planning.');
-    await o.ligne({ venant: 'MARTIN Alice', equipe: 'Équipe 1', pp: PP.A, sens: '🕳️ Entre sous terre', texte: 'Équipe 1 à l\'entrée, on entre.' });
-    await o.planning({ texte: 'Seule MARTIN est cochée (c\'est elle qui appelle) : on coche « Toute l\'équipe ».' });
-    await t.dire(dicte('L\'équipe 3 part du PC. Puis : équipe 3 au point A, seule MOREAU Inès s\'y arrête pour poser le TPS.'),
-        '« Au point phone » = simple passage, sans changement de planning : l\'application demande qui est présent.');
-    await o.ligne({ equipe: 'Équipe 3', depart: true, lieu: 'Sous terre' });
+        '« Message venant de » : MARTIN Alice remplit l\'équipe toute seule. Point A, sens « Entre sous terre ». Rien à écrire dans « Événement » : il n\'y a pas de renseignement en plus.');
+    await t.vite(() => o.ligne({ venant: 'MARTIN Alice', equipe: 'Équipe 1', pp: PP.A, sens: '🕳️ Entre sous terre' }), 0.5);
+    await o.planning({ texte: 'Seule MARTIN est cochée, c\'est elle qui appelle : on coche « Toute l\'équipe », puis on valide.' });
+    await o.voirLigne('Entre sous terre',
+        'La ligne porte le point A (colonne Localisation) et « Entre sous terre », sans rien avoir tapé.');
+    await o.voirPlanning('MARTIN Alice', 'Au planning, l\'équipe 1 passe en « Sous Terre » (marron).');
+
+    await t.chapitre('Une équipe qui se sépare à l\'entrée');
+    await t.dire(dicte('L\'équipe 3 part du PC vers la cavité.'));
+    await t.vite(() => o.ligne({ equipe: 'Équipe 3', depart: true, lieu: 'Sous terre' }));
     await o.planning();
-    await o.ligne({ equipe: 'Équipe 3', pp: PP.A, sens: '📍 Au point phone', texte: 'Seule MOREAU Inès s\'arrête pour poser le TPS.' });
-    await o.planning({ toute: false, garder: ['MOREAU Inès'] });
-    await t.dire(dicte('De MARTIN : équipe 1 en tête du P40, RAS.'), 'Point B est de type « sous terre » : le planning reste en « Sous terre ».');
-    await o.ligne({ venant: 'MARTIN Alice', equipe: 'Équipe 1', pp: PP.B, texte: 'Équipe 1 en tête du P40, RAS.' });
+    await o.voirPlanning('MOREAU Inès', 'MOREAU Inès et SIMON Julien passent en « Approche ».');
+    await t.dire(dicte('Équipe 3 au point A : MOREAU Inès reste à l\'entrée pour poser le TPS. SIMON Julien entre seul et tire la ligne du TPS vers le P40.'),
+        'Deux lignes, une par sauveteur. Ici il y a un renseignement en plus : on l\'écrit dans « Événement ».');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 3', pp: PP.A, sens: '🕳️ Entre sous terre', texte: 'SIMON Julien entre seul et tire la ligne du TPS vers le P40.' }), 0.5);
+    await o.planning({ toute: false, garder: ['SIMON Julien'], texte: 'Dans la fenêtre de planning, on ne garde que SIMON Julien : lui seul entre sous terre.' });
+    await t.dire('Pour MOREAU Inès, le bouton « 🌿 Reste à l\'entrée » : elle arrive à l\'entrée et y reste, sans entrer sous terre.',
+        'Ce bouton sert aussi à une équipe qui ressort et attend à l\'entrée. « 📍 Au point phone », lui, ne change pas le planning : c\'est un simple passage.');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 3', pp: PP.A, sens: '🌿 Reste à l\'entrée', texte: 'MOREAU Inès pose le TPS à l\'entrée.' }), 0.5);
+    await o.planning({ toute: false, garder: ['MOREAU Inès'], texte: 'Dans la fenêtre de planning, on ne garde que MOREAU Inès.' });
+    await o.voirLigne('MOREAU Inès pose le TPS', 'En main courante, les deux lignes de l\'équipe 3 au point A : SIMON « Entre sous terre », MOREAU « Reste à l\'entrée ».');
+    await o.voirPlanning('SIMON Julien',
+        'Au planning, SIMON Julien est « Sous Terre » ; MOREAU Inès passe en « Mission de surface » (orange) : elle travaille à l\'entrée, pas sous terre.');
+
+    await t.chapitre('Suivre la progression sous terre');
+    await t.dire(dicte('De MARTIN : équipe 1 en tête du P40.'), 'Point B, de type « sous terre » : le planning reste en « Sous Terre ». Rien à écrire en plus.');
+    await t.vite(() => o.ligne({ venant: 'MARTIN Alice', equipe: 'Équipe 1', pp: PP.B }), 0.5);
     await o.planning();
-    await t.dire(dicte('Équipe 1 arrivée en C, base du P40.'), 'Le point est tapé dans le texte : l\'application le remarque et propose de le sélectionner dans « Point Phone ».');
+    await o.voirLigne('Tête du P40', 'La ligne porte le point B, « Tête du P40 », dans la colonne Localisation.');
+    await t.dire(dicte('Équipe 1 arrivée en C, base du P40.'),
+        'Si le secrétaire tape le point dans le texte au lieu de le choisir, l\'application le remarque et propose de le sélectionner dans « Point Phone ».');
     await t.saisir(p.locator('input[list="equipe-list"]:visible'), 'Équipe 1');
-    await t.saisir(t.champ('Description...'), 'Équipe 1 arrivée en C, base du P40.');
+    await t.vite(() => t.saisir(t.champ('Description...'), 'Équipe 1 arrivée en C, base du P40.'), 0.5);
     await t.clic(t.bouton(/^Sélectionner$/));
     await t.clic(t.bouton(/^✓ ENREGISTRER$/));
     await o.planning().catch(() => {});
-    await t.dire(dicte('Message du PC pour MARTIN Alice : rendez compte dès votre arrivée au point E.'), '« Message à destination de » : la catégorie passe à « Communication ».');
-    await o.ligne({ dest: 'MARTIN Alice', texte: 'Rendez compte dès votre arrivée au point E.' });
+    await o.voirLigne('arrivée en C', 'La ligne est bien rangée au point C, base du P40.');
+    await t.dire(dicte('Message de GIRARD Antoine pour MARTIN Alice : « Rendez compte dès votre arrivée au point E. »'),
+        'C\'est un message : « Message venant de » GIRARD Antoine, « Message à destination de » MARTIN Alice, et le texte mot pour mot.');
+    await t.vite(() => o.ligne({ venant: 'GIRARD Antoine', dest: 'MARTIN Alice', texte: 'Rendez compte dès votre arrivée au point E.' }), 0.5);
+    await o.voirLigne('Rendez compte dès votre arrivée',
+        'La ligne affiche « Message de : GIRARD Antoine pour : MARTIN Alice » ; la catégorie passe à « Communication ».');
+
     await t.chapitre('Les rappels');
     const samu = (await o.maintenant()) + 30 * 60000;
-    await t.dire(dicte('Le SAMU demande un bilan médical dans 30 minutes. Mettez un rappel.'), 'Date et heure du rappel : la ligne affiche « 📅 PROGRAMMÉE ».');
-    await o.ligne({ texte: 'Le SAMU demande un bilan médical dans 30 minutes.', rappel: samu });
-    await t.dire(dicte('Rappelez la famille de la victime dans 3 minutes.'), 'Moins de 10 minutes : le rappel est « URGENT » et la fenêtre d\'alertes s\'ouvre. « Report 5 mn » la repousse.');
-    await o.ligne({ texte: 'Rappeler la famille de la victime.', rappel: (await o.maintenant()) + 3 * 60000 });
+    await t.dire(dicte('Message du SAMU pour le PC : « Envoyez-nous un bilan médical dans 30 minutes. » Mettez un rappel.'),
+        'Un message, avec la date et l\'heure du rappel.');
+    await t.vite(() => o.ligne({ venant: 'SAMU', dest: 'PC', texte: 'Envoyez-nous un bilan médical dans 30 minutes.', rappel: samu }), 0.5);
+    await o.voirLigne('bilan médical', 'La ligne affiche « 📅 Programmée » avec l\'heure du rappel.');
+    await t.dire(dicte('Rappelez la famille de la victime dans 3 minutes.'),
+        'Moins de 10 minutes avant l\'échéance : le rappel devient « urgent » et la fenêtre d\'alertes s\'ouvre.');
+    await t.vite(async () => o.ligne({ texte: 'Rappeler la famille de la victime.', rappel: (await o.maintenant()) + 3 * 60000 }), 0.5);
     await o.alerte().waitFor({ timeout: 40000 });
+    await t.viser(o.alerte());
+    await t.dire('La fenêtre « Alertes en attente » montre le rappel. « Report 5 mn » le repousse de 5 minutes.');
     await t.clic(t.bouton('Report 5 mn'));
+
     await t.chapitre('Pièce jointe, renforts, alerte traitée');
-    await t.dire(dicte('MARTIN envoie une photo du croquis du P40.'), 'La pièce jointe est gardée avec la ligne ; un clic sur 📎 la télécharge.');
-    await o.ligne({ texte: 'Croquis du P40 reçu.', fichier: CROQUIS });
+    await t.dire(dicte('MARTIN Alice envoie au PC une photo du croquis du P40.'),
+        'Un message venant de MARTIN Alice pour le PC, avec la photo en pièce jointe.');
+    await t.vite(() => o.ligne({ venant: 'MARTIN Alice', dest: 'PC', texte: 'Croquis du P40.', fichier: CROQUIS }), 0.5);
+    await o.voirLigne('Croquis du P40', 'La photo est gardée avec la ligne : un clic sur 📎 l\'ouvre.');
     await t.dire(dicte('Faites venir une partie des renforts mis en alerte : THOMAS, LAURENT, LEFEBVRE, MICHEL et GARCIA, et MOREL Paul pour relever au secrétariat. Ils sont arrivés.'),
         'Ils étaient dans la liste, en alerte : on enregistre maintenant leur arrivée. Pour MOREL Paul, « arrive en gestion » est cochée d\'office : son rôle est « Gestion PC, secrétaire ».');
     await t.clic(t.bouton('Enregistrement des sauveteurs'));
@@ -505,46 +550,70 @@ PHASES.push(async (t, o) => {
     }, 0.35);
     await t.clic(t.bouton('Arrivée (6)'));
     await o.fermer();
+    await o.voirLigne('Arrivée de : THOMAS', 'En main courante, l\'arrivée des six renforts, puis « Activité "Gestion - PC" affectée à : MOREL Paul ».');
+    await o.voirPlanning('MOREL Paul', 'Au planning, six nouvelles lignes : les renforts en « Disponible », MOREL Paul en « Gestion - PC » (jaune).');
     await t.avancer(6, 'Six minutes plus tard, la fenêtre d\'alertes revient.');
     await o.alerte().waitFor({ timeout: 40000 });
-    await t.dire(dicte('La famille a été rappelée.'), '« ✓ Traité » : la main courante note « Rappel N°… traité » et la ligne passe à « RÉALISÉE ».');
+    await t.dire(dicte('La famille a été rappelée.'), 'On clique « ✓ Traité » dans la fenêtre d\'alertes.');
     await t.clic(p.locator('div.border-red-300:visible', { hasText: 'famille' }).locator('button', { hasText: '✓ Traité' }));
+    await o.voirLigne('Rappel N°', 'La main courante note « Rappel N°… réalisé », avec le début du texte du rappel.');
+    await o.voirLigne(['Rappeler la famille', 'Rappel N°'], 'Et la ligne du rappel passe à « Réalisée ».');
+
     await t.chapitre('Corriger, insérer, rechercher, imprimer');
-    await t.dire(dicte('Erreur : la victime a 43 ans, pas 34.'), 'Le crayon ✏️ corrige une ligne. Rien n\'est effacé : « Corrigée par … » montre l\'ancienne version.');
+    await t.dire(dicte('Erreur : la victime a 43 ans, pas 34.'), 'Le crayon ✏️ corrige une ligne. Rien n\'est effacé.');
     await t.clic(p.locator('table tbody tr', { hasText: 'Lucas FAIVRE, 34 ans' }).first().locator('button[title="Modifier cet événement"]'));
     const ta = p.locator('textarea[placeholder="Décrivez l\'événement..."]:visible');
-    await t.saisir(ta, (await ta.inputValue()).replace('34 ans', '43 ans'));
+    await t.vite(async () => t.saisir(ta, (await ta.inputValue()).replace('34 ans', '43 ans')), 0.5);
     await t.clic(t.bouton('Enregistrer', { dernier: true }));
     await p.keyboard.press('Escape');
     await t.clic(p.locator('table tbody tr', { hasText: '43 ans' }).first().locator('button[title="Voir les versions précédentes"]'));
+    await o.voirLigne('43 ans', 'La ligne 001 dit maintenant « 43 ans ». Le bouton d\'historique montre l\'ancienne version, « 34 ans », avec qui l\'a corrigée et quand.');
     await t.dire(dicte('J\'avais oublié : deux minutes après la ligne 003, la gendarmerie a bouclé l\'accès au parking.'),
         '➕ insère une ligne oubliée à sa place, avec l\'heure réelle. Elle prend le numéro « 003a » : les numéros déjà annoncés ne changent jamais.');
     const tr3 = p.locator('table tbody tr', { hasText: 'Le PC est installé au parking' }).first();
     const [h, m] = (await tr3.locator('td').nth(2).innerText()).split(' ')[1].slice(0, 5).split(':').map(Number);
     await t.clic(tr3.locator('button[title="Insérer un événement après celui-ci"]'));
     const f = p.locator('div.bg-white:visible', { has: p.locator('h2', { hasText: 'Insérer un événement' }) }).last();
-    await t.saisir(f.locator('textarea').first(), 'La gendarmerie a bouclé l\'accès au parking.');
+    await t.vite(() => t.saisir(f.locator('textarea').first(), 'La gendarmerie a bouclé l\'accès au parking.'), 0.5);
     const h2 = o.heure(new Date(2026, 0, 1, h, m + 2).getTime());
     await o.valeur(f.locator('input[type="time"]').last(), h2);
     await t.clic(f.locator('button', { hasText: 'Insérer l\'événement' }));
-    await t.dire(dicte('Relève : MOREL Paul prend le clavier.'), 'Le bouton 🔄 change le secrétaire : on peut taper son nom, ou le choisir parmi les sauveteurs sur site. Les lignes suivantes portent son nom.');
+    await o.voirLigne('bouclé l\'accès', `La ligne 003a se range juste après la 003, à ${h2}.`);
+    await t.dire(dicte('Relève : MOREL Paul prend le clavier.'), 'Le bouton 🔄 change le secrétaire : on peut taper son nom, ou le choisir parmi les sauveteurs sur site.');
     await o.secretaire(SECRETAIRE_2, 'MOREL Paul');
-    await t.dire(dicte('Retrouvez tout ce qui parle du P40.'), 'La recherche rapide filtre le tableau (secrétaire, texte, équipe, point phone).');
+    await t.viser(p.locator('input[placeholder="MOREL Paul"]:visible').first());
+    await t.dire('Le champ « Secrétaire » affiche MOREL Paul : les lignes suivantes porteront son nom.');
+    await t.dire(dicte('Retrouvez tout ce qui parle du P40.'), 'La recherche rapide filtre le tableau : secrétaire, texte, équipe, point phone.');
     await t.saisir(t.champ('Recherche rapide... (secrétaire, événement, équipe, point phone)'), 'P40');
+    await o.attendre(600);
+    const trouvees = await p.locator('tbody tr:visible').count();
+    await t.viser(p.locator('tbody:visible').first());
+    if (process.env.FILM_RAPIDE) await t.decrire('S4-recherche-P40');
+    await t.dire(`Il reste ${trouvees} lignes : toutes celles qui citent le P40, dans le texte ou dans le point phone (B, tête du P40 ; C, base du P40).`);
     await t.clic(t.bouton(/^Effacer$/));
-    await t.dire(dicte('Combien de messages importants ? de rappels ? de lignes de progression ?'), 'La recherche avancée filtre par importance, rappels (avec leurs compteurs) et catégories.');
+    await t.dire('« Effacer » remet toutes les lignes.');
+    await t.dire(dicte('Combien de messages importants ? de rappels ? de lignes de progression ?'), 'La recherche avancée filtre par importance, par rappel et par catégorie.');
     await t.clic(t.bouton('Recherche Avancée'));
+    const resultats = p.getByText(/Résultats : \d+ événement/).first();
+    const compter = async () => (await resultats.innerText()).match(/\d+/)[0];
     await t.clic(t.bouton('Messages Importants'));
+    await t.viser(resultats);
+    await t.dire(`Messages importants : ${await compter()}.`);
     await t.clic(t.bouton('Avec Alerte'));
+    await t.viser(resultats);
+    await t.dire(`Lignes avec un rappel : ${await compter()}.`);
     await t.clic(t.bouton(/Catégories \(/));
     await t.clic(t.bouton('Tout décocher'));
     await t.cocher(t.etiquette('📍 Progression').locator('input'));
+    await t.viser(resultats);
+    await t.dire(`Lignes de progression : ${await compter()}.`);
     await o.fermer();
-    await t.dire(dicte('Imprimez la main courante.'), 'L\'aperçu reprend les compteurs ; on imprime ou on ferme.');
-    const avant = t.app.windows().length;
-    await t.clic(t.bouton('Imprimer main courante'));
-    await o.attendre(3000);
-    for (const w of t.app.windows().slice(avant)) await w.close().catch(() => {});
+    await t.dire(dicte('Imprimez la main courante.'));
+    await o.apercu();
+    await t.clic(t.bouton(/Imprimer main courante/));
+    await t.dire('La main courante mise en page s\'affiche : en-tête du secours, puis chaque ligne avec son numéro, son heure, son secrétaire et son texte.',
+        'Le bouton « Imprimer » de cette fenêtre l\'envoie à l\'imprimante, ou l\'enregistre en PDF.');
+    await o.fermerApercu();
     await t.avancer(10, 'Pause de 10 minutes. Pendant la pause, le rappel du SAMU arrive à échéance.');
 });
 
@@ -556,7 +625,7 @@ PHASES.push(async (t, o) => {
     await o.alerte().waitFor({ timeout: 40000 });
     await t.dire(dicte('Le bilan a été transmis au SAMU.'), 'La fenêtre d\'alertes se ferme par « × » (elle revient moins d\'une minute après) ; on peut aussi valider le rappel dans le tableau.');
     await t.clic(p.locator('button[title^="Fermer (réapparaîtra"]'));
-    await t.clic(p.locator('table tbody tr', { hasText: 'Le SAMU demande un bilan' }).filter({ hasNotText: 'Rappel N°' }).first().locator('button', { hasText: '✓ Valider' }));
+    await t.clic(p.locator('table tbody tr', { hasText: 'Envoyez-nous un bilan médical' }).filter({ hasNotText: 'Rappel N°' }).first().locator('button', { hasText: '✓ Valider' }));
     await t.chapitre('Scinder une équipe');
     await t.dire(dicte('L\'équipe 2 part du PC et entre sous terre.'));
     await o.ligne({ equipe: 'Équipe 2', depart: true, lieu: 'Sous terre' }); await o.planning();
