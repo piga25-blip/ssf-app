@@ -175,7 +175,7 @@ const GestionPlanningModal = ({
                                                 onChange={(e) => setFonctionArrivee({ ...fonctionArrivee, [s.id]: e.target.checked ? activite : null })}
                                                 className="w-3.5 h-3.5"
                                             />
-                                            <span className="inline-block w-3 h-3 rounded-sm border border-gray-400" style={{ backgroundColor: couleur }}></span>
+                                            <span className="inline-block rounded-sm border border-gray-400" style={{ width: '12px', height: '12px', backgroundColor: couleur }}></span>
                                             {libelle}
                                         </label>
                                     );
