@@ -58,7 +58,7 @@
     {
      "categorie": "equipe",
      "dateHeure": "14/03/2026 08:01:31",
-     "evenement": "👔 Activité \"Engage\" affectée à : MARTIN Alice, BERNARD Bruno, DUBOIS Chloé",
+     "evenement": "👔 Activité \"Engagé\" affectée à : MARTIN Alice, BERNARD Bruno, DUBOIS Chloé",
      "fait": false,
      "id": "ID_3",
      "isoTimestamp": "2026-03-14T07:01:31.000Z",
@@ -195,7 +195,7 @@
     {
      "categorie": "equipe",
      "dateHeure": "14/03/2026 08:50:43",
-     "evenement": "👔 Activité \"Engage\" affectée à : THOMAS David, ROBERT Emma",
+     "evenement": "👔 Activité \"Engagé\" affectée à : THOMAS David, ROBERT Emma",
      "fait": false,
      "id": "ID_12",
      "isoTimestamp": "2026-03-14T07:50:43.800Z",

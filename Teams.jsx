@@ -284,7 +284,7 @@ let GestionEquipesModal = ({
         const slotIndex = indexCreneau({ startHour }, horodatage);
         if (slotIndex >= 0 && slotIndex < getTotalSlots(totalDays)) {
             const isGestion = nouvelleEquipe.mission.toLowerCase().includes('gestion');
-            evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Activité "${isGestion ? 'Gestion' : 'Engage'}" affectée à : ${membresNomsString}`, numero: NUMERO_AUTO, fait: false });
+            evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Activité "${isGestion ? 'Gestion - PC' : 'Engagé'}" affectée à : ${membresNomsString}`, numero: NUMERO_AUTO, fait: false });
         }
 
         // Équipe créée (ses membres quittent leur ancienne équipe), numéro mémorisé, planning, main courante
