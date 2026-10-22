@@ -28,9 +28,16 @@ fs.writeFileSync(CSV, `ID;Nom;Prénom;Rôle;SSF
 90-001;MICHEL;Manon;Eq transmission;90
 G-001;ROUX;Pierre;Gendarme PGHM, Gestion matériel;Gendarmerie
 P-001;GARCIA;Nora;Infirmière;Pompier
+25-011;VIDAL;Claire;Gestion PC, secrétaire;25
+25-012;MOREL;Paul;Gestion PC, secrétaire;25
+25-013;NICOLAS;Sarah;Gestion PC, secrétaire;25
+25-014;FAURE;Lucie;CE transmission, TPS de surface;25
+R-001;BOYER;Marc;Radioamateur;ADRASEC 25
 `, 'utf8');
 
-const PP = { F: 'F - Parking — Poste médical avancé', A: 'A - Entrée de la cavité', B: 'B - Tête du P40', C: 'C - Base du P40', E: 'E - Point victime', G: 'G - Hôpital de Pontarlier', PC: 'PC - Poste de Commandement' };
+const PP = { F: 'F - Parking — Poste médical avancé', A: 'A - Entrée de la cavité', B: 'B - Tête du P40', C: 'C - Base du P40', E: 'E - Point victime', G: 'G - TPS de surface, relais radio', PC: 'PC - Poste de Commandement' };
+// Les secrétaires du PC (dans la liste des sauveteurs, en « Gestion - PC » dès leur arrivée)
+const SECRETAIRE_1 = 'Claire VIDAL', SECRETAIRE_2 = 'Paul MOREL', SECRETAIRE_3 = 'Sarah NICOLAS';
 const dicte = (s) => `Le formateur dicte : « ${s} »`;
 
 // ── Outils communs ──────────────────────────────────────────────────────
@@ -84,9 +91,10 @@ const outils = (t) => {
         }
         await t.clic(boite.locator('button', { hasText: 'Valider (' }));
     };
-    o.secretaire = async (nom) => {
+    o.secretaire = async (nom, dansListe) => {
         await t.clic(p.locator('button[title="Changer de secrétaire"], button[title="Définir le secrétaire"]').first());
-        await t.saisir(t.champ('Ex: Martin DUPONT'), nom);
+        if (dansListe) await t.clic(p.locator('button:visible', { hasText: new RegExp('^' + dansListe + '$') }));
+        else await t.saisir(t.champ('Ex: Martin DUPONT'), nom);
         await t.clic(t.bouton(/^✓ Enregistrer$/));
     };
     o.creerEquipe = async ({ lieu, titre, ordre, membres }) => {
@@ -130,6 +138,25 @@ const outils = (t) => {
         if (explication) await t.dire(explication, pourquoi);
         await p.evaluate(() => window.scrollTo(0, 0));
     };
+    // Planning : grille défilée jusqu'à l'heure actuelle (à gauche de la palette), ligne entourée
+    o.voirPlanning = async (nom, explication, pourquoi) => {
+        await t.vite(() => t.clic(t.bouton('Planning Opérationnel')));
+        await p.evaluate(() => {
+            const grille = document.querySelector('.planning-table-wrapper');
+            const maintenant = new Date();
+            const heure = `${String(maintenant.getHours()).padStart(2, '0')}:00`;
+            const th = grille && [...grille.querySelectorAll('th.header-time')].find(h => h.textContent.trim().endsWith(heure));
+            const palette = document.getElementById('palette-title');
+            if (!th || !palette) return;
+            const x = th.getBoundingClientRect().left + th.offsetWidth * maintenant.getMinutes() / 60;
+            grille.scrollLeft += x - (palette.getBoundingClientRect().left - 90);
+        });
+        const l = p.locator('tr:visible', { hasText: nom }).first();
+        await l.scrollIntoViewIfNeeded().catch(() => {});
+        await t.viser(l);
+        if (explication) await t.dire(explication, pourquoi);
+        await t.vite(() => t.clic(t.bouton(/Main Courante/)));
+    };
     return o;
 };
 
@@ -171,10 +198,10 @@ PHASES.push(async (t, o) => {
     await o.attendre(1500);
 
     await t.chapitre('Régler le poste');
-    await t.dire(dicte('Le secrétaire de ce poste, c\'est vous.'), 'Le nom est mémorisé sur ce PC seulement ; il signe chaque ligne de main courante.');
-    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), 'Stagiaire 1'); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
-    else await o.secretaire('Stagiaire 1');
-    await t.viser(p.locator('input:visible').filter({ has: p.locator('xpath=self::*[@value="Stagiaire 1"]') }).or(p.getByText('Secrétaire', { exact: true })).first());
+    await t.dire(dicte('Vous êtes Claire VIDAL, secrétaire de ce poste.'), 'Le nom est mémorisé sur ce PC seulement ; il signe chaque ligne de main courante. La secrétaire est aussi sur le site : elle sera inscrite avec les sauveteurs.');
+    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), SECRETAIRE_1); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
+    else await o.secretaire(SECRETAIRE_1);
+    await t.viser(p.locator('input:visible').filter({ has: p.locator('xpath=self::*[@value="Claire VIDAL"]') }).or(p.getByText('Secrétaire', { exact: true })).first());
     await t.dire('Le nom du secrétaire est en haut du formulaire de main courante : il remplira la colonne « Secrétaire » de chaque ligne.');
     await t.dire(dicte('Mettez les sauvegardes automatiques toutes les 30 minutes.'));
     await t.clic(t.bouton('Sauvegardes auto'));
@@ -224,57 +251,118 @@ PHASES.push(async (t, o) => {
     await t.chapitre('La liste des sauveteurs');
     await t.dire(dicte('Chargez la liste des sauveteurs du département : fichier liste-formation sur le Bureau.'),
         'Le fichier CSV : une ligne de titres, puis ID ; Nom ; Prénom ; Rôle ; SSF, séparés par des points-virgules. Dans la case Rôle, plusieurs spécialités séparées par des virgules.');
+    const liste = () => o.modale().locator('h3', { hasText: 'Liste complète' });
     await t.clic(t.bouton('Liste des sauveteurs'));
-    await t.fichier(t.bouton('Importer CSV'), p.locator('input[type="file"][accept*=".csv"]'), CSV);
+    await t.dire('Ici, la liste vient d\'un fichier. Elle peut aussi être récupérée depuis la base nationale, ou depuis un export Excel : voir le film « Inscrire les sauveteurs ».');
+    await t.fichier(t.etiquette('Importer CSV'), p.locator('input[type="file"][accept*=".csv"]'), CSV);
+    await t.viser(liste());
+    await t.dire('L\'application confirme : 21 sauveteurs importés. Le titre « Liste complète (21) » le montre aussi.',
+        'La liste contient aussi les secrétaires du PC (Gestion PC) et un radioamateur de l\'ADRASEC : toute personne présente sur le site doit y figurer.');
     await t.dire(dicte('Retrouvez MOREAU Inès, puis triez la liste par SSF.'));
     await t.saisir(t.champ('🔍 Recherche rapide...'), 'mor');
-    await t.saisir(t.champ('🔍 Recherche rapide...'), '');
+    await t.viser(o.modale().locator('tbody tr', { hasText: 'MOREAU' }));
+    await t.dire('Seules les lignes qui contiennent « mor » restent affichées : MOREAU Inès est trouvée.');
+    await t.vite(() => t.saisir(t.champ('🔍 Recherche rapide...'), ''));
     await t.clic(p.locator('th:visible', { hasText: 'SSF' }).first());
+    await t.dire('Un clic sur l\'en-tête « SSF » range la liste par département ; un second clic inverse l\'ordre.');
     await t.dire(dicte('ROBERT Emma est plongeur et secouriste.'));
     await t.clic(o.modale().locator('tbody tr', { hasText: 'ROBERT' }).locator('button[title="Modifier"]'));
-    const role = o.modale().locator('tbody tr', { has: p.locator('input') }).locator('input').nth(2);
+    // Cases de la ligne en modification : nom, rôle, SSF / service
+    const role = o.modale().locator('tbody tr', { has: p.locator('input') }).locator('input').nth(1);
     await t.saisir(role, 'Plongeur / Secouriste');
     await t.clic(p.locator('button[title="Enregistrer"]'));
+    await t.viser(o.modale().locator('tbody tr', { hasText: 'ROBERT' }));
+    await t.dire('Dans la colonne « Rôle », sa ligne affiche le nouveau rôle : « Plongeur / Secouriste ». Son département (SSF 25) ne change pas.');
     await t.dire(dicte('LEROY Hugo a prévenu : il ne viendra pas. Retirez-le.'), 'On peut supprimer un sauveteur tant qu\'il n\'est pas inscrit au planning.');
     await t.clic(o.modale().locator('tbody tr', { hasText: 'LEROY' }).locator('button[title="Supprimer"]'));
+    await t.viser(liste());
+    await t.dire('Après confirmation, il disparaît : la liste passe à 20.');
+
     await t.chapitre('Un sauveteur hors liste');
     await t.dire(dicte('Un CRS est arrivé en renfort, il n\'est pas sur la liste : BLANC Olivier, CRS, sauveteur montagne.'),
         'On laisse l\'ID vide : l\'application en crée un (EXT-…). La colonne SSF accepte un texte (CRS, Gendarmerie…) : le rapport les compte à part.');
-    await t.saisir(t.champ('NOM'), 'BLANC'); await t.saisir(t.champ('Prénom'), 'Olivier');
-    await t.saisir(t.champ('Rôle'), 'Sauveteur montagne'); await t.saisir(t.champ('SSF / Service'), 'CRS');
+    await t.vite(async () => {
+        await t.saisir(t.champ('NOM'), 'BLANC'); await t.saisir(t.champ('Prénom'), 'Olivier');
+        await t.saisir(t.champ('Rôle'), 'Sauveteur montagne'); await t.saisir(t.champ('SSF / Service'), 'CRS');
+    });
     await t.clic(t.bouton('+ Ajouter'));
+    const blanc = o.modale().locator('tbody tr', { hasText: 'BLANC' });
+    await blanc.scrollIntoViewIfNeeded().catch(() => {});
+    await t.viser(blanc);
+    if (process.env.FILM_RAPIDE) await t.decrire('S2-blanc');
+    await t.dire('BLANC Olivier est dans la liste, avec un identifiant créé par l\'application (EXT-001) et « CRS » comme service. La liste repasse à 21.');
     await o.fermer();
+
     await t.chapitre('Les arrivées');
-    await t.dire(dicte('Sont arrivés au PC : GIRARD, MARTIN, BERNARD, DUBOIS, ROBERT, PETIT, DURAND, MOREAU, SIMON, ROUX et BLANC.'),
-        '« Enregistrement des sauveteurs » : on coche les présents dans la liste de gauche, puis « Arrivée ».');
+    await t.dire(dicte('Sont arrivés au PC : GIRARD, MARTIN, BERNARD, DUBOIS, ROBERT, PETIT, DURAND, MOREAU, SIMON, ROUX, BLANC, et vous-même, VIDAL Claire.'),
+        '« Enregistrement des sauveteurs » : on coche les présents dans la liste de gauche, puis « Arrivée ». La secrétaire aussi : elle est sur le site.');
     await t.clic(t.bouton('Enregistrement des sauveteurs'));
-    for (const n of ['GIRARD Antoine', 'MARTIN Alice', 'BERNARD Bruno', 'DUBOIS Chloé', 'ROBERT Emma', 'PETIT Félix', 'DURAND Gaëlle', 'MOREAU Inès', 'SIMON Julien', 'ROUX Pierre', 'BLANC Olivier'])
-        await t.cocher(p.locator('label:visible', { hasText: n }).first().locator('input'));
-    await t.clic(t.bouton('Arrivée (11)'));
-    await t.dire('Chaque sauveteur sur site reçoit un numéro de planning (N°). La main courante note « Arrivée de : … », le planning les met en « Disponible ».');
+    await t.vite(async () => {
+        for (const n of ['GIRARD Antoine', 'MARTIN Alice', 'BERNARD Bruno', 'DUBOIS Chloé', 'ROBERT Emma', 'PETIT Félix', 'DURAND Gaëlle', 'MOREAU Inès', 'SIMON Julien', 'ROUX Pierre', 'BLANC Olivier', 'VIDAL Claire'])
+            await t.cocher(p.locator('label:visible', { hasText: n }).first().locator('input'));
+    }, 0.35);
+    const caseFonction = (nom, libelle) => p.locator('div.p-2:visible', { has: p.getByText(nom, { exact: true }) }).first().locator('label', { hasText: libelle });
+    await t.viser(caseFonction('VIDAL Claire', 'arrive en gestion'));
+    await t.dire('Sous VIDAL Claire et ROUX Pierre, la case « arrive en gestion » est déjà cochée : leur rôle dans la liste est « Gestion PC » ou « Gestion matériel », et VIDAL Claire est aussi la secrétaire de ce poste.',
+        'Ils arriveront en « Gestion - PC » (jaune) au planning, sans équipe à créer.');
+    await t.viser(caseFonction('SIMON Julien', 'conseiller technique'));
+    await t.dire('Sous GIRARD Antoine et SIMON Julien, conseillers techniques, la case « arrive comme conseiller technique » est proposée, mais pas cochée.',
+        'CT est une qualification, pas forcément leur fonction sur ce secours. Ici, GIRARD va diriger le secours et SIMON vient comme équipier transmission : on ne coche rien.');
+    await t.clic(t.bouton('Arrivée (12)'));
+    await t.viser(p.locator('h3:visible', { hasText: 'Sur site' }));
+    if (process.env.FILM_RAPIDE) await t.decrire('S2-arrivees');
+    await t.dire(dicte('Quel numéro de planning a MARTIN Alice ?'),
+        'Les 12 passent dans la colonne « Sur site », chacun avec son numéro d\'arrivée (N°1, N°2…), qui sera son numéro au planning.');
     await o.fermer();
-    await t.dire(dicte('GIRARD Antoine prend la direction des opérations souterraines.'), 'Pas de mot-clé reconnu : on choisit la catégorie « Personnel ».');
+    await o.voirLigne('Arrivée de',
+        'Dans la main courante, l\'application a écrit seule la ligne « Arrivée de : » avec les 12 noms, à l\'heure de l\'arrivée.',
+        'Catégorie « Personnel », secrétaire « Système » : les arrivées sont tracées sans rien saisir.');
+    await o.voirLigne('"Gestion - PC" affectée',
+        'Juste après, une seconde ligne : « Activité "Gestion - PC" affectée à : ROUX Pierre, VIDAL Claire ».');
+    await o.voirPlanning('VIDAL Claire',
+        'Au planning, chacun a sa ligne, avec son numéro d\'arrivée, et « Disponible » (vert foncé) à partir de l\'heure d\'arrivée. ROUX Pierre (N° 10) et VIDAL Claire (N° 12) sont en « Gestion - PC » (jaune).');
+
+    await t.chapitre('Le directeur du secours souterrain');
+    await t.dire(dicte('GIRARD Antoine prend la direction des opérations souterraines.'), 'On l\'écrit d\'abord dans la main courante. Pas de mot-clé reconnu : on choisit la catégorie « Personnel ».');
     await o.ligne({ texte: 'GIRARD Antoine prend la direction des opérations souterraines.', categorie: 'personnel' });
+    await o.voirLigne('direction des opérations', 'La ligne est enregistrée en « Personnel », la catégorie choisie.');
+    await t.dire('Puis on le note au planning, à la main : on sélectionne sa case actuelle, et on clique « Directeur Secours Souterrain » dans la palette.',
+        'Le directeur du secours souterrain n\'est dans aucune équipe : seule la palette peut le noter au planning.');
+    await t.clic(t.bouton('Planning Opérationnel'));
+    const i = await o.caseActuelle('GIRARD Antoine');
+    await t.clic(o.cases('GIRARD Antoine').nth(i));
+    await t.clic(t.bouton('Directeur Secours Souterrain'));
+    await o.voirPlanning('GIRARD Antoine', 'Sa case est maintenant en « Directeur Secours Souterrain » (rose vif) ; la mise à jour du planning la prolongera ensuite.');
+    await o.voirLigne('Directeur Secours Souterrain',
+        'La palette a écrit seule une ligne dans la main courante : « Activité "Directeur Secours Souterrain" affectée à : GIRARD Antoine ».',
+        'Toute modification faite à la main dans le planning est tracée dans la main courante.');
+
+    await t.chapitre('Les renforts en alerte');
+    await t.dire(dicte('Mettez en alerte, sans les faire venir pour l\'instant : THOMAS, LAURENT, LEFEBVRE, MICHEL et GARCIA ; MOREL Paul et NICOLAS Sarah pour le secrétariat ; FAURE Lucie et BOYER Marc, de l\'ADRASEC, pour le TPS de surface.'),
+        'Un secours spéléo demande souvent plus de monde que prévu : on alerte à l\'avance, et on fait venir chacun au bon moment.');
+    await t.dire('L\'application n\'a pas d\'état « en alerte » : on l\'écrit dans la main courante. Les personnes alertées restent dans la liste, sans arrivée ; on enregistrera leur arrivée quand elles viendront.');
+    await t.vite(() => o.ligne({ texte: 'Mis en alerte, à faire venir plus tard : THOMAS David, LAURENT Karine, LEFEBVRE Léo, MICHEL Manon, GARCIA Nora ; secrétariat : MOREL Paul, NICOLAS Sarah ; TPS de surface : FAURE Lucie, BOYER Marc (ADRASEC).', categorie: 'personnel' }), 0.35);
+    await o.voirLigne('Mis en alerte', 'La ligne garde la trace de qui a été alerté, et à quelle heure.');
 });
 
 // Phase 3 — Points phones et premières équipes
 PHASES.push(async (t, o) => {
     const p = t.page;
     await t.chapitre('Les points phones');
-    await t.dire(dicte('Voici les points phones de la cavité : F parking, A entrée, B tête du P40, C base du P40, D salle du Chaos, E point victime, G hôpital de Pontarlier.'),
+    await t.dire(dicte('Voici les points phones de la cavité : F parking, A entrée, B tête du P40, C base du P40, D salle du Chaos, E point victime, G TPS de surface, relais radio vers le PC.'),
         'Chaque point : une lettre, un nom, une position (ordre dans le diagramme) et un type de lieu. Le type décide de l\'activité au planning quand une équipe y passe.');
     await t.clic(t.bouton('Points Phone'));
     for (const [l, nom, type, pos] of [['F', 'Parking — Poste médical avancé', '🌿 Surface', '1'], ['A', 'Entrée de la cavité', '🚪 Entrée cavité', '2'], ['B', 'Tête du P40', '🪨 Sous terre', '3'],
-        ['C', 'Base du P40', '🪨 Sous terre', '4'], ['D', 'Salle du Chaos', '🪨 Sous terre', '5'], ['E', 'Point victime', '🪨 Sous terre', '6'], ['G', 'Hôpital de Pontarlier', '🚗 Hors site', '7']])
+        ['C', 'Base du P40', '🪨 Sous terre', '4'], ['D', 'Salle du Chaos', '🪨 Sous terre', '5'], ['E', 'Point victime', '🪨 Sous terre', '6'], ['G', 'TPS de surface, relais radio', '🌿 Surface', '7']])
         await o.ajouterPoint(l, nom, type, pos);
     await t.dire(dicte('Correction : D s\'appelle Salle du Chaos amont.'));
     await o.modifierPoint('Salle du Chaos', 'Salle du Chaos amont');
     await t.dire('« Vider tout » efface toute la liste : on ne s\'en sert jamais pendant une opération.');
     await o.fermer();
     await t.chapitre('Créer les équipes');
+    await o.equipes();
     await t.dire(dicte('Équipe 1 : MARTIN Alice chef, BERNARD Bruno, ROBERT Emma. Titre : Reconnaissance jusqu\'à la victime. Sous terre.'),
         'Le premier coché devient le chef. Le type de mission est détecté dans le titre (« Reconnaissance »). L\'ordre de mission détaille la tâche.');
-    await o.equipes();
     await o.creerEquipe({ lieu: '🪨 Sous terre', titre: 'Reconnaissance jusqu\'à la victime', ordre: 'Descendre jusqu\'au point victime, faire le bilan, rendre compte par TPS à chaque point phone.', membres: ['MARTIN Alice', 'BERNARD Bruno', 'ROBERT Emma'] });
     await t.dire(dicte('Équipe 2 : DUBOIS Chloé chef, DURAND Gaëlle, PETIT Félix. Titre : ASV et médicalisation de la victime. Sous terre.'), 'Le numéro suivant (2) est proposé tout seul.');
     await o.creerEquipe({ lieu: '🪨 Sous terre', titre: 'ASV et médicalisation de la victime', membres: ['DUBOIS Chloé', 'DURAND Gaëlle', 'PETIT Félix'] });
@@ -288,8 +376,8 @@ PHASES.push(async (t, o) => {
     const choix = p.locator('select:visible', { has: p.locator('option', { hasText: 'Sélectionner un type' }) });
     if (!(await choix.inputValue())) await t.choisir(choix, { index: 1 });
     await t.clic(t.bouton('Créer l\'Équipe (2)'));
-    await t.dire(dicte('Équipe 4 : ROUX Pierre chef, BLANC Olivier. Titre : Logistique, acheminement du matériel en surface. Surface.'));
-    await o.creerEquipe({ lieu: '🌿 Surface', titre: 'Logistique, acheminement du matériel en surface', membres: ['ROUX Pierre', 'BLANC Olivier'] });
+    await t.dire(dicte('Équipe 4 : BLANC Olivier. Titre : Logistique, acheminement du matériel en surface. Surface.'));
+    await o.creerEquipe({ lieu: '🌿 Surface', titre: 'Logistique, acheminement du matériel en surface', membres: ['BLANC Olivier'] });
     await t.chapitre('Lire, imprimer, exporter');
     await t.dire('Dans « Équipes Actives », l\'en-tête montre le lieu, le titre, le chef 👑 et le nombre de membres ; un clic déplie l\'équipe.');
     await o.deplier('Équipe 1');
@@ -344,10 +432,13 @@ PHASES.push(async (t, o) => {
     await t.chapitre('Pièce jointe, renforts, alerte traitée');
     await t.dire(dicte('MARTIN envoie une photo du croquis du P40.'), 'La pièce jointe est gardée avec la ligne ; un clic sur 📎 la télécharge.');
     await o.ligne({ texte: 'Croquis du P40 reçu.', fichier: CROQUIS });
-    await t.dire(dicte('Arrivent en renfort : THOMAS, LAURENT, LEFEBVRE, MICHEL et GARCIA.'));
+    await t.dire(dicte('Faites venir une partie des renforts mis en alerte : THOMAS, LAURENT, LEFEBVRE, MICHEL et GARCIA, et MOREL Paul pour relever au secrétariat. Ils sont arrivés.'),
+        'Ils étaient dans la liste, en alerte : on enregistre maintenant leur arrivée. Pour MOREL Paul, « arrive en gestion » est cochée d\'office : son rôle est « Gestion PC, secrétaire ».');
     await t.clic(t.bouton('Enregistrement des sauveteurs'));
-    for (const n of ['THOMAS David', 'LAURENT Karine', 'LEFEBVRE Léo', 'MICHEL Manon', 'GARCIA Nora']) await t.cocher(p.locator('label:visible', { hasText: n }).first().locator('input'));
-    await t.clic(t.bouton('Arrivée (5)'));
+    await t.vite(async () => {
+        for (const n of ['THOMAS David', 'LAURENT Karine', 'LEFEBVRE Léo', 'MICHEL Manon', 'GARCIA Nora', 'MOREL Paul']) await t.cocher(p.locator('label:visible', { hasText: n }).first().locator('input'));
+    }, 0.35);
+    await t.clic(t.bouton('Arrivée (6)'));
     await o.fermer();
     await t.avancer(6, 'Six minutes plus tard, la fenêtre d\'alertes revient.');
     await o.alerte().waitFor({ timeout: 40000 });
@@ -371,8 +462,8 @@ PHASES.push(async (t, o) => {
     const h2 = o.heure(new Date(2026, 0, 1, h, m + 2).getTime());
     await o.valeur(f.locator('input[type="time"]').last(), h2);
     await t.clic(f.locator('button', { hasText: 'Insérer l\'événement' }));
-    await t.dire(dicte('Relève : votre binôme prend le clavier.'), 'Le bouton 🔄 change le secrétaire : les lignes suivantes portent son nom.');
-    await o.secretaire('Stagiaire 2');
+    await t.dire(dicte('Relève : MOREL Paul prend le clavier.'), 'Le bouton 🔄 change le secrétaire : on peut taper son nom, ou le choisir parmi les sauveteurs sur site. Les lignes suivantes portent son nom.');
+    await o.secretaire(SECRETAIRE_2, 'MOREL Paul');
     await t.dire(dicte('Retrouvez tout ce qui parle du P40.'), 'La recherche rapide filtre le tableau (secrétaire, texte, équipe, point phone).');
     await t.saisir(t.champ('Recherche rapide... (secrétaire, événement, équipe, point phone)'), 'P40');
     await t.clic(t.bouton(/^Effacer$/));
@@ -454,6 +545,27 @@ PHASES.push(async (t, o) => {
     await o.creerEquipe({ lieu: '🚗 Hors site', titre: 'Chercher la civière au dépôt de Besançon', membres: ['LEFEBVRE Léo', 'MICHEL Manon'] });
     await o.fermer();
     await o.ligne({ equipe: 'Équipe 5', depart: true, lieu: 'Hors site' }); await o.planning();
+
+    await t.chapitre('Le TPS de surface et la liaison radio');
+    await t.dire(dicte('Faites venir FAURE Lucie et BOYER Marc, de l\'ADRASEC, mis en alerte. Ils sont arrivés.'),
+        'Ils installent un TPS de surface au point G. Le radioamateur de l\'ADRASEC fait la liaison radio entre ce TPS et le PC.');
+    await t.clic(t.bouton('Enregistrement des sauveteurs'));
+    await t.vite(async () => {
+        for (const n of ['FAURE Lucie', 'BOYER Marc']) await t.cocher(p.locator('label:visible', { hasText: n }).first().locator('input'));
+    });
+    await t.clic(t.bouton('Arrivée (2)'));
+    await o.fermer();
+    await t.dire(dicte('Équipe 6 : FAURE Lucie chef, BOYER Marc. Titre : Transmission, TPS de surface et relais radio vers le PC. Surface.'));
+    await o.equipes();
+    await o.creerEquipe({ lieu: '🌿 Surface', titre: 'Transmission, TPS de surface et relais radio vers le PC', ordre: 'Installer le TPS de surface au point G et assurer la liaison radio avec le PC.', membres: ['FAURE Lucie', 'BOYER Marc'] });
+    await o.fermer();
+    await t.dire(dicte('L\'équipe 6 part du PC vers le point G.'), '« Départ PC », lieu « Surface » : l\'équipe passe en « Mission de surface » au planning.');
+    await o.ligne({ equipe: 'Équipe 6', depart: true, lieu: 'Surface' }); await o.planning();
+    await t.dire(dicte('Message de BOYER Marc pour le PC : « TPS de surface installé au point G, liaison radio établie avec le PC. »'),
+        'C\'est un message : « Message venant de », « Message à destination de », le point G et le texte mot pour mot.');
+    await o.ligne({ venant: 'BOYER Marc', dest: 'PC', pp: PP.G, texte: 'TPS de surface installé au point G, liaison radio établie avec le PC.' });
+    await o.planning().catch(() => {});
+
     await t.dire(dicte('L\'équipe 4 a terminé : fin de mission. … Erreur : c\'est l\'équipe 2B qui a terminé, pas la 4.'),
         '« Fin de mission » dissout l\'équipe ; « Réactiver » annule une fin de mission faite par erreur.');
     await o.equipes(); await o.deplier('Équipe 4');
@@ -473,7 +585,13 @@ PHASES.push(async (t, o) => {
 PHASES.push(async (t, o) => {
     const p = t.page;
     await t.chapitre('Ouvrir le secours au réseau');
-    await t.dire(dicte('Un second secrétaire arrive avec une tablette. Ouvrez le secours au réseau.'),
+    await t.dire(dicte('NICOLAS Sarah, mise en alerte pour le secrétariat, arrive avec une tablette. Inscrivez son arrivée.'),
+        'Comme toute personne présente sur le site. Son rôle « Gestion PC, secrétaire » coche d\'office « arrive en gestion ».');
+    await t.clic(t.bouton('Enregistrement des sauveteurs'));
+    await t.cocher(p.locator('label:visible', { hasText: 'NICOLAS Sarah' }).first().locator('input'));
+    await t.clic(t.bouton('Arrivée (1)'));
+    await o.fermer();
+    await t.dire(dicte('Ouvrez le secours au réseau pour sa tablette.'),
         'Seul le PC principal a l\'application : les autres postes n\'ont besoin que d\'un navigateur sur le même réseau. Windows peut demander d\'autoriser le pare-feu : « Oui ».');
     await t.clic(t.bouton('🌐 Mode réseau'));
     await t.clic(t.bouton('Activer le mode réseau'));
@@ -489,7 +607,7 @@ PHASES.push(async (t, o) => {
     await tab.clic(tab.bouton('Se connecter'));
     await tab.page.waitForTimeout(2000);
     await tab.clic(tab.page.locator('button:visible', { hasText: /^🔄$/ }).first());
-    await tab.saisir(tab.champ('Ex: Martin DUPONT').or(tab.page.locator('input:visible').last()), 'Assistant TABLETTE');
+    await tab.saisir(tab.champ('Ex: Martin DUPONT').or(tab.page.locator('input:visible').last()), SECRETAIRE_3);
     await tab.clic(tab.bouton(/^✓ Enregistrer$/));
     await t.dire('La tablette est connectée (« Connecté au poste principal »), mais en CONSULTATION SEULE : elle voit tout, ne modifie rien.');
     await t.chapitre('Rôles et saisie à plusieurs');
@@ -538,11 +656,14 @@ PHASES.push(async (t, o) => {
     await t.dire(dicte('Le secours ne durera pas trois jours : réglez sur deux.'));
     await t.saisir(p.locator('input[type="number"]:visible'), '2');
     const ti = await p.locator('#palette-title').boundingBox();
-    await t.glisser(p.locator('#palette-title'), { x: 120, y: ti.y + ti.height / 2 + 300 });
-    await t.dire(dicte('GIRARD Antoine est Directeur des secours souterrains.'), 'On sélectionne ses cases, puis on clique l\'activité dans la palette : une ligne est ajoutée à la main courante.');
-    let i = await o.caseActuelle('GIRARD Antoine');
-    await t.glisser(o.cases('GIRARD Antoine').nth(Math.max(0, i - 2)), o.cases('GIRARD Antoine').nth(i));
-    await t.clic(t.bouton('Directeur Secours Souterrain'));
+    await t.glisser(p.locator('#palette-title'), { x: 160, y: ti.y + ti.height / 2 + 40 });
+    await t.dire(dicte('Vérifiez que GIRARD Antoine est noté directeur du secours souterrain.'), 'Noté à la main depuis la palette en phase 2, il a été prolongé par la mise à jour du planning.');
+    await t.viser(p.locator('tr:visible', { hasText: 'GIRARD Antoine' }).first());
+    await t.dire(dicte('ROBERT et PETIT vont manger.'), 'On sélectionne leurs cases actuelles (Ctrl pour la seconde), puis on clique l\'activité dans la palette : une ligne est ajoutée à la main courante.');
+    let i = await o.caseActuelle('ROBERT Emma');
+    await t.clic(o.cases('ROBERT Emma').nth(i));
+    await o.cases('PETIT Félix').nth(await o.caseActuelle('PETIT Félix')).click({ modifiers: ['Control'] });
+    await t.clic(t.bouton('Repas - Déjeuner'));
     await t.dire(dicte('ROUX et BLANC vont dormir 4 heures sur le site, avec un rappel 30 minutes avant.'), '« Repos sur site » ouvre la fenêtre de durée : 4 h, rappel 30 min avant la fin.');
     await t.clic(o.cases('ROUX Pierre').nth(await o.caseActuelle('ROUX Pierre')));
     await o.cases('BLANC Olivier').nth(await o.caseActuelle('BLANC Olivier')).click({ modifiers: ['Control'] });
@@ -582,9 +703,9 @@ PHASES.push(async (t, o) => {
 PHASES.push(async (t, o) => {
     const p = t.page;
     await t.chapitre('Évacuation et sauvegarde');
-    await t.dire(dicte('La victime est sortie de la cavité, prise en charge au poste médical avancé. Puis : victime évacuée vers l\'hôpital de Pontarlier.'), 'Deux lignes importantes, points F puis G ; catégorie « Secours » détectée.');
+    await t.dire(dicte('La victime est sortie de la cavité, prise en charge au poste médical avancé. Puis : victime évacuée vers l\'hôpital de Pontarlier.'), 'Deux lignes importantes : la première au point F ; la seconde sans point phone, car l\'hôpital est hors du site. Catégorie « Secours » détectée.');
     await o.ligne({ texte: 'La victime est sortie de la cavité, prise en charge au poste médical avancé.', pp: PP.F, important: true });
-    await o.ligne({ texte: 'Victime évacuée vers l\'hôpital de Pontarlier.', pp: PP.G, important: true });
+    await o.ligne({ texte: 'Victime évacuée vers l\'hôpital de Pontarlier.', important: true });
     await t.dire(dicte('Par précaution, exportez tout avant de fermer l\'application.'), '« Exporter Tout » : tout le secours dans un seul fichier, à archiver.');
     await t.clic(t.bouton('Exporter Tout'));
     const idPrincipal = await p.locator('input[placeholder="Ex: GouffreA_2025"]').inputValue();
@@ -606,7 +727,7 @@ PHASES.push(async (t, o) => {
     await t.saisir(p.locator('input[placeholder="Ex: Martin DUPONT"]:visible').last(), 'ROUX Pierre');
     await t.clic(t.bouton('Confirmer et Démarrer', { dernier: true }));
     await o.attendre(1500);
-    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), 'Stagiaire 2'); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
+    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), SECRETAIRE_2); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
     await t.dire('Pour chaque ligne du papier : l\'heure écrite, puis le texte. Les lignes se rangent dans l\'ordre chronologique et sont numérotées PCA-001, PCA-002…');
     const maintenant = await o.maintenant();
     for (const [min, txt] of [[-70, 'Route d\'accès fermée par la gendarmerie.'], [-100, 'Véhicule du SSF 25 arrivé au parking.'], [-30, 'Ambulance du SAMU arrivée au parking.']]) {
@@ -633,7 +754,7 @@ PHASES.push(async (t, o) => {
     await t.clic(p.getByText('PC de Terrain', { exact: false }).last());
     await t.clic(t.bouton('Confirmer et Démarrer', { dernier: true }));
     await o.attendre(1500);
-    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), 'Stagiaire 2'); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
+    if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), SECRETAIRE_2); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
     await t.dire(dicte('Intégrez la main courante papier.'), '« Importer MC (aperçu) » montre la fusion chronologique avant de confirmer. Les lignes recopiées portent « 📝 papier ».');
     await t.clic(t.bouton('Importer MC (aperçu)'));
     await t.fichier(p.getByText('Cliquez pour sélectionner un fichier'), p.locator('#mc-file-input'), fichierPCA);
@@ -673,6 +794,9 @@ const film = (n, id, titre) => executer(id, titre, async (t) => {
     for (let k = 0; k < n - 1; k++) await PHASES[k](t, o);   // phases précédentes, non filmées
     await t.debutFilm();
     await PHASES[n - 1](t, o);
-}, { debut: new Date() });
+// Phases 1 à 5 : séance commencée à 9 h ce jour (jamais à cheval sur minuit, quelle que soit
+// l'heure du tournage). À partir de la phase 6 (mode réseau), heure réelle : le PC principal
+// date les lignes des autres postes à l'heure réelle.
+}, { debut: n >= 6 ? new Date() : (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d; })() });
 
 module.exports = { film, PHASES };
