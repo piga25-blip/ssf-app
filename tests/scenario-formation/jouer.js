@@ -764,7 +764,7 @@ const ecrireRapport = () => {
         await attendreActivite('PETIT Félix', 'Disponible');
     });
     await etape('5.2:25', 'Équipe 3 sort et reste à l\'entrée (Mission de surface)', async () => {
-        await ligne({ equipe: 'Équipe 3', pp: PP.A, sens: '🌿 Sort — reste entrée' });
+        await ligne({ equipe: 'Équipe 3', pp: PP.A, sens: '🌿 Reste à l\'entrée' });
         await fenetrePlanning({ titre: 'mission_surface' });
     });
     await etape('5.2:26', 'Équipe 5 hors site, Départ PC 🚗', async () => {

@@ -1151,7 +1151,7 @@ let MainCouranteTab = ({
                 nomPP3b.includes('entr') || nomPP3b.includes('sorti') || nomPP3b.includes('cavit'));
             if (isEntreeSortie3b) {
                 const sensLabel = formData.sensEntree === true ? 'Entre sous terre'
-                                : formData.sensEntree === 'surface' ? 'Sort de sous terre — reste à l\'entrée'
+                                : formData.sensEntree === 'surface' ? 'Reste à l\'entrée'
                                 : formData.sensEntree === 'retourPC' ? 'Sort de sous terre — rentre au PC'
                                 : 'Au point phone';
                 if (!messageComplet.toLowerCase().includes(sensLabel.toLowerCase())) {
@@ -2129,9 +2129,9 @@ let MainCouranteTab = ({
                                          <input type="radio" checked={formData.sensEntree===true} onChange={function(){setFormData(Object.assign({},formData,{sensEntree:true}));}} style={{display:'none'}} />
                                          🕳️ Entre sous terre
                                      </label>
-                                     <label style={{cursor:'pointer',padding:'4px 8px',borderRadius:'5px',fontSize:'11px',fontWeight:'700',border:'1px solid',backgroundColor:formData.sensEntree==='surface'?'#15803d':'#fff',color:formData.sensEntree==='surface'?'#fff':'#4b5563',borderColor:formData.sensEntree==='surface'?'#15803d':'#d1d5db'}} title="Sort mais reste à l'entrée cavité — Planning → Surface">
+                                     <label style={{cursor:'pointer',padding:'4px 8px',borderRadius:'5px',fontSize:'11px',fontWeight:'700',border:'1px solid',backgroundColor:formData.sensEntree==='surface'?'#15803d':'#fff',color:formData.sensEntree==='surface'?'#fff':'#4b5563',borderColor:formData.sensEntree==='surface'?'#15803d':'#d1d5db'}} title="Arrive ou ressort, et reste à l'entrée de la cavité — Planning → Mission de surface">
                                          <input type="radio" checked={formData.sensEntree==='surface'} onChange={function(){setFormData(Object.assign({},formData,{sensEntree:'surface'}));}} style={{display:'none'}} />
-                                         🌿 Sort — reste entrée
+                                         🌿 Reste à l'entrée
                                      </label>
                                      <label style={{cursor:'pointer',padding:'4px 8px',borderRadius:'5px',fontSize:'11px',fontWeight:'700',border:'1px solid',backgroundColor:formData.sensEntree==='retourPC'?'#0369a1':'#fff',color:formData.sensEntree==='retourPC'?'#fff':'#4b5563',borderColor:formData.sensEntree==='retourPC'?'#0369a1':'#d1d5db'}} title="Sort et remonte vers le PC — Planning → Approche">
                                          <input type="radio" checked={formData.sensEntree==='retourPC'} onChange={function(){setFormData(Object.assign({},formData,{sensEntree:'retourPC'}));}} style={{display:'none'}} />
