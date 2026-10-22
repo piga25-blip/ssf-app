@@ -5,7 +5,7 @@
 // Les étapes et sélecteurs sont ceux vérifiés par tests/scenario-formation/jouer.js.
 const path = require('path');
 const fs = require('fs');
-const { executer } = require('./outils');
+const { executer, simultane } = require('./outils');
 
 const RACINE = path.join(__dirname, '..', '..', '..');
 const CSV = path.join(__dirname, '..', 'sortie', 'tutoriels', 'liste-formation.csv');
@@ -129,6 +129,40 @@ const outils = (t) => {
     o.cases = (nom) => p.locator('tr', { hasText: nom }).locator('td.time-slot-cell');
     o.caseActuelle = (nom) => o.cases(nom).evaluateAll(tds => { const vide = td => /rgba\(0, 0, 0, 0\)|rgb\(255, 255, 255\)/.test(getComputedStyle(td).backgroundColor); let i = tds.length - 1; while (i > 0 && vide(tds[i])) i--; return i; });
     o.alerte = () => p.locator('h3:visible', { hasText: 'Alertes en attente' });
+    // Liste déroulante d'un champ à suggestions (point phone…) : la liste du navigateur ne se
+    // filme pas, elle est dessinée par-dessus la page le temps du choix. tt : poste (PC ou tablette)
+    o.deroulante = async (tt, champ, valeur) => {
+        const pg = tt.page;
+        await champ.evaluate(e => e.scrollIntoView({ block: 'center' }));
+        await tt.rythme(0.5);
+        const b = await champ.boundingBox();
+        await pg.evaluate(({ x, y, w, h, liste }) => {
+            const fl = document.createElement('div');
+            fl.id = 'film-fleche';
+            fl.style.cssText = `position:fixed;left:${x + w - 24}px;top:${y}px;width:22px;height:${h}px;z-index:99998;display:flex;align-items:center;justify-content:center;font-size:12px;color:#374151`;
+            fl.textContent = '▼';
+            document.body.appendChild(fl);
+            const options = [...document.querySelectorAll(`#${liste} option`)].map(op => op.value);
+            const l = document.createElement('div');
+            l.id = 'film-liste';
+            l.style.cssText = `position:fixed;left:${x}px;top:${y + h + 2}px;width:${w}px;z-index:99999;background:#fff;border:1px solid #9ca3af;box-shadow:0 4px 12px rgba(0,0,0,.25);font:14px Arial;visibility:hidden`;
+            options.forEach(v => { const d = document.createElement('div'); d.textContent = v; d.style.cssText = 'padding:7px 10px;color:#111'; d.onmouseenter = () => { d.style.background = '#dbeafe'; }; d.onmouseleave = () => { d.style.background = ''; }; l.appendChild(d); });
+            document.body.appendChild(l);
+            // Pas la place sous le champ : la liste s'ouvre au-dessus, comme celle du navigateur
+            if (y + h + 2 + l.offsetHeight > window.innerHeight) l.style.top = Math.max(0, y - 2 - l.offsetHeight) + 'px';
+        }, { x: b.x, y: b.y, w: b.width, h: b.height, liste: await champ.getAttribute('list') });
+        await tt.clic(pg.locator('#film-fleche'));
+        await pg.evaluate(() => { document.getElementById('film-liste').style.visibility = 'visible'; });
+        await tt.rythme(1.5);
+        const choix = pg.locator('#film-liste div', { hasText: valeur }).first();
+        const point = await tt.viser(choix);
+        await choix.evaluate(d => { d.style.background = '#dbeafe'; });
+        await tt.rythme(0.8);
+        await tt.onde(point);
+        await pg.evaluate(() => { ['film-fleche', 'film-liste'].forEach(id => { const e = document.getElementById(id); if (e) e.remove(); }); });
+        await champ.fill(valeur);
+        await tt.rythme(1.5);
+    };
     // Résultat d'une saisie : la ligne de main courante entourée, puis l'explication
     o.voirLigne = async (texte, explication, pourquoi) => {
         if (!(await p.locator('tbody tr:visible').count())) await t.vite(() => t.clic(t.bouton(/Main Courante/)));
@@ -774,6 +808,31 @@ PHASES.push(async (t, o) => {
 // Phase 6 — Mode réseau
 PHASES.push(async (t, o) => {
     const p = t.page;
+    // Ligne de main courante d'un poste (PC ou tablette), entourée, puis l'explication
+    const voirLigne = async (poste, texte, explication, pourquoi) => {
+        await poste.vite(() => poste.clic(poste.bouton(/Main Courante/)));
+        const [avec, sans] = Array.isArray(texte) ? texte : [texte];
+        const l = poste.page.locator('tbody tr:visible', { hasText: avec }).filter(sans ? { hasNotText: sans } : {}).first();
+        await l.waitFor({ timeout: 10000 }).catch(() => {});
+        await l.scrollIntoViewIfNeeded().catch(() => {});
+        await poste.viser(l);
+        if (process.env.FILM_RAPIDE) console.log('MC ▸ ' + (await l.innerText().catch(() => '?')).replace(/\s+/g, ' '));
+        await t.dire(explication, pourquoi);
+        await poste.page.evaluate(() => window.scrollTo(0, 0));
+    };
+    // Fenêtre « Mode réseau » du PC : liste des postes connectés, en bas de la fenêtre
+    const postesConnectes = async (explication, pourquoi) => {
+        const titre = p.locator('text=/Postes connectés/').first();
+        await titre.scrollIntoViewIfNeeded();
+        await t.viser(titre);
+        const liste = p.locator('table:visible').filter({ has: p.locator('select') });
+        if (await liste.count()) { await liste.last().scrollIntoViewIfNeeded({ timeout: 3000 }).catch(() => {}); await t.viser(liste.last()); }
+        if (explication) await t.dire(explication, pourquoi);
+    };
+    const ligneTablette = () => p.locator('tr:visible').filter({ has: p.locator('select') }).last();
+    const bandeau = (tab) => tab.page.locator('span:visible', { hasText: /Connecté au poste principal|Connexion perdue/ }).first();
+    const nouveauCode = async () => { await o.attendre(2000); return p.locator('span.font-mono.text-2xl').first().innerText(); };
+
     await t.chapitre('Ouvrir le secours au réseau');
     await t.dire(dicte('NICOLAS Sarah, mise en alerte pour le secrétariat, arrive avec une tablette. Inscrivez son arrivée.'),
         'Comme toute personne présente sur le site. Son rôle « Gestion PC, secrétaire » coche d\'office « arrive en gestion ».');
@@ -781,6 +840,8 @@ PHASES.push(async (t, o) => {
     await t.cocher(p.locator('label:visible', { hasText: 'NICOLAS Sarah' }).first().locator('input'));
     await t.clic(t.bouton('Arrivée (1)'));
     await o.fermer();
+    await o.voirLigne('Arrivée de : NICOLAS', 'En main courante : « Arrivée de : NICOLAS Sarah », puis « Activité "Gestion - PC" affectée à : NICOLAS Sarah ».');
+    await o.voirPlanning('NICOLAS Sarah', 'Au planning, NICOLAS Sarah est en « Gestion - PC » (jaune).');
     await t.dire(dicte('Ouvrez le secours au réseau pour sa tablette.'),
         'Seul le PC principal a l\'application : les autres postes n\'ont besoin que d\'un navigateur sur le même réseau. Windows peut demander d\'autoriser le pare-feu : « Oui ».');
     await t.clic(t.bouton('🌐 Mode réseau'));
@@ -788,51 +849,121 @@ PHASES.push(async (t, o) => {
     await o.attendre(1500);
     const adresse = await p.locator('span.font-mono.text-xl').first().innerText();
     const code = await p.locator('span.font-mono.text-2xl').first().innerText();
-    await t.dire(`Le PC affiche l'adresse (${adresse}), un code QR et le code de session (${code}).`, 'Sur une tablette, le plus simple est de photographier le code QR. Sinon : l\'adresse, avec http://, dans la barre d\'adresse du navigateur.');
+    await t.viser(p.locator('span.font-mono.text-2xl').first());
+    await t.dire(`Le PC affiche l'adresse (${adresse}), un code QR et le code de session (${code}).`,
+        'Sur une tablette, le plus simple est de photographier le code QR. Sinon : l\'adresse, avec http://, dans la barre d\'adresse du navigateur.');
+
     await t.chapitre('Connecter la tablette');
+    await t.dire('Sur la tablette, on ouvre le navigateur et on tape l\'adresse affichée par le PC. Elle apparaît à droite.');
     const tab = await t.ouvrirTablette(adresse + '/');
     await tab.rythme(2);
-    await t.dire('La tablette demande le code de session : on tape les 6 chiffres.');
+    await t.dire('La tablette demande le code de session : on tape les 6 chiffres affichés par le PC.');
     await tab.saisir(tab.page.locator('input[placeholder="000000"]'), code);
     await tab.clic(tab.bouton('Se connecter'));
     await tab.page.waitForTimeout(2000);
+    await t.dire('Sur la tablette, on indique qui l\'utilise : bouton 🔄 à côté de « Secrétaire ».', 'Ce nom signe les lignes saisies depuis la tablette.');
     await tab.clic(tab.page.locator('button:visible', { hasText: /^🔄$/ }).first());
     await tab.saisir(tab.champ('Ex: Martin DUPONT').or(tab.page.locator('input:visible').last()), SECRETAIRE_3);
     await tab.clic(tab.bouton(/^✓ Enregistrer$/));
-    await t.dire('La tablette est connectée (« Connecté au poste principal »), mais en CONSULTATION SEULE : elle voit tout, ne modifie rien.');
-    await t.chapitre('Rôles et saisie à plusieurs');
-    await t.dire(dicte('Donnez-lui le droit de saisir.'), 'Dans « Postes connectés », le rôle de la tablette passe à « ✍️ Saisie ».');
-    await t.choisir(p.locator('tr:visible').filter({ has: p.locator('select') }).last().locator('select'), 'saisie');
+    await tab.viser(bandeau(tab));
+    await t.dire('La tablette est connectée : « Connecté au poste principal ». Mais elle est en consultation seule : elle voit tout, elle ne modifie rien.',
+        'Par prudence, un nouveau poste ne peut rien modifier tant que le PC principal ne l\'a pas autorisé.');
+
+    await t.chapitre('Donner le droit de saisir');
+    await t.dire(dicte('Donnez-lui le droit de saisir.'));
+    await postesConnectes('Sur le PC, en bas de la fenêtre « Mode réseau », la tablette apparaît dans « Postes connectés ». Son rôle se choisit poste par poste.');
+    await t.choisir(ligneTablette().locator('select'), 'saisie');
+    await t.viser(ligneTablette());
+    await t.dire('Sur le PC, le rôle de la tablette passe à « ✍️ Saisie ».');
+    await tab.viser(bandeau(tab));
+    await t.dire('Sur la tablette, le bandeau affiche aussitôt « ✍️ Poste de saisie ».',
+        'Restent réservés au PC principal : les informations et la clôture du secours, les imports, les remises à zéro, les secrétaires et les réglages du planning.');
     await o.fermer();
-    await t.dire(dicte('De MARTIN : équipe 1 au point victime, bilan en cours.'), 'Saisie sur la tablette : la ligne arrive aussitôt sur le PC, avec « 📡 Saisie sur … ».');
-    await tab.saisir(tab.page.locator('input[list="equipe-list"]:visible'), 'Équipe 1');
-    await tab.saisir(tab.page.locator('input[list="pointsphone-list"]:visible'), PP.E);
-    await tab.saisir(tab.champ('Description...'), 'De MARTIN : équipe 1 au point victime, bilan en cours.');
+
+    await t.chapitre('Saisir à plusieurs');
+    await t.dire(dicte('De MARTIN Alice : équipe 1 au point victime, bilan en cours.'),
+        'Saisie sur la tablette : « Message venant de » MARTIN Alice remplit l\'équipe, et il y a un renseignement en plus, « bilan en cours ».');
+    await tab.vite(() => tab.saisir(tab.page.locator('input[list="expediteurs-list"]:visible'), 'MARTIN Alice'), 0.5);
+    await t.dire('Pour le point phone, au lieu de taper, on peut cliquer sur la petite flèche au bout du champ : la liste des points phones s\'ouvre, on clique sur le bon.');
+    await o.deroulante(tab, tab.page.locator('input[list="pointsphone-list"]:visible'), PP.E);
+    if (process.env.FILM_RAPIDE) await tab.decrire('S6-liste');
+    await tab.vite(() => tab.saisir(tab.champ('Description...'), 'Bilan en cours.'), 0.5);
     await tab.clic(tab.bouton(/^✓ ENREGISTRER$/));
-    await tab.page.waitForTimeout(1500);
     const mod = tab.page.locator('button:visible', { hasText: 'Valider (' });
-    if (await mod.count()) await tab.clic(mod);
+    await mod.first().waitFor({ timeout: 5000 }).catch(() => {});
+    if (await mod.count()) {
+        await t.dire('La fenêtre de planning s\'ouvre sur la tablette : on coche « Toute l\'équipe », puis on valide.');
+        const toute = tab.page.locator('label:visible', { hasText: 'Toute l\'équipe' }).locator('input');
+        if (await toute.count() && !(await toute.isChecked())) await tab.cocher(toute);
+        await tab.clic(mod);
+    }
+    await voirLigne(t, 'Bilan en cours.', 'Sur le PC, la ligne arrive aussitôt : point E, « Message de : MARTIN Alice », la secrétaire de la tablette (Sarah NICOLAS) et la mention « 📡 Saisie sur … ».');
     await t.dire(dicte('Au top, enregistrez tous les deux une ligne. Top !'), 'Les numéros et les heures sont donnés par le PC principal : deux lignes au même instant ont deux numéros différents.');
-    await t.saisir(t.champ('Description...'), 'Top PC.');
-    await tab.saisir(tab.champ('Description...'), 'Top tablette.');
-    await Promise.all([t.bouton(/^✓ ENREGISTRER$/).click(), tab.bouton(/^✓ ENREGISTRER$/).click()]);
+    await t.vite(() => t.saisir(t.champ('Description...'), 'Top PC.'), 0.5);
+    await tab.vite(() => tab.saisir(tab.champ('Description...'), 'Top tablette.'), 0.5);
+    await simultane([[t, t.bouton(/^✓ ENREGISTRER$/)], [tab, tab.bouton(/^✓ ENREGISTRER$/)]]);
     await t.rythme(3);
-    await t.chapitre('Code, coupure, désactivation');
-    await t.dire(dicte('Le code a circulé par radio : changez-le.'), 'La tablette redemande le code, puis revient en consultation : le PC lui redonne « Saisie ».');
+    await voirLigne(t, 'Top tablette.', 'Sur le PC, les deux lignes se suivent, chacune avec son numéro : aucun doublon.');
+
+    await t.chapitre('Changer le code');
+    await t.dire(dicte('Le code a circulé par radio : changez-le.'));
     await t.clic(t.bouton('🌐 Mode réseau'));
     await t.clic(t.bouton('Changer le code'));
-    await o.attendre(2000);
-    const nouveau = await p.locator('span.font-mono.text-2xl').first().innerText();
+    const nouveau = await nouveauCode();
+    await t.viser(p.locator('span.font-mono.text-2xl').first());
+    await t.dire(`Sur le PC, un nouveau code s'affiche : ${nouveau}. Tous les autres postes sont déconnectés.`);
+    await tab.viser(tab.page.locator('input[placeholder="000000"]'));
+    await t.dire('Sur la tablette, la demande de code revient : l\'ancien code ne marche plus. On tape le nouveau.');
     await tab.saisir(tab.page.locator('input[placeholder="000000"]'), nouveau);
     await tab.clic(tab.bouton('Se connecter'));
     await tab.page.waitForTimeout(2000);
-    await t.dire(dicte('Panne : la tablette perd le réseau.'), 'La tablette affiche « Connexion perdue » et refuse la saisie ; « 💾 Copie de secours » garde la dernière version du secours. Au retour du réseau, elle se reconnecte seule.');
+    await postesConnectes('Sur le PC, la tablette est reconnectée, mais de nouveau en « Consultation » : après un changement de code, le droit de saisir est à redonner.',
+        'Changer le code remet tout à plat : aucun appareil ne garde un droit de saisie sans que le PC principal le lui redonne.');
+    await t.choisir(ligneTablette().locator('select'), 'saisie');
+    await t.viser(ligneTablette());
+    await tab.viser(bandeau(tab));
+    await t.dire('On lui redonne « ✍️ Saisie » : le bandeau de la tablette repasse en « Poste de saisie ».');
+
+    await t.chapitre('Coupure du réseau');
+    await t.dire(dicte('Panne : le réseau est coupé.'), 'On simule la coupure depuis le PC : « Désactiver » dans la fenêtre « Mode réseau ».');
     await t.clic(t.bouton(/^Désactiver$/));
-    await tab.rythme(4);
+    await o.fermer();
+    await tab.page.locator('text=/Connexion perdue/').first().waitFor({ timeout: 15000 }).catch(() => {});
+    if (process.env.FILM_RAPIDE) await tab.decrire('S6-coupure');
+    await tab.viser(bandeau(tab));
+    await t.dire('Sur la tablette, le bandeau passe au rouge : « Connexion perdue — reconnexion en cours… (saisie impossible) ».',
+        '« 💾 Copie de secours » télécharge la dernière version reçue du secours : si le PC principal est hors service, on l\'importe sur un autre ordinateur.');
+    await t.dire(dicte('De MARTIN Alice : bilan terminé.'), 'La tablette essaie d\'enregistrer la ligne pendant la coupure.');
+    await tab.vite(async () => {
+        await tab.saisir(tab.page.locator('input[list="expediteurs-list"]:visible'), 'MARTIN Alice');
+        await tab.saisir(tab.champ('Description...'), 'Bilan terminé.');
+    }, 0.5);
+    await tab.clic(tab.bouton(/^✓ ENREGISTRER$/));
+    await t.dire('Elle refuse : « Hors ligne : saisie impossible ». Ce qui a été tapé reste dans le formulaire.', 'Rien n\'est envoyé plus tard sans contrôle.');
+    await t.dire('Le réseau revient : sur le PC, on réactive le mode réseau. Le code ne change pas.');
+    await t.clic(t.bouton('🌐 Mode réseau'));
     await t.clic(t.bouton('Activer le mode réseau'));
-    await tab.page.waitForTimeout(10000);
-    await t.dire(dicte('Fin du travail à plusieurs.'), '« Désactiver » coupe l\'accès de tous les autres postes.');
+    await tab.page.locator('text=Connecté au poste principal').first().waitFor({ timeout: 30000 }).catch(() => {});
+    await tab.page.waitForTimeout(1500);
+    await postesConnectes('Sur le PC, la tablette est revenue toute seule dans les postes connectés, avec son rôle « Saisie ».');
+    await tab.viser(bandeau(tab));
+    await t.dire('Sur la tablette : « Connecté au poste principal ». On clique de nouveau sur « Enregistrer ».');
+    await o.fermer();
+    await tab.clic(tab.bouton(/^✓ ENREGISTRER$/));
+    if (await mod.count()) await tab.clic(mod);
+    await voirLigne(t, 'Bilan terminé.', 'La ligne arrive sur le PC, avec l\'heure à laquelle elle a été enregistrée. Si l\'appel datait de plusieurs minutes, on le précise dans le texte.');
+
+    await t.chapitre('Désactiver le réseau');
+    await t.dire(dicte('Fin du travail à plusieurs.'), 'Sur le PC, « Désactiver » dans la fenêtre « Mode réseau » coupe l\'accès de tous les autres postes.');
+    await t.clic(t.bouton('🌐 Mode réseau'));
     await t.clic(t.bouton(/^Désactiver$/));
+    await t.viser(t.bouton('Activer le mode réseau'));
+    await t.dire('Sur le PC, le mode réseau est désactivé : la fenêtre propose de nouveau « Activer le mode réseau ».');
+    await tab.page.locator('text=/Connexion perdue/').first().waitFor({ timeout: 15000 }).catch(() => {});
+    if (process.env.FILM_RAPIDE) await tab.decrire('S6-coupure');
+    await tab.viser(bandeau(tab));
+    await t.dire('Sur la tablette, « Connexion perdue » : elle ne peut plus rien saisir. On ferme son navigateur.',
+        'Les lignes saisies sur la tablette sont dans la main courante du PC : rien n\'est à récupérer sur la tablette.');
     await o.fermer();
     await tab.fermerPoste();
 });
@@ -982,11 +1113,19 @@ PHASES.push(async (t, o) => {
 const film = (n, id, titre) => executer(id, titre, async (t) => {
     const o = outils(t);
     for (let k = 0; k < n - 1; k++) await PHASES[k](t, o);   // phases précédentes, non filmées
+    // À partir de la phase 6 (mode réseau), le PC principal date les lignes des autres postes à
+    // l'heure réelle : l'horloge du PC, partie plus tôt et avancée par les phases précédentes
+    // (pauses, rappels), est amenée à l'heure réelle avant le film
+    if (n >= 6) {
+        const ecart = Date.now() - await t.page.evaluate(() => Date.now());
+        if (ecart > 0) await t.page.clock.fastForward(ecart);
+        await t.page.waitForTimeout(5000);
+    }
     await t.debutFilm();
     await PHASES[n - 1](t, o);
 // Phases 1 à 5 : séance commencée à 9 h ce jour (jamais à cheval sur minuit, quelle que soit
-// l'heure du tournage). À partir de la phase 6 (mode réseau), heure réelle : le PC principal
-// date les lignes des autres postes à l'heure réelle.
-}, { debut: n >= 6 ? new Date() : (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d; })() });
+// l'heure du tournage). Phases 6 à 8 : séance commencée 2 h 30 avant le tournage (les phases
+// précédentes avancent l'horloge d'environ 1 h 15), puis heure réelle.
+}, { debut: n >= 6 ? new Date(Date.now() - 150 * 60000) : (() => { const d = new Date(); d.setHours(9, 0, 0, 0); return d; })() });
 
 module.exports = { film, PHASES };
