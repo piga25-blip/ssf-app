@@ -71,6 +71,8 @@
            invisible sans ce fond) */
         .bg-teal-700 { background-color: rgb(15 118 110); }
         .hover\:bg-teal-800:hover { background-color: rgb(17 94 89); }
+        /* « 🕐 Sauvegardes auto » : couleur au survol */
+        .hover\:bg-teal-700:hover { background-color: rgb(15 118 110); }
         .disabled\:opacity-60:disabled { opacity: 0.6; }
         .bg-green-700 { background-color: rgb(21 128 61); }
         .hover\:bg-green-800:hover { background-color: rgb(22 101 52); }
@@ -405,7 +407,8 @@
             border: 2px solid #0055a4; 
             box-shadow: 0 4px 12px rgba(0, 85, 164, 0.3); 
             border-radius: 8px; 
-            z-index: 9999; 
+            /* sous les fenêtres (z-50 et plus) : la palette ne cache plus leurs boutons */
+            z-index: 40; 
         }
         
         .palette-title {

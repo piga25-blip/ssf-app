@@ -1408,9 +1408,13 @@ let GestionEquipesModal = ({
 
             {/* ── MODALE SCINDER ── */}
             {modalScindre && (() => {
+                // Cases cochées et numéro gardés dans modalScindre (état du parent) : un rafraîchissement
+                // de la fenêtre Équipes (planning, réseau…) ne les remet plus à leur valeur de départ
                 const ScindreModal = () => {
-                    const [membresSelec, setMembresSelec] = React.useState(modalScindre.membresSelec);
-                    const [newNum, setNewNum] = React.useState(modalScindre.team.name.replace('Équipe ','') + 'B');
+                    const membresSelec = modalScindre.membresSelec;
+                    const setMembresSelec = (f) => setModalScindre(m => m && ({ ...m, membresSelec: typeof f === 'function' ? f(m.membresSelec) : f }));
+                    const newNum = modalScindre.newNum ?? modalScindre.team.name.replace('Équipe ','') + 'B';
+                    const setNewNum = (v) => setModalScindre(m => m && ({ ...m, newNum: v }));
                     const team = modalScindre.team;
                     const baseNum = team.name.replace('Équipe ','');
                     const handleValider = () => {
@@ -1506,7 +1510,7 @@ let GestionEquipesModal = ({
                         </div>
                     );
                 };
-                return <ScindreModal />;
+                return ScindreModal();
             })()}
         </div>
     );
