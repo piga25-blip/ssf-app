@@ -217,7 +217,8 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   qui garde ses cases au rafraîchissement, planning limité au dernier jour, Ctrl + clic,
   synthèse et progression des équipes, colonnes Repos / Surface / PC du rapport, palette
   d'activités sous les fenêtres, icônes visibles partout). Test `tests/verif-scinder.js` ajouté
-  à `npm test`.
+  à `npm test`. Notice Word mise à jour (puce « Nouveautés de la 14.0.5 », date du 24/10/2026),
+  copiée dans les kits.
 - **Kits passés en 14.0.5** (24/10/2026) : `Application-SSF-Setup-14.0.5.exe` dans
   `dist/Kit-essai-terrain-14/`, `Application-SSF-14.0.5-arm64.dmg` et `Application-SSF-14.0.5.dmg`
   (téléchargés depuis la release) dans `dist/Kit-essai-Mac-14/` ; fiches `docs/essai-terrain` et
