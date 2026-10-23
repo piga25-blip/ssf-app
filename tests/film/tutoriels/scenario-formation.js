@@ -1294,14 +1294,15 @@ PHASES.push(async (t, o) => {
     await t.viser(ligneApercu('Civière sortie'));
     await t.dire('Dans l\'aperçu, rangé par heure : l\'arrivée de l\'ambulance, notée sur le papier (badge PCA), vient entre deux lignes du PC de terrain : « civière en tête du P40 » et « civière sortie de la cavité ».');
     await t.clic(t.bouton('Confirmer la Fusion'));
-    // La main courante est rangée par numéro : un clic sur « Date/Heure » la range par heure
-    await t.dire('Dans la main courante, la ligne garde son numéro, PCA-003. Pour la lire à sa place, on range le tableau par heure : clic sur l\'en-tête « Date/Heure ».');
-    await t.clic(p.locator('th:visible', { hasText: 'Date/Heure' }).first());
     if (process.env.FILM_RAPIDE) await t.decrire('S8-fusion');
-    await o.voirLigne('Ambulance du SAMU arrivée', 'La ligne du papier, « 📝 papier », au nom de ROUX Pierre, entre « civière sortie de la cavité » au-dessus et « civière en tête du P40 » au-dessous.',
-        'Rangée par heure, la main courante fusionnée raconte le secours dans l\'ordre, quel que soit le poste qui a noté la ligne.');
-    await t.clic(p.locator('th:visible', { hasText: /^N°/ }).first());
-    await t.dire('Un clic sur « N° » remet l\'ordre habituel, par numéro.');
+    // Main courante : la ligne du papier garde son numéro (PCA-003) et se range à son heure
+    const ligneMC = (texte) => p.locator('tbody tr:visible', { hasText: texte }).first();
+    await ligneMC('Ambulance du SAMU arrivée').evaluate(tr => tr.scrollIntoView({ block: 'center' })).catch(() => {});
+    await t.viser(ligneMC('Civière sortie'));
+    await t.viser(ligneMC('Ambulance du SAMU arrivée'));
+    await t.viser(ligneMC('Civière en tête'));
+    await o.voirLigne('Ambulance du SAMU arrivée', 'Dans la main courante, la ligne du papier garde son numéro, PCA-003, et le repère « 📝 papier », au nom de ROUX Pierre. Elle se range à son heure : sous « civière sortie de la cavité », au-dessus de « civière en tête du P40 ».',
+        'La main courante fusionnée raconte le secours dans l\'ordre, quel que soit le poste qui a noté la ligne.');
     await t.chapitre('Clôture et rapport');
     await t.dire(dicte('Faites une sauvegarde maintenant.'), 'Les sauvegardes automatiques se téléchargent ou se restaurent depuis cette fenêtre.');
     await t.clic(t.bouton('Sauvegardes auto'));
