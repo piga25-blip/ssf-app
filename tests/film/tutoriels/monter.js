@@ -64,7 +64,8 @@ const monter = (id, numero, titre, resume, groupe) => {
     const marqueDebut = journal.marques.find(m => m.type === 'debut');
     const coupe = Math.max(0, ((marqueDebut ? marqueDebut.t : debutVideo) - debutVideo) / 1000);
     const marques = journal.marques.filter(m => !marqueDebut || m.t >= marqueDebut.t).map(m => ({ ...m, s: (m.t - debutVideo) / 1000 - coupe }));
-    const total = dv - coupe;
+    // Arrêt à la fin du film : la fermeture des postes (parfois longue) n'est pas montrée
+    const total = Math.min(dv - coupe, journal.finFilm ? (journal.finFilm - debutVideo) / 1000 - coupe + 1 : Infinity);
     // Autres postes filmés (journaux plus anciens : une seule « tablette »)
     const autresPostes = (journal.postes || (journal.tablette ? [{ ...journal.tablette, nom: 'Tablette' }] : []))
         .filter(po => po.video && fs.existsSync(po.video))

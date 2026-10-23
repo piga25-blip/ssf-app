@@ -90,7 +90,7 @@ executer('07-sauvegarde-cloture', 'Sauvegarder, faire le rapport et clôturer', 
     await t.clic(t.bouton('Importer MC (aperçu)'));
     const fenetreMC = p.locator('div.bg-white:visible', { has: p.locator('h2', { hasText: 'Importer et Fusionner' }) }).last();
     await t.dire('La fenêtre rappelle les étapes : choisir le fichier, vérifier l\'aperçu, confirmer.');
-    await t.viser(fenetreMC.locator('input[type="file"]'));
+    await t.viser(fenetreMC.locator('label[for="mc-file-input"]'));
     await p.evaluate(() => window.__film && window.__film.message('💻 Fenêtre de Windows', '« Ouvrir » : on choisit le fichier de MC2.', 3000));
     await fenetreMC.locator('input[type="file"]').setInputFiles(path.join(__dirname, 'mc-secondaire-MC2.json'));
     await t.rythme(1);

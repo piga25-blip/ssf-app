@@ -185,6 +185,7 @@ const demarrer = async (id, { debut = new Date(2026, 2, 14, 8, 0, 0), env = {} }
     t.ouvrirTablette = (url, options = {}) => t.ouvrirPoste(url, { largeur: 768, hauteur: 1000, nom: 'Tablette', ...options });
 
     t.fermer = async () => {
+        journal.finFilm = Date.now();   // fin du film : la fermeture des postes qui suit n'est pas montrée
         journal.postes = [];
         for (const tb of postes) {
             clearInterval(tb.minuterie);
