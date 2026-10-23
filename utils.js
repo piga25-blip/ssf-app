@@ -164,6 +164,29 @@ const creneauxEcoules = (startHour, events) => {
     return Math.floor((Date.now() - debut.getTime()) / (15 * 60000)) + 1;
 };
 
+// Ordre de la main courante, de la plus ancienne ligne à la plus récente : rang de chaque
+// ligne (Map id → rang). Les lignes de ce poste se suivent par numéro (001, 002, 002a…) ; une
+// ligne venue d'une autre main courante (PCA-003, MC2-001) se range à son heure, après la
+// dernière ligne de ce poste écrite avant elle
+const ordreMainCourante = (events) => {
+    const cle = (num) => { const m = String(num || '').match(/^(\d+)([a-z]*)$/i); return m ? [parseInt(m[1], 10), m[2].toLowerCase()] : null; };
+    const heure = (e) => Date.parse(e.isoTimestamp) || 0;
+    const locales = (events || []).filter(e => cle(e.numero)).map(e => ({ h: heure(e), c: cle(e.numero) }));
+    const avant = (a, b) => a[0] - b[0] || a[1].localeCompare(b[1]);
+    const rangs = (events || []).map(e => {
+        const c = cle(e.numero);
+        if (c) return { e, c, h: 0 };
+        let dernier = [0, ''];
+        locales.forEach(l => { if (l.h <= heure(e) && avant(l.c, dernier) > 0) dernier = l.c; });
+        return { e, c: dernier, h: heure(e) || 1 };
+    });
+    rangs.sort((a, b) => avant(a.c, b.c) || a.h - b.h);
+    return new Map(rangs.map((r, i) => [r.e.id, i]));
+};
+
+// Heure d'une ligne de main courante (horodatage exact, sinon le texte de la date)
+const heureLigne = (e) => Date.parse(e.isoTimestamp) || new Date(e.timestamp || e.dateHeure).getTime() || 0;
+
 const indexToTime = (index, startHour, totalDays) => {
     const totalSlots = getTotalSlots(totalDays, startHour);
     const safeIndex = Math.min(index, totalSlots - 1);

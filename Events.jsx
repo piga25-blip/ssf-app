@@ -81,26 +81,22 @@ const RechercheMainCouranteModal = ({ events, onClose }) => {
         }
 
         // Tri selon la colonne et direction sélectionnées
+        const ordre = ordreMainCourante(events);
         return filtered.sort((a, b) => {
             let compareA, compareB;
 
             switch (sortColumn) {
                 case 'numero':
-                    // Extraire le nombre du numéro (ex: "001" -> 1, "A-001" -> 1)
-                    const getNumericPart = (num) => {
-                        const match = (num || '').match(/(\d+)$/);
-                        return match ? parseInt(match[1]) : 0;
-                    };
-                    compareA = getNumericPart(a.numero);
-                    compareB = getNumericPart(b.numero);
+                    compareA = ordre.get(a.id);
+                    compareB = ordre.get(b.id);
                     break;
                 case 'secretaire':
                     compareA = (a.secretaire || '').toLowerCase();
                     compareB = (b.secretaire || '').toLowerCase();
                     break;
                 case 'timestamp':
-                    compareA = new Date(a.timestamp || a.dateHeure).getTime();
-                    compareB = new Date(b.timestamp || b.dateHeure).getTime();
+                    compareA = heureLigne(a);
+                    compareB = heureLigne(b);
                     break;
                 case 'categorie':
                     compareA = (a.categorie || 'autre').toLowerCase();
@@ -538,6 +534,8 @@ let MainCouranteTab = ({
     const [showCategorieAlert, setShowCategorieAlert] = useState(false);
     const [sortColumn, setSortColumn] = useState('numero'); // numero, secretaire, timestamp, categorie
     const [sortDirection, setSortDirection] = useState('desc');
+    // Tri par numéro : une ligne venue d'une autre main courante (PCA-003) se range à son heure
+    const ordreLignes = React.useMemo(() => ordreMainCourante(events), [events]);
     // ── Refs navigation clavier (formulaire principal MC) ──────────────
     const refDestinataire = React.useRef(null);
     const refEquipe       = React.useRef(null);
@@ -856,14 +854,8 @@ let MainCouranteTab = ({
         
         // Même ordre que le tableau (plus récent en haut) : un événement inséré (002a) se range
         // à sa place et non à la fin
-        const cleNumero = (num) => {
-            const m = String(num || '').match(/^(\d+)([a-z]*)$/i);
-            return m ? [parseInt(m[1], 10), m[2]] : [0, ''];
-        };
-        const eventsTries = [...events].sort((a, b) => {
-            const [na, sa] = cleNumero(a.numero), [nb, sb] = cleNumero(b.numero);
-            return na !== nb ? nb - na : sb.localeCompare(sa);
-        });
+        const ordre = ordreMainCourante(events);
+        const eventsTries = [...events].sort((a, b) => ordre.get(b.id) - ordre.get(a.id));
 
         // Construction du HTML pour l'impression
         const printContent = `
@@ -2461,44 +2453,22 @@ let MainCouranteTab = ({
                 };
 
                 const getSortedEvents = (eventsToSort) => {
+                    const ordre = ordreMainCourante(events);
                     return [...eventsToSort].sort((a, b) => {
                         let compareA, compareB;
 
                         switch (sortColumn) {
                             case 'numero':
-                                const parseNumero = (num) => {
-                                    // Extraire la partie numérique et le suffixe alphabétique
-                                    const match = (num || '').match(/^(\d+)([a-z]*)$/i);
-                                    if (match) {
-                                        return {
-                                            numeric: parseInt(match[1]),
-                                            suffix: match[2] || '' // suffixe vide si pas de lettre
-                                        };
-                                    }
-                                    return { numeric: 0, suffix: '' };
-                                };
-                                
-                                const parsedA = parseNumero(a.numero);
-                                const parsedB = parseNumero(b.numero);
-                                
-                                // Comparer d'abord la partie numérique
-                                if (parsedA.numeric !== parsedB.numeric) {
-                                    compareA = parsedA.numeric;
-                                    compareB = parsedB.numeric;
-                                } else {
-                                    // Si les numéros sont identiques, comparer les suffixes
-                                    // Un numéro sans suffixe vient après ceux avec suffixe en tri descendant
-                                    compareA = parsedA.suffix;
-                                    compareB = parsedB.suffix;
-                                }
+                                compareA = ordre.get(a.id);
+                                compareB = ordre.get(b.id);
                                 break;
                             case 'secretaire':
                                 compareA = (a.secretaire || '').toLowerCase();
                                 compareB = (b.secretaire || '').toLowerCase();
                                 break;
                             case 'timestamp':
-                                compareA = new Date(a.timestamp || a.dateHeure).getTime();
-                                compareB = new Date(b.timestamp || b.dateHeure).getTime();
+                                compareA = heureLigne(a);
+                                compareB = heureLigne(b);
                                 break;
                             case 'categorie':
                                 compareA = (a.categorie || 'autre').toLowerCase();
@@ -2885,38 +2855,16 @@ let MainCouranteTab = ({
                                 
                                 switch (sortColumn) {
                                     case 'numero':
-                                        const parseNumero = (num) => {
-                                            // Extraire la partie numérique et le suffixe alphabétique
-                                            const match = (num || '').match(/(\d+)([a-z]*)$/i);
-                                            if (match) {
-                                                return {
-                                                    numeric: parseInt(match[1]),
-                                                    suffix: match[2] || '' // suffixe vide si pas de lettre
-                                                };
-                                            }
-                                            return { numeric: 0, suffix: '' };
-                                        };
-                                        
-                                        const parsedA = parseNumero(a.numero);
-                                        const parsedB = parseNumero(b.numero);
-                                        
-                                        // Comparer d'abord la partie numérique
-                                        if (parsedA.numeric !== parsedB.numeric) {
-                                            compareA = parsedA.numeric;
-                                            compareB = parsedB.numeric;
-                                        } else {
-                                            // Si les numéros sont identiques, comparer les suffixes
-                                            compareA = parsedA.suffix;
-                                            compareB = parsedB.suffix;
-                                        }
+                                        compareA = ordreLignes.get(a.id);
+                                        compareB = ordreLignes.get(b.id);
                                         break;
                                     case 'secretaire':
                                         compareA = (a.secretaire || '').toLowerCase();
                                         compareB = (b.secretaire || '').toLowerCase();
                                         break;
                                     case 'timestamp':
-                                        compareA = new Date(a.timestamp || a.dateHeure).getTime();
-                                        compareB = new Date(b.timestamp || b.dateHeure).getTime();
+                                        compareA = heureLigne(a);
+                                        compareB = heureLigne(b);
                                         break;
                                     case 'categorie':
                                         compareA = (a.categorie || 'autre').toLowerCase();
