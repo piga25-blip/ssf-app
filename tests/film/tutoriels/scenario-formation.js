@@ -61,6 +61,8 @@ const outils = (t) => {
     o.valeur = async (loc, v) => { await t.viser(loc); await loc.first().fill(v); await t.rythme(1.5); };
     // Ligne de main courante
     o.ligne = async ({ dest, venant, equipe, depart, retour, lieu, pp, sens, texte, important, rappel, fichier, categorie } = {}) => {
+        // Phases rejouées avant un film : du temps passe entre deux progressions, comme en séance
+        if (o.etaler && t.enPreparation && (pp || depart || retour)) await p.clock.fastForward(o.etaler * 60000);
         if (dest) await t.saisir(p.locator('input[list="destinataires-list"]:visible'), dest);
         if (venant) await t.saisir(p.locator('input[list="expediteurs-list"]:visible'), venant);
         if (equipe && !(venant && (await p.locator('input[list="equipe-list"]:visible').inputValue()) === equipe)) await t.saisir(p.locator('input[list="equipe-list"]:visible'), equipe);
@@ -202,18 +204,19 @@ const outils = (t) => {
     // Fenêtres de Windows (enregistrer un fichier) : elles ne peuvent pas être filmées, un message dit ce qui s'ouvre
     o.windows = (texte) => p.evaluate((x) => window.__film && window.__film.message('💻 Fenêtre de Windows', x, 7000), texte);
     // Planning : grille défilée jusqu'à l'heure actuelle (à gauche de la palette), ligne entourée
+    o.grilleMaintenant = () => p.evaluate(() => {
+        const grille = document.querySelector('.planning-table-wrapper');
+        const maintenant = new Date();
+        const heure = `${String(maintenant.getHours()).padStart(2, '0')}:00`;
+        const th = grille && [...grille.querySelectorAll('th.header-time')].find(h => h.textContent.trim().endsWith(heure));
+        const palette = document.getElementById('palette-title');
+        if (!th || !palette) return;
+        const x = th.getBoundingClientRect().left + th.offsetWidth * maintenant.getMinutes() / 60;
+        grille.scrollLeft += x - (palette.getBoundingClientRect().left - 90);
+    });
     o.voirPlanning = async (nom, explication, pourquoi) => {
         await t.vite(() => t.clic(t.bouton('Planning Opérationnel')));
-        await p.evaluate(() => {
-            const grille = document.querySelector('.planning-table-wrapper');
-            const maintenant = new Date();
-            const heure = `${String(maintenant.getHours()).padStart(2, '0')}:00`;
-            const th = grille && [...grille.querySelectorAll('th.header-time')].find(h => h.textContent.trim().endsWith(heure));
-            const palette = document.getElementById('palette-title');
-            if (!th || !palette) return;
-            const x = th.getBoundingClientRect().left + th.offsetWidth * maintenant.getMinutes() / 60;
-            grille.scrollLeft += x - (palette.getBoundingClientRect().left - 90);
-        });
+        await o.grilleMaintenant();
         const l = p.locator('tr:visible', { hasText: nom }).first();
         await l.scrollIntoViewIfNeeded().catch(() => {});
         await t.viser(l);
@@ -971,53 +974,184 @@ PHASES.push(async (t, o) => {
 // Phase 7 — Planning, synthèse et tableaux de bord
 PHASES.push(async (t, o) => {
     const p = t.page;
+    const onglet = (nom) => t.vite(() => t.clic(t.bouton(nom)));
+    // Case actuelle d'un sauveteur : grille défilée jusqu'à maintenant, ligne au milieu de l'écran
+    const caseDe = async (nom) => {
+        await o.grilleMaintenant();
+        await p.locator('tr:visible', { hasText: nom }).first().evaluate(l => l.scrollIntoView({ block: 'center' }));
+        return o.cases(nom).nth(await o.caseActuelle(nom));
+    };
+    const voirMC = async (texte, explication, pourquoi) => { await onglet(/Main Courante/); await o.voirLigne(texte, explication, pourquoi); };
+
     await t.chapitre('Le planning à la main');
     await t.dire('Le planning se remplit tout seul à partir de la main courante. On le complète à la main pour ce que la main courante ne dit pas.');
     await t.clic(t.bouton('Planning Opérationnel'));
     await t.dire(dicte('Le secours ne durera pas trois jours : réglez sur deux.'));
     await t.saisir(p.locator('input[type="number"]:visible'), '2');
-    const ti = await p.locator('#palette-title').boundingBox();
-    await t.glisser(p.locator('#palette-title'), { x: 160, y: ti.y + ti.height / 2 + 40 });
+    if (process.env.FILM_RAPIDE) await t.decrire('S7-jours');
+    // Fin de la grille, juste à gauche de la palette
+    await p.evaluate(() => {
+        const g = document.querySelector('.planning-table-wrapper');
+        const th = [...g.querySelectorAll('th.header-time')].pop();
+        g.scrollLeft += th.getBoundingClientRect().right - (document.getElementById('palette-title').getBoundingClientRect().left - 30);
+    });
+    await t.viser(p.locator('th.header-time').last());
+    await t.dire('La dernière colonne du planning est maintenant J2 23:45 : le planning s\'arrête à la fin du deuxième jour du calendrier.');
+    await o.grilleMaintenant();
+    await t.viser(p.locator('select[title*="heure de début" i]').first());
+    await t.dire('« Début J1 », l\'heure où commence le planning, est réglé tout seul à l\'ouverture du dossier : une heure avant la première saisie, au cas où.',
+        'Il ne peut plus changer dès que des sauveteurs sont inscrits au planning.');
+    await t.dire('Conseil : cochez « Mise à jour automatique du planning ».',
+        'Tous les quarts d\'heure, le planning prolonge les activités en cours. Sans la case, une fenêtre demande à chaque fois de confirmer, comme en phase 5 ; avec la case, c\'est fait sans rien demander.');
+    await t.cocher(p.locator('label', { hasText: 'Mise à jour automatique du planning' }).locator('input'));
+    const attente = await p.evaluate(() => { const d = new Date(); return 15 * 60000 - ((d.getMinutes() % 15) * 60000 + d.getSeconds() * 1000 + d.getMilliseconds()); });
+    await t.avancer(attente / 60000 + 0.05, 'Au quart d\'heure suivant…');
+    const encart = p.locator('text=/Planning mis à jour automatiquement/').first();
+    if (process.env.FILM_RAPIDE) await t.decrire('S7-encart');
+    await t.viser(encart);
+    await t.dire('… un encart discret, en bas, signale que le planning a été mis à jour : pas de fenêtre à valider.', 'C\'est le réglage à préférer pendant un secours : le planning reste à jour sans interrompre la saisie.');
     await t.dire(dicte('Vérifiez que GIRARD Antoine est noté directeur du secours souterrain.'), 'Noté à la main depuis la palette en phase 2, il a été prolongé par la mise à jour du planning.');
+    await o.grilleMaintenant();
     await t.viser(p.locator('tr:visible', { hasText: 'GIRARD Antoine' }).first());
-    await t.dire(dicte('ROBERT et PETIT vont manger.'), 'On sélectionne leurs cases actuelles (Ctrl pour la seconde), puis on clique l\'activité dans la palette : une ligne est ajoutée à la main courante.');
-    let i = await o.caseActuelle('ROBERT Emma');
-    await t.clic(o.cases('ROBERT Emma').nth(i));
-    await o.cases('PETIT Félix').nth(await o.caseActuelle('PETIT Félix')).click({ modifiers: ['Control'] });
+
+    await t.dire(dicte('ROBERT et PETIT vont manger.'), 'On sélectionne leurs cases actuelles (Ctrl pour la seconde), puis on clique l\'activité dans la palette.');
+    await t.clic(await caseDe('ROBERT Emma'));
+    await (await caseDe('PETIT Félix')).click({ modifiers: ['Control'] });
     await t.clic(t.bouton('Repas - Déjeuner'));
+    await voirMC('Repas - Déjeuner', 'Dans la main courante, une ligne « Système » : activité « Repas - Déjeuner » affectée à ROBERT Emma et PETIT Félix.');
+    await o.voirPlanning('ROBERT Emma', 'Dans le planning, leurs cases passent en « Repas - Déjeuner ».');
+
     await t.dire(dicte('ROUX et BLANC vont dormir 4 heures sur le site, avec un rappel 30 minutes avant.'), '« Repos sur site » ouvre la fenêtre de durée : 4 h, rappel 30 min avant la fin.');
-    await t.clic(o.cases('ROUX Pierre').nth(await o.caseActuelle('ROUX Pierre')));
-    await o.cases('BLANC Olivier').nth(await o.caseActuelle('BLANC Olivier')).click({ modifiers: ['Control'] });
+    await t.clic(t.bouton('Planning Opérationnel'));
+    await t.clic(await caseDe('ROUX Pierre'));
+    await (await caseDe('BLANC Olivier')).click({ modifiers: ['Control'] });
     await t.clic(t.bouton('Repos sur site'));
     await t.clic(t.bouton(/^4h$/));
     await t.clic(t.bouton(/^30min$/));
     await t.clic(t.bouton('✓ Valider', { dernier: true }));
-    await t.clic(t.bouton('Planning Opérationnel'));
+    await voirMC('Repos sur site', 'La ligne donne la durée, l\'heure de fin prévue et le rappel : il sonnera 30 minutes avant le réveil.');
+    await o.voirPlanning('ROUX Pierre', 'Dans le planning, ROUX et BLANC passent en « Repos sur site ».');
+
     await t.dire(dicte('LAURENT Karine part au brancardage.'), 'Brancardage est une activité d\'équipe (👥) : refusée pour un sauveteur sans équipe, avec un message.');
-    await t.clic(o.cases('LAURENT Karine').nth(await o.caseActuelle('LAURENT Karine')));
+    await t.clic(t.bouton('Planning Opérationnel'));
+    await t.clic(await caseDe('LAURENT Karine'));
     await t.clic(t.bouton('Brancardage'));
+    await t.dire('Rien n\'est changé : ni ligne de main courante, ni case du planning. Il faut d\'abord la mettre dans une équipe.');
+
     await t.dire(dicte('DUBOIS reste auprès de la victime pour la prochaine heure.'), 'La poignée bleue au coin de la sélection prolonge l\'activité, comme dans un tableur.');
-    i = await o.caseActuelle('DUBOIS Chloé');
-    await t.clic(o.cases('DUBOIS Chloé').nth(i));
+    const dubois = await caseDe('DUBOIS Chloé');
+    await t.clic(dubois);
+    const i = await o.caseActuelle('DUBOIS Chloé');
     const poignee = p.locator('.fill-handle');
     if (await poignee.count()) await t.glisser(poignee, o.cases('DUBOIS Chloé').nth(i + 4));
-    await t.dire(dicte('Remplissez les trous du planning.'), '« Mettre à jour les activités » prolonge les activités en cours jusqu\'à maintenant.');
-    await t.clic(t.bouton('Mettre a jour les activites'));
-    await t.chapitre('Synthèse, tableau de bord, progression');
-    await t.dire(dicte('Qui était sous terre il y a une heure ?'), '« Synthèse Affectations » compte les sauveteurs par activité à une heure donnée ; les listes s\'impriment.');
+    await voirMC('prolongée (recopie)', 'Dans la main courante : activité prolongée (recopie) pour DUBOIS Chloé.');
+    await o.voirPlanning('DUBOIS Chloé', 'Dans le planning, son activité continue sur une heure de plus.');
+    await t.dire('Le bouton orange « Mettre à jour les activités » fait à la demande ce que la mise à jour automatique fait tous les quarts d\'heure.');
+
+    await t.chapitre('Synthèse et tableau de bord');
+    await t.dire(dicte('Le CT demande : qui est disponible ?'), '« Synthèse Affectations » compte les sauveteurs par activité, à l\'heure actuelle, et en donne les listes.');
     await t.clic(t.bouton('Synthèse Affectations'));
-    await t.clic(p.locator('button[title="Reculer d\'une heure"]'));
-    await t.clic(p.locator('button[title="Avancer d\'une heure"]'));
+    const synthese = p.locator('.section-synthese tr', { hasText: 'Disponible' }).first();
+    await t.viser(synthese);
+    await t.dire('Dans le comptage, la ligne « Disponible » donne leur nombre.');
+    await t.clic(t.bouton('✗ Tout désélectionner'));
+    await t.cocher(p.locator('.section-detail label', { hasText: /^Disponible$/ }).locator('input'));
+    const liste = p.locator('.section-detail h4', { hasText: /^Disponible/ }).first();
+    await liste.evaluate(el => el.parentElement.scrollIntoView({ block: 'center' })).catch(() => {});
+    if (process.env.FILM_RAPIDE) await t.decrire('S7-disponibles');
+    await t.viser(liste.locator('xpath=..'));
+    await t.dire('Dans « Détail des sauveteurs », on ne garde que « Disponible » : voici leurs noms, avec leur rôle et leur SSF. C\'est la réponse à donner au CT ; la liste s\'imprime.',
+        'Les flèches en haut changent l\'heure de référence : on peut aussi savoir qui était disponible, ou sous terre, il y a une heure.');
+    await t.dire('Si le mode réseau est ouvert, le CT peut faire cette recherche lui-même, depuis une tablette connectée au PC : l\'onglet « Synthèse Affectations » y est aussi.');
+    await p.evaluate(() => window.scrollTo(0, 0));
     await t.dire(dicte('Combien de SSF du Doubs, d\'autres départements, d\'autres services ?'), 'Le tableau de bord donne les chiffres clés et les alertes de durée de mission.');
     await t.clic(t.bouton('Tableau de Bord'));
     await t.rythme(3);
     await p.mouse.wheel(0, 800);
     await t.rythme(3);
     await p.evaluate(() => window.scrollTo(0, 0));
-    await t.dire(dicte('Où en est chaque équipe ?'), '« Progression Équipes » trace chaque équipe point phone par point phone (entrée en haut, temps vers la droite), avec l\'historique des localisations.');
+
+    await t.chapitre('La progression des équipes');
+    await onglet(/Main Courante/);
+    await t.dire(dicte('De DUBOIS : équipe 2 en tête du P40.'), 'Une progression comme en phase 4 : l\'équipe 2 continue sa descente, sans les membres partis dans la 2B.');
+    await t.vite(() => o.ligne({ venant: 'DUBOIS Chloé', equipe: 'Équipe 2', pp: PP.B }), 0.5);
+    await o.planning();
+    await o.voirLigne(['Tête du P40', 'MARTIN'], 'La ligne porte l\'équipe 2 et le point B.');
+    await t.dire(dicte('De DUBOIS : équipe 2 au point victime.'));
+    await t.vite(() => o.ligne({ venant: 'DUBOIS Chloé', equipe: 'Équipe 2', pp: PP.E }), 0.5);
+    await o.planning();
+    await o.voirLigne(['Point victime', 'MARTIN'], 'La ligne porte l\'équipe 2 et le point E.');
+    await o.voirPlanning('DUBOIS Chloé', 'Au planning, rien ne change : DUBOIS et DURAND restent « Sous Terre », dans l\'équipe 2.');
+    await t.dire(dicte('Où en est chaque équipe ?'));
     await t.clic(t.bouton('Progression Équipes'));
-    await t.rythme(4);
-    await t.clic(t.bouton('Main Courante'));
+    const graphe = p.locator('svg[width]:visible').filter({ has: p.locator('text', { hasText: 'entrée de la cavité' }) }).first();
+    const puce = (nom) => p.locator('button', { has: p.locator('svg') }).filter({ hasText: new RegExp('^' + nom + ' \\(') }).first();
+    const points = () => graphe.locator('circle[r="7"]');
+    // Équipes affichées : on clique les puces pour masquer les autres
+    const afficher = async (noms) => {
+        const toutes = await p.locator('button', { has: p.locator('svg line') }).filter({ hasText: /^Équipe / }).allInnerTexts();
+        for (const texte of toutes) {
+            const nom = texte.replace(/\s*\(\d+\)\s*$/, '').trim();
+            const b = puce(nom);
+            const visible = await b.evaluate(el => getComputedStyle(el).color !== 'rgb(156, 163, 175)');
+            if (visible !== noms.includes(nom)) await t.clic(b);
+        }
+    };
+    const survoler = async (cercle, explication, pourquoi) => {
+        await t.viser(cercle);
+        await cercle.hover();
+        await t.rythme(1);
+        if (process.env.FILM_RAPIDE) await t.decrire('S7-bulle-' + (o.nBulle = (o.nBulle || 0) + 1));
+        await t.dire(explication, pourquoi);
+        await p.mouse.move(5, 5);
+    };
+    await p.evaluate(() => window.scrollTo(0, 0));
+    await graphe.scrollIntoViewIfNeeded();
+    await t.viser(graphe);
+    await t.dire('Le graphique trace chaque équipe point phone par point phone. De haut en bas : le PC, la surface sur fond vert, le trait foncé de l\'entrée de la cavité, puis les points sous terre sur fond brun, dans l\'ordre de la descente. De gauche à droite, le temps.',
+        'Chaque rond est une ligne de main courante qui situe l\'équipe : au PC (départ, retour) ou à un point phone. Le graphique se construit tout seul, à partir des saisies.');
+    await t.viser(p.locator('text=Équipes visibles :').first());
+    await t.dire('Au-dessus, une puce par équipe, avec sa couleur et le nombre de ses points. Un clic sur une puce masque l\'équipe, un second clic la remontre.');
+
+    await t.dire(dicte('Montrez-moi seulement l\'équipe 1.'));
+    await t.vite(() => afficher(['Équipe 1']));
+    if (process.env.FILM_RAPIDE) await t.decrire('S7-equipe1');
+    await t.viser(graphe);
+    await t.dire('On a masqué toutes les autres : il ne reste que la ligne de l\'équipe 1, du PC jusqu\'au point victime.');
+    await survoler(points().first(), 'En passant la souris sur un rond, une bulle donne le numéro de la ligne de main courante, le point phone, l\'heure, le message, et les membres de l\'équipe. Ici, le départ du PC.',
+        'Entre le départ du PC et l\'arrivée à l\'entrée, on lit le temps d\'approche.');
+    await survoler(points().nth(2), 'Puis chaque point phone de la descente : on retrouve d\'un coup d\'œil quand l\'équipe y est passée.');
+    await survoler(points().last(), 'Le dernier rond est la dernière position connue de l\'équipe.');
+
+    await t.dire(dicte('Comparez avec l\'équipe 3.'));
+    await t.clic(puce('Équipe 3'));
+    await t.viser(graphe);
+    await t.dire('On peut en afficher plusieurs : on clique les puces des équipes voulues. Chaque équipe garde sa couleur.');
+
+    await t.dire(dicte('Et l\'équipe 2, qui a été scindée ?'));
+    await t.vite(() => afficher(['Équipe 2']));
+    if (process.env.FILM_RAPIDE) await t.decrire('S7-avant-scission');
+    await t.viser(graphe);
+    await t.dire('L\'équipe 2 seule, en trait plein : elle part du PC, entre au point A, où elle est scindée, puis continue jusqu\'au point victime avec les membres qui restent.');
+    await survoler(points().last(), 'La bulle donne ses membres actuels : ceux qui sont restés dans l\'équipe 2.');
+    await t.dire('Ajoutons l\'équipe 2B, née de la scission.');
+    await t.clic(puce('Équipe 2B'));
+    if (process.env.FILM_RAPIDE) await t.decrire('S7-apres-scission');
+    await t.viser(graphe);
+    await t.viser(puce('Équipe 2B'));
+    await t.dire('Une sous-équipe a la couleur de son équipe d\'origine ; sa ligne est en pointillés pour une sous-équipe B, en tirets pour une sous-équipe A.',
+        'Avant la scission, une seule ligne ; au point A, elle se sépare en deux chemins : l\'équipe 2 descend, la 2B remonte au PC chercher la couverture chauffante.');
+    await survoler(graphe.locator('g').filter({ has: p.locator('path[stroke-dasharray="2 4"]') }).last().locator('circle[r="7"]').last(), 'Le dernier rond de la 2B : son retour au PC, où elle est dissoute. Ses membres redeviennent disponibles.');
+
+    await t.dire('On remontre toutes les équipes, et le zoom (+ et −) élargit ou resserre l\'axe du temps.');
+    const toutes = await p.locator('button', { has: p.locator('svg line') }).filter({ hasText: /^Équipe / }).allInnerTexts();
+    await t.vite(() => afficher(toutes.map(s => s.replace(/\s*\(\d+\)\s*$/, '').trim())));
+    await t.clic(p.locator('button[title="Agrandir"]'));
+    await t.clic(p.locator('button[title="Agrandir"]'));
+    await t.viser(graphe);
+    await t.rythme(2);
+    await t.clic(p.locator('button[title="Réinitialiser"]'));
+    await t.clic(t.bouton(/Main Courante/));
 });
 
 // Phase 8 — Fin de secours
@@ -1156,7 +1290,13 @@ const presentation = () => executer('S0-presentation', "Présentation de l'exerc
 // ── Un film par phase ───────────────────────────────────────────────────
 const film = (n, id, titre) => executer(id, titre, async (t) => {
     const o = outils(t);
-    for (let k = 0; k < n - 1; k++) await PHASES[k](t, o);   // phases précédentes, non filmées
+    for (let k = 0; k < n - 1; k++) {   // phases précédentes, non filmées
+        // Phases 7 et 8 : 4 minutes entre deux progressions des phases 1 à 5, pour que le graphique
+        // de progression ressemble à celui d'une vraie séance
+        o.etaler = n >= 7 && k < 5 ? 4 : 0;
+        await PHASES[k](t, o);
+    }
+    o.etaler = 0;
     // À partir de la phase 6 (mode réseau), le PC principal date les lignes des autres postes à
     // l'heure réelle : l'horloge du PC, partie plus tôt et avancée par les phases précédentes
     // (pauses, rappels), est amenée à l'heure réelle avant le film
