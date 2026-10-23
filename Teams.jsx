@@ -287,7 +287,7 @@ let GestionEquipesModal = ({
         // Activité « Engagé » (« Gestion » pour une équipe de gestion) au quart d'heure actuel,
         // si l'heure est dans le planning : appliquée par l'action, avec sa ligne de main courante
         const slotIndex = indexCreneau({ startHour }, horodatage);
-        if (slotIndex >= 0 && slotIndex < getTotalSlots(totalDays)) {
+        if (slotIndex >= 0 && slotIndex < getTotalSlots(totalDays, startHour)) {
             const isGestion = nouvelleEquipe.mission.toLowerCase().includes('gestion');
             evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Activité "${isGestion ? 'Gestion - PC' : 'Engagé'}" affectée à : ${membresNomsString}`, numero: NUMERO_AUTO, fait: false });
         }

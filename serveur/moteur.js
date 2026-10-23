@@ -19,7 +19,7 @@ const chargerDonneesJS = (racineApp) => {
         const DEFAULT_TOTAL_DAYS = ${lire(/const DEFAULT_TOTAL_DAYS = (\d+);/)};
         const SLOTS_PER_HOUR = ${lire(/const SLOTS_PER_HOUR = (\d+);/)};
         const SLOTS_PER_DAY = 24 * SLOTS_PER_HOUR;
-        const getTotalSlots = (totalDays) => totalDays * SLOTS_PER_DAY;
+        const getTotalSlots = (totalDays, startHour = 0) => Math.max(SLOTS_PER_HOUR, totalDays * SLOTS_PER_DAY - (startHour || 0) * SLOTS_PER_HOUR);
     `, contexte);
     vm.runInContext(fs.readFileSync(path.join(racineApp, 'donnees.js'), 'utf8'), contexte, { filename: 'donnees.js' });
     return vm.runInContext('({ reducteurDonnees, etatInitialDonnees, CLES_DONNEES, idsUniques, ACTIONS_SAISIE_DISTANTE, indexCreneau, dateHeureFr })', contexte);

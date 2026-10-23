@@ -405,7 +405,7 @@ let SecretaireModal = ({ currentSecretaire, setCurrentSecretaire, onClose, maste
         if (!sauveteur || !actions) return false;
         const maintenant = new Date();
         const slot = indexCreneau({ startHour }, maintenant.toISOString());
-        if (slot < 0 || slot >= getTotalSlots(totalDays)) return false;
+        if (slot < 0 || slot >= getTotalSlots(totalDays, startHour)) return false;
         if ((planning[sauveteur.id] || [])[slot] === 'gestion') return false;
         actions.affecterPlanningDepuisMC({
             id: nouvelId(),

@@ -28,7 +28,7 @@ const usePlanning = ({
         let minutesSinceStart = (now.getHours() * 60 + now.getMinutes()) - (startHour * 60);
         if (minutesSinceStart < 0) minutesSinceStart += 24 * 60;
         const slotEcoule = Math.floor(minutesSinceStart / 15) - 1;
-        const totalSlots = getTotalSlots(totalDays);
+        const totalSlots = getTotalSlots(totalDays, startHour);
         if (slotEcoule < 1 || slotEcoule >= totalSlots) return;
 
         const aCombler = [];
@@ -81,7 +81,7 @@ const usePlanning = ({
             let minutesSinceStart = (now.getHours() * 60 + now.getMinutes()) - (startHour * 60);
             if (minutesSinceStart < 0) minutesSinceStart += 24 * 60;
             const slotEcoule = Math.floor(minutesSinceStart / 15) - 1;
-            const totalSlots = getTotalSlots(totalDays);
+            const totalSlots = getTotalSlots(totalDays, startHour);
             if (slotEcoule < 0 || slotEcoule >= totalSlots) return;
             const sauveteursPropager = [];
             activeSauveteurIds.forEach(function(id) {

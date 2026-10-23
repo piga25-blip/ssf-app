@@ -1291,7 +1291,7 @@ let MainCouranteTab = ({
             var hP = nowP2.getHours() - startHour;
             if (hP < 0) hP += 24;
             var slotP = hP * 4 + Math.floor(nowP2.getMinutes() / 15);
-            var totalSlotsP = getTotalSlots(totalDays);
+            var totalSlotsP = getTotalSlots(totalDays, startHour);
             if (slotP < 0 || slotP >= totalSlotsP) return;
              // Ouvrir le modal de sélection des membres ; la mise à jour du planning se fait à sa validation
              if (sauveteurCible || teamTrouve) {

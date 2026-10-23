@@ -150,7 +150,7 @@ const affecterCreneau = (ligne, slot, activite) => {
 // ligne de planning ; rien si l'heure est hors du planning. Renvoie le nouveau planning.
 const affecterAuCreneauActuel = (etat, ids, horodatage, activite) => {
     const slot = indexCreneau(etat, horodatage);
-    if (slot < 0 || slot >= getTotalSlots(etat.totalDays)) return etat.planning;
+    if (slot < 0 || slot >= getTotalSlots(etat.totalDays, etat.startHour)) return etat.planning;
     const planning = { ...etat.planning };
     ids.forEach(id => { if (planning[id]) { const r = [...planning[id]]; r[slot] = activite; planning[id] = r; } });
     return planning;
@@ -267,7 +267,7 @@ const ACTIONS_DONNEES = {
     // pour ceux qui arrivent dans cette fonction (une ligne de main courante par fonction).
     'SAUVETEURS/ARRIVEE'(etat, a) {
         const activites = a.activites || {};
-        const totalSlots = getTotalSlots(etat.totalDays);
+        const totalSlots = getTotalSlots(etat.totalDays, etat.startHour);
         const slot = indexCreneau(etat, a.horodatage);
         const dansPlanning = slot >= 0 && slot < totalSlots;
         let { activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber } = etat;
@@ -312,7 +312,7 @@ const ACTIONS_DONNEES = {
     // gardé au planning avec « Quitter le secours » sur le créneau actuel (les créneaux vides
     // qui précèdent reprennent la dernière activité), une ligne de main courante.
     'SAUVETEURS/DEPART'(etat, a) {
-        const totalSlots = getTotalSlots(etat.totalDays);
+        const totalSlots = getTotalSlots(etat.totalDays, etat.startHour);
         const slot = indexCreneau(etat, a.horodatage);
         const vide = v => !v || v === 'nondef' || v === 'effacer';
         const planning = { ...etat.planning };
@@ -505,7 +505,7 @@ const ACTIONS_DONNEES = {
     // Activité posée sur des cases de la grille (une ligne est créée si besoin) ; ligne de
     // main courante facultative (construite par l'appelant)
     'PLANNING/AFFECTER'(etat, { cellules, activite, evenement }) {
-        const totalSlots = getTotalSlots(etat.totalDays);
+        const totalSlots = getTotalSlots(etat.totalDays, etat.startHour);
         const planning = { ...etat.planning };
         cellules.forEach(({ id, slot }) => {
             const r = planning[id] ? [...planning[id]] : Array(totalSlots).fill('nondef');

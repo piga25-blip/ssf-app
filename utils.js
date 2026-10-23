@@ -128,7 +128,9 @@ class ModalErrorBoundary extends React.Component {
     }
 }
 
-const getTotalSlots = (totalDays) => totalDays * SLOTS_PER_DAY;
+// Le planning va de l'heure de début (J1) jusqu'à la fin du dernier jour du calendrier :
+// réglé sur 2 jours avec un début à 06:00, il s'arrête à J2 23:45
+const getTotalSlots = (totalDays, startHour = 0) => Math.max(SLOTS_PER_HOUR, totalDays * SLOTS_PER_DAY - (startHour || 0) * SLOTS_PER_HOUR);
 
 // Texte en minuscules sans accents (comparaison des rôles et des noms)
 const sansAccents = (texte) => (texte || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -163,7 +165,7 @@ const creneauxEcoules = (startHour, events) => {
 };
 
 const indexToTime = (index, startHour, totalDays) => {
-    const totalSlots = getTotalSlots(totalDays);
+    const totalSlots = getTotalSlots(totalDays, startHour);
     const safeIndex = Math.min(index, totalSlots - 1);
     const offsetInSlots = startHour * SLOTS_PER_HOUR;
     const absoluteSlotIndex = offsetInSlots + safeIndex;
