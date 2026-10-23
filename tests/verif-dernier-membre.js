@@ -1,9 +1,12 @@
 // ============================================
-// VÉRIFICATION : dernier membre d'une équipe parti par « Mouvement Individuel Rapide »
+// VÉRIFICATION : équipe vidée de tous ses membres
 // ============================================
-// Le dernier membre envoyé au PC (ou dans une autre équipe) termine la mission de son équipe
-// comme « Fin de mission » : ligne « 🔚 Dissolution » dans la main courante, équipe gardée dans
-// « Équipes Dissoutes » (réactivable quand il lui reste un membre), au lieu de disparaître.
+// Une équipe dont le dernier membre part (« Mouvement Individuel Rapide » vers le PC ou une autre
+// équipe), ou dont tous les membres sont pris par une nouvelle équipe ou un ajout de membres,
+// termine sa mission comme par « Fin de mission » : ligne « 🔚 Dissolution » dans la main
+// courante, équipe gardée dans « Équipes Dissoutes » (réactivable s'il lui reste un membre), au
+// lieu de disparaître ou de rester vide parmi les équipes actives. Une scission de tous les
+// membres est refusée.
 // Utilisation : node tests/verif-dernier-membre.js
 
 process.env.FILM_RAPIDE = '1';
@@ -57,11 +60,43 @@ executer('_verif-dernier-membre', 'vérification', async (t) => {
     await t.clic(reactiver('Équipe 2'));
     controler('Équipe 2 vide : réactivation refusée avec un message', (await dernierMessage()).includes('ne peut pas être réactivée'));
 
+    // Scission de tous les membres de l'Équipe 3 (MARTIN, DUBOIS, THOMAS) : refusée
+    const c3 = carte('Équipe 3');
+    if (!(await c3.locator('button', { hasText: 'Fin de mission' }).isVisible())) await t.clic(c3.locator('div.cursor-pointer').first());
+    await t.clic(c3.locator('button', { hasText: '✂️ Scinder' }));
+    const fenetre = p.locator('div', { has: p.locator('h3', { hasText: '✂️ Scinder' }) }).last();
+    await fenetre.locator('label', { hasText: 'MARTIN Alice' }).locator('input[type="checkbox"]').check();
+    await t.clic(fenetre.locator('button', { hasText: '✂️ Créer Équipe' }));
+    controler('scission de tous les membres : refusée (« Gardez au moins un membre »)', (await dernierMessage()).includes('Gardez au moins un membre dans Équipe 3'));
+    await t.clic(fenetre.locator('button', { hasText: 'Annuler' }));
+    await t.clic(t.bouton(/^Fermer$/, { dernier: true }));
+
+    // Nouvelle Équipe 4 avec tous les membres de l'Équipe 3 : l'Équipe 3 est dissoute
+    await P.creerEquipe(t, { titre: 'Désobstruction', membres: ['MARTIN Alice', 'DUBOIS Chloé', 'THOMAS David'] });
+    const questions = (await p.locator('.__film_message').allInnerTexts()).filter(m => m.includes('Déjà dans une autre équipe'));
+    controler('création : la question annonce « Équipe 3 n\'aura plus de membre : elle sera dissoute »', questions.some(m => m.includes("Équipe 3 n'aura plus de membre : elle sera dissoute")));
+
+    // Équipe 5 (BERNARD), puis ajout de tous les membres de l'Équipe 4 : l'Équipe 4 est dissoute
+    await P.creerEquipe(t, { titre: 'Brancardage', membres: ['BERNARD Bruno'] });
+    await t.clic(t.bouton(/^👥 Équipes$/));
+    const c5 = carte('Équipe 5');
+    if (!(await c5.locator('button', { hasText: 'Fin de mission' }).isVisible())) await t.clic(c5.locator('div.cursor-pointer').first());
+    await t.clic(c5.locator('button', { hasText: '➕ Ajouter des Membres' }));
+    for (const nom of ['MARTIN Alice', 'DUBOIS Chloé', 'THOMAS David']) await c5.locator('label', { hasText: nom }).locator('input[type="checkbox"]').check();
+    await t.clic(c5.locator('button', { hasText: /✓ Ajouter \(3\)/ }));
+    await p.waitForTimeout(600);
+    controler('ajout : message « Équipe 4 n\'a plus de membre : elle est dissoute »', (await dernierMessage()).includes("Équipe 4 n'a plus de membre : elle est dissoute"));
+    controler('Équipes 3 et 4 dans « Équipes Dissoutes », plus dans les actives',
+        await dissoutes.getByText('Équipe 3', { exact: true }).isVisible() && await dissoutes.getByText('Équipe 4', { exact: true }).isVisible()
+        && !(await carte('Équipe 3').isVisible()) && !(await carte('Équipe 4').isVisible()));
+
     await t.clic(t.bouton(/^Fermer$/, { dernier: true }));
     const lignes = await p.locator('table tbody tr').allInnerTexts();
     const dissolution = (n) => lignes.find(l => l.includes('Dissolution Équipe ' + n));
     controler('MC : « 🔚 Dissolution Équipe 1 », dernier membre BERNARD → PC', !!dissolution(1) && dissolution(1).includes('BERNARD Bruno → PC'));
     controler('MC : « 🔚 Dissolution Équipe 2 », dernier membre THOMAS → Équipe 3', !!dissolution(2) && dissolution(2).includes('THOMAS David → Équipe 3'));
+    controler('MC : « 🔚 Dissolution Équipe 3 », tous ses membres passent dans Équipe 4', !!dissolution(3) && dissolution(3).includes('Tous ses membres passent dans Équipe 4'));
+    controler('MC : « 🔚 Dissolution Équipe 4 », tous ses membres passent dans Équipe 5', !!dissolution(4) && dissolution(4).includes('Tous ses membres passent dans Équipe 5'));
 
     if (controles.some(ok => !ok)) throw new Error(`${controles.filter(ok => !ok).length} contrôle(s) en échec`);
 });

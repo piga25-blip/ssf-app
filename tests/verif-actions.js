@@ -266,6 +266,23 @@ const base = () => {
     verifier('Équipes : réactivation (« engage »)', e.teams[0].status === 'active' && e.teams[0].dissolvedAt === null && e.planning.S1[13] === 'engage');
 }
 
+// ===== Équipe vidée par une création, un ajout ou une scission : dissoute, pas laissée vide
+{
+    let e = appliquer(base(), { type: 'SAUVETEURS/ARRIVEE', ids: ['S1', 'S2', 'S3'], horodatage: iso(8), idEvenement: 'a', numero: 1 });
+    const equipe = (id, membres) => ({ id, name: 'Équipe ' + id.slice(1), mission: 'Reconnaissance', members: membres, status: 'active', createdAt: iso(9), history: [] });
+    e = appliquer(e, { type: 'EQUIPES/CREER', equipe: equipe('T1', ['S1']), horodatage: iso(9), evenements: [] });
+    e = appliquer(e, { type: 'EQUIPES/CREER', equipe: equipe('T2', ['S2']), horodatage: iso(9), evenements: [] });
+    e = appliquer(e, { type: 'EQUIPES/CREER', equipe: equipe('T3', ['S1', 'S3']), horodatage: iso(9, 30), evenements: [ligne('c3', '002'), ligne('d1', '003')] });
+    const t1 = e.teams.find(t => t.id === 'T1');
+    verifier('Équipe vidée par une création → dissoute (historique)', t1.status === 'dissolved' && t1.dissolvedAt === iso(9, 30) && t1.history[t1.history.length - 1].action === 'dissolution', t1);
+    e = appliquer(e, { type: 'EQUIPES/AJOUTER_MEMBRES', id: 'T3', membres: ['S2'], horodatage: iso(10), evenement: ligne('am', '004'), evenementsDissolution: [ligne('d2', '005')] });
+    const t2 = e.teams.find(t => t.id === 'T2');
+    verifier('Équipe vidée par un ajout de membres → dissoute (+ ligne)', t2.status === 'dissolved' && e.events[e.events.length - 1].id === 'd2', t2);
+    const s = appliquer(e, { type: 'EQUIPES/SCINDER', idSource: 'T3', nouvelleEquipe: equipe('T3B', ['S1', 'S2', 'S3']), evenements: [] });
+    verifier('Équipe vidée par une scission (autre poste) → dissoute', s.teams.find(t => t.id === 'T3').status === 'dissolved');
+    verifier('Équipe déjà dissoute : pas dissoute une seconde fois', t1.history.filter(h => h.action === 'dissolution').length === 1 && e.teams.find(t => t.id === 'T1').history.length === t1.history.length);
+}
+
 // ===== Recopie d'une main courante papier (PC Base Arrière)
 {
     let e = etatInitialDonnees(8);
