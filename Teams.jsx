@@ -419,6 +419,17 @@ let GestionEquipesModal = ({
         const membre = masterSauveteursList.find(s => s.id === memberId);
         if (!membre) return;
 
+        // Dernier membre qui part : l'équipe est dissoute comme par « Fin de mission » (ligne
+        // « Dissolution », équipe gardée dans les équipes dissoutes) au lieu de disparaître
+        const dernierMembre = equipeOrigine.members.length === 1 && equipeOrigine.members[0] === memberId;
+        const ligneDissolution = (horodatage, vers) => dernierMembre && (!mcMode || mcMode === 'principale')
+            ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔚 Dissolution ${equipeOrigine.name}
+Dernier membre : ${membre.name} → ${vers}`, equipe: equipeOrigine.name, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
+            : null;
+        const avisDissolution = dernierMembre ? `
+
+${equipeOrigine.name} n'a plus de membre : elle est dissoute (voir « Équipes dissoutes »).` : '';
+
         // Retour au PC
         if (destination === 'PC' || destination === '**PC**') {
             const horodatage = new Date().toISOString();
@@ -427,10 +438,11 @@ let GestionEquipesModal = ({
             const evenement = (!mcMode || mcMode === 'principale')
                 ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `↩️ ${membre.name} libéré de ${equipeOrigine.name} vers PC`, pointPhone: pointPhonePC, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
                 : null;
-            // Retiré de l'équipe (une équipe vidée disparaît), « Disponible » au créneau actuel
-            actions.libererMembre(equipeOrigineId, memberId, horodatage, evenement);
+            // Retiré de l'équipe (dernier membre : équipe dissoute), « Disponible » au créneau actuel
+            const dissolution = ligneDissolution(horodatage, 'PC');
+            actions.libererMembre(equipeOrigineId, memberId, horodatage, evenement, dissolution && { ...dissolution, pointPhone: pointPhonePC });
             setMouvements({...mouvements, [memberId]: ''});
-            alert('✅ Membre libéré au PC');
+            alert('✅ Membre libéré au PC' + avisDissolution);
         }
         // Déplacement vers une autre équipe
         else {
@@ -455,16 +467,20 @@ let GestionEquipesModal = ({
             const evenement = (!mcMode || mcMode === 'principale')
                 ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔄 ${membre.name} : ${equipeOrigine.name} → ${equipeDest.name}`, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
                 : null;
-            // Une équipe vidée disparaît
-            actions.deplacerMembre(equipeOrigineId, equipeDest.id, memberId, horodatage, evenement);
+            // Une équipe vidée est dissoute
+            actions.deplacerMembre(equipeOrigineId, equipeDest.id, memberId, horodatage, evenement, ligneDissolution(horodatage, equipeDest.name));
             setMouvements({...mouvements, [memberId]: ''});
-            alert('✅ Membre déplacé');
+            alert('✅ Membre déplacé' + avisDissolution);
         }
     };
 
     const reactiverEquipe = (teamId) => {
         const team = teams.find(t => t.id === teamId);
         if (!team) return;
+        if (team.members.length === 0) {
+            alert(team.name + " n'a plus de membre (le dernier est parti dans une autre équipe) : elle ne peut pas être réactivée. Créez une nouvelle équipe.");
+            return;
+        }
 
         if (!window.confirm('Reactiver ' + team.name + ' ? Mission : ' + team.mission + ' - Les membres redeviendront engages.')) return;
 
