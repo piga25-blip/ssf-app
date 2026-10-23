@@ -128,10 +128,67 @@ class ModalErrorBoundary extends React.Component {
     }
 }
 
-const getTotalSlots = (totalDays) => totalDays * SLOTS_PER_DAY;
+// Le planning va de l'heure de début (J1) jusqu'à la fin du dernier jour du calendrier :
+// réglé sur 2 jours avec un début à 06:00, il s'arrête à J2 23:45
+const getTotalSlots = (totalDays, startHour = 0) => Math.max(SLOTS_PER_HOUR, totalDays * SLOTS_PER_DAY - (startHour || 0) * SLOTS_PER_HOUR);
+
+// Texte en minuscules sans accents (comparaison des rôles et des noms)
+const sansAccents = (texte) => (texte || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+// Fonction de surface lue dans la colonne « Rôle » de la liste des sauveteurs :
+// gestion (secrétariat, matériel, logistique) et conseiller technique (CT, CTDS, CTDSA)
+const fonctionsDuRole = (role) => {
+    const r = sansAccents(role).replace(/['’]/g, ' ');
+    return {
+        gestion: /\b(gestion|secretaires?|secretariat|materiel|logistique)\b/.test(r),
+        conseiller: /\b(ct|ctdsa?|conseill\w* technique)\b/.test(r),
+    };
+};
+
+// Même personne : « Claire VIDAL » et « VIDAL Claire » (mots dans n'importe quel ordre, sans accents)
+const memePersonne = (a, b) => {
+    const mots = (t) => sansAccents(t).split(/[\s,;.-]+/).filter(Boolean).sort().join(' ');
+    return !!mots(a) && mots(a) === mots(b);
+};
+
+// Nombre de créneaux du planning commencés à l'heure actuelle (créneau en cours compris).
+// J1 commence à startHour le jour de la première ligne de main courante (la veille si cette
+// ligne est avant startHour) ; sans main courante, pas de limite.
+const creneauxEcoules = (startHour, events) => {
+    const heures = (events || []).map(e => Date.parse(e && e.isoTimestamp)).filter(Number.isFinite);
+    if (heures.length === 0) return Infinity;
+    const premier = new Date(Math.min(...heures));
+    const debut = new Date(premier);
+    debut.setHours(startHour, 0, 0, 0);
+    if (debut > premier) debut.setDate(debut.getDate() - 1);
+    return Math.floor((Date.now() - debut.getTime()) / (15 * 60000)) + 1;
+};
+
+// Ordre de la main courante, de la plus ancienne ligne à la plus récente : rang de chaque
+// ligne (Map id → rang). Les lignes de ce poste se suivent par numéro (001, 002, 002a…) ; une
+// ligne venue d'une autre main courante (PCA-003, MC2-001) se range à son heure, après la
+// dernière ligne de ce poste écrite avant elle
+const ordreMainCourante = (events) => {
+    const cle = (num) => { const m = String(num || '').match(/^(\d+)([a-z]*)$/i); return m ? [parseInt(m[1], 10), m[2].toLowerCase()] : null; };
+    const heure = (e) => Date.parse(e.isoTimestamp) || 0;
+    const locales = (events || []).filter(e => cle(e.numero)).map(e => ({ h: heure(e), c: cle(e.numero) }));
+    const avant = (a, b) => a[0] - b[0] || a[1].localeCompare(b[1]);
+    const rangs = (events || []).map(e => {
+        const c = cle(e.numero);
+        if (c) return { e, c, h: 0 };
+        let dernier = [0, ''];
+        locales.forEach(l => { if (l.h <= heure(e) && avant(l.c, dernier) > 0) dernier = l.c; });
+        return { e, c: dernier, h: heure(e) || 1 };
+    });
+    rangs.sort((a, b) => avant(a.c, b.c) || a.h - b.h);
+    return new Map(rangs.map((r, i) => [r.e.id, i]));
+};
+
+// Heure d'une ligne de main courante (horodatage exact, sinon le texte de la date)
+const heureLigne = (e) => Date.parse(e.isoTimestamp) || new Date(e.timestamp || e.dateHeure).getTime() || 0;
 
 const indexToTime = (index, startHour, totalDays) => {
-    const totalSlots = getTotalSlots(totalDays);
+    const totalSlots = getTotalSlots(totalDays, startHour);
     const safeIndex = Math.min(index, totalSlots - 1);
     const offsetInSlots = startHour * SLOTS_PER_HOUR;
     const absoluteSlotIndex = offsetInSlots + safeIndex;

@@ -73,7 +73,7 @@ const RACINE = path.join(__dirname, '..');
         for (const [lettre, nom] of [['A', 'Entrée'], ['B', 'Puits']]) {
             await page.locator('div.flex.gap-2:visible', { has: page.locator('input[placeholder="Pos."]') }).locator('select').selectOption(lettre);
             await page.locator('input[placeholder="Ex: Base du P80, Poste médical..."]').fill(nom);
-            await page.locator('label:visible', { hasText: '🪨 Sous terre' }).first().click();
+            await page.locator('label:visible', { hasText: '🕳️ Sous terre' }).first().click();
             await bouton('+ Ajouter').click();
         }
         await bouton(/^Fermer$/).last().click();

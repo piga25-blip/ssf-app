@@ -4,7 +4,7 @@
 let SyntheseTab = ({
     masterSauveteursList, activeSauveteurIds, planning, totalDays, startHour
 }) => {
-    const totalSlots = getTotalSlots(totalDays);
+    const totalSlots = getTotalSlots(totalDays, startHour);
     
     // Calculer l'heure actuelle par rapport au planning
     const getCurrentTimeInPlanning = () => {
@@ -14,13 +14,13 @@ let SyntheseTab = ({
         // Calculer combien d'heures se sont écoulées depuis startHour aujourd'hui
         let hoursFromStart = currentHour - startHour;
         
-        // Si on est avant l'heure de début, considérer qu'on est au début
+        // Avant l'heure de début : le planning a commencé la veille
         if (hoursFromStart < 0) {
-            hoursFromStart = 0;
+            hoursFromStart += 24;
         }
         
         // Si on dépasse la durée du planning, mettre à la fin
-        const maxHours = totalSlots / 2;
+        const maxHours = totalSlots * TIME_PER_SLOT;
         if (hoursFromStart > maxHours) {
             hoursFromStart = maxHours;
         }
@@ -40,6 +40,10 @@ let SyntheseTab = ({
     // Calculer les affectations à l'heure de référence
     const getAffectationsAtTime = () => {
         const slotIndex = Math.floor(referenceTime / TIME_PER_SLOT);
+        // Le quart d'heure en cours n'est rempli dans le planning qu'une fois écoulé :
+        // on y compte la dernière activité connue de chacun
+        const slotActuel = Math.floor(getCurrentTimeInPlanning() / TIME_PER_SLOT);
+        const vide = (a) => !a || a === 'nondef' || a === 'effacer';
         const affectations = {};
 
         ACTIVITIES.forEach(activity => {
@@ -50,8 +54,11 @@ let SyntheseTab = ({
             const sauvPlanning = planning[sauvId];
             if (!sauvPlanning) return;
 
-            const activityId = sauvPlanning[slotIndex];
-            if (activityId && activityId !== 'nondef') {
+            let activityId = sauvPlanning[slotIndex];
+            if (vide(activityId) && slotIndex === slotActuel) {
+                for (let i = slotIndex - 1; i >= 0; i--) { if (!vide(sauvPlanning[i])) { activityId = sauvPlanning[i]; break; } }
+            }
+            if (!vide(activityId) && affectations[activityId]) {
                 const sauv = masterSauveteursList.find(s => s.id === sauvId);
                 if (sauv) {
                     affectations[activityId].push(sauv);
@@ -88,18 +95,20 @@ let SyntheseTab = ({
             document.body.classList.remove('print-synthese-only', 'print-detail-only');
         }
         
+        // Seule la synthèse est imprimée (pas l'en-tête, les onglets ni les boutons de l'application)
+        document.body.classList.add('impression-synthese');
         // Lancer l'impression
         window.print();
         
         // Nettoyer après impression
         setTimeout(() => {
-            document.body.classList.remove('print-synthese-only', 'print-detail-only');
+            document.body.classList.remove('print-synthese-only', 'print-detail-only', 'impression-synthese');
         }, 100);
     };
 
     // Formater l'heure de référence pour l'affichage en bleu
     const formatReferenceTime = (hours) => {
-        const day = Math.floor(hours / 24) + 1;
+        const day = Math.floor((startHour + hours) / 24) + 1; // jour du calendrier, comme le planning
         const hourInDay = hours % 24;
         const displayHour = Math.floor((startHour + hourInDay) % 24);
         const minutes = Math.round((hourInDay % 1) * 60);
@@ -114,7 +123,7 @@ let SyntheseTab = ({
         const endHours = startHours + TIME_PER_SLOT;
         
         // Formater le début
-        const dayStart = Math.floor(startHours / 24) + 1;
+        const dayStart = Math.floor((startHour + startHours) / 24) + 1; // jour du calendrier, comme le planning
         const hourInDayStart = startHours % 24;
         const displayHourStart = Math.floor((startHour + hourInDayStart) % 24);
         const minutesStart = Math.round((hourInDayStart % 1) * 60);
@@ -145,10 +154,10 @@ let SyntheseTab = ({
     };
 
     return (
-        <div className="p-6">
+        <div className="p-6 zone-synthese">
             <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <h2 className="text-2xl font-bold text-blue-700 mb-6 no-print">
-                    Synthèse de la Situation sur les Affectations (V10.36)
+                    Synthèse de la Situation sur les Affectations
                 </h2>
 
                 {/* Contrôle de l'heure de référence */}
@@ -206,7 +215,7 @@ let SyntheseTab = ({
                 {/* Titre pour l'impression uniquement */}
                 <div className="print-only" style={{display: 'none'}}>
                     <h1 style={{fontSize: '18pt', fontWeight: 'bold', marginBottom: '10mm', color: '#1d4ed8'}}>
-                        Synthèse de la Situation sur les Affectations (V10.36)
+                        Synthèse de la Situation sur les Affectations
                     </h1>
                     <p style={{fontSize: '14pt', fontWeight: 'bold', marginBottom: '10mm', color: '#2563eb'}}>
                         Heure de référence : {formatReferenceTimeAsInterval(referenceTime)}
@@ -408,8 +417,10 @@ let DashboardTab = ({
         return `${h}h${String(m).padStart(2, '0')}`;
     };
 
-    const totalSlots = getTotalSlots(totalDays);
-    
+    const totalSlots = getTotalSlots(totalDays, startHour);
+    // Les activités posées à l'avance dans le planning ne comptent qu'une fois leur heure passée
+    const limiteEcoulee = creneauxEcoules(startHour, events);
+
     // Calcul des statistiques temps réel
     const calculateStatistics = () => {
         const stats = {
@@ -447,7 +458,7 @@ let DashboardTab = ({
                     const activities = planning[sauveteurId];
                     if (Array.isArray(activities)) {
                         activities.forEach((activityId, slot) => {
-                            if (activityId && activityId !== 'nondef' && activityId !== 'effacer') {
+                            if (slot < limiteEcoulee && activityId && activityId !== 'nondef' && activityId !== 'effacer') {
                                 totalHeures += TIME_PER_SLOT;
                                 activiteTemps[activityId] = (activiteTemps[activityId] || 0) + TIME_PER_SLOT;
 
@@ -460,7 +471,7 @@ let DashboardTab = ({
                     }
                 } else {
                     // FORMAT CLÉ : planning["sauveteurId|slot"] = activity
-                    for (let slot = 0; slot < totalSlots; slot++) {
+                    for (let slot = 0; slot < Math.min(totalSlots, limiteEcoulee); slot++) {
                         const key = `${sauveteurId}|${slot}`;
                         const activityId = planning[key];
 
@@ -575,6 +586,15 @@ let DashboardTab = ({
     const [modalSauveteurPage, setModalSauveteurPage] = React.useState(0);
     useCloseOnEscape(showReportPreview ? () => setShowReportPreview(false) : null);
 
+    // Colonnes du temps par sauveteur (rapport, PDF, Excel) : activités du planning regroupées
+    const RUBRIQUES_TEMPS = {
+        souterre: ['souterre', 'brancardage', 'plongee'],
+        repos: ['repos_site', 'repos_domicile', 'repas_dejeuner'],
+        surface: ['approche', 'mission_surface'],
+        gestion: ['gestion', 'directeur_souterrain', 'conseiller_technique']
+    };
+    const tempsRubrique = (s, rubrique) => RUBRIQUES_TEMPS[rubrique].reduce((total, id) => total + (s.activites[id] || 0), 0);
+
     // Fonction pour générer un rapport de fin de mission
     const generateMissionReport = () => {
         const { jsPDF } = window.jspdf;
@@ -684,10 +704,10 @@ let DashboardTab = ({
         const sauveteurData = allSauveteurs.map(s => [
             s.nom,
             `${s.totalHeures.toFixed(1)}h`,
-            `${(s.activites['souterre'] || 0).toFixed(1)}h`,
-            `${(s.activites['repos'] || 0).toFixed(1)}h`,
-            `${(s.activites['surface'] || 0).toFixed(1)}h`,
-            `${(s.activites['gestion'] || 0).toFixed(1)}h`
+            `${tempsRubrique(s, 'souterre').toFixed(1)}h`,
+            `${tempsRubrique(s, 'repos').toFixed(1)}h`,
+            `${tempsRubrique(s, 'surface').toFixed(1)}h`,
+            `${tempsRubrique(s, 'gestion').toFixed(1)}h`
         ]);
 
         // Afficher tous les sauveteurs avec pagination automatique
@@ -784,6 +804,10 @@ let DashboardTab = ({
                     yPos += 4;
                     doc.text(`Membres initiaux: ${team.history[0].details.membres.join(', ')}`, 14, yPos);
                     yPos += 5;
+                    if (team.history[0].details.origine) {
+                        doc.text(`Issue de la scission de ${team.history[0].details.origine}`, 14, yPos);
+                        yPos += 5;
+                    }
                     doc.setFont(undefined, 'normal');
                 }
 
@@ -820,6 +844,17 @@ let DashboardTab = ({
                             doc.setTextColor(200, 0, 0);
                             doc.text(`  • ${timeOnly} - Dissolution de l'équipe`, 14, yPos);
                             doc.setTextColor(0, 0, 0);
+                            yPos += 5;
+                        } else if (entry.action === 'reactivation') {
+                            doc.text(`  • ${timeOnly} - Réactivation de l'équipe`, 14, yPos);
+                            yPos += 5;
+                        } else if (entry.action === 'scission') {
+                            doc.text(`  • ${timeOnly} - Scission vers ${entry.details.nouvelle_equipe}: ${(entry.details.membres || []).join(', ')}`, 14, yPos);
+                            yPos += 5;
+                        } else if (entry.action === 'modification_mission') {
+                            doc.text(`  • ${timeOnly} - Nouvelle mission: ${entry.details.nouvelle_mission}`, 14, yPos);
+                            yPos += 4;
+                            doc.text(`    (ancienne mission: ${entry.details.ancienne_mission})`, 14, yPos);
                             yPos += 5;
                         }
                     });
@@ -900,10 +935,10 @@ let DashboardTab = ({
                 .map(s => [
                     s.nom,
                     s.totalHeures.toFixed(1),
-                    (s.activites['souterre'] || 0).toFixed(1),
-                    (s.activites['repos'] || 0).toFixed(1),
-                    (s.activites['surface'] || 0).toFixed(1),
-                    (s.activites['gestion'] || 0).toFixed(1),
+                    tempsRubrique(s, 'souterre').toFixed(1),
+                    tempsRubrique(s, 'repos').toFixed(1),
+                    tempsRubrique(s, 'surface').toFixed(1),
+                    tempsRubrique(s, 'gestion').toFixed(1),
                     (s.activites['disponible'] || 0).toFixed(1),
                     (s.activites['engage'] || 0).toFixed(1)
                 ])
@@ -1124,7 +1159,7 @@ let DashboardTab = ({
                                 }`}
                             >
                                 <span className="text-2xl">
-                                    {alerte.type === 'danger' ? '🔴' : '🟠'}
+                                    {alerte.type === 'danger' ? '🔴' : '⚠️'}
                                 </span>
                                 <div className="flex-1">
                                     <div className="font-bold text-lg">{alerte.message}</div>
@@ -1464,16 +1499,16 @@ let DashboardTab = ({
                                                                         {formatHeuresMinutes(s.totalHeures)}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {formatHeuresMinutes(s.activites['souterre'] || 0)}
+                                                                        {formatHeuresMinutes(tempsRubrique(s, 'souterre'))}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {formatHeuresMinutes(s.activites['repos'] || 0)}
+                                                                        {formatHeuresMinutes(tempsRubrique(s, 'repos'))}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {formatHeuresMinutes(s.activites['surface'] || 0)}
+                                                                        {formatHeuresMinutes(tempsRubrique(s, 'surface'))}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {formatHeuresMinutes(s.activites['gestion'] || 0)}
+                                                                        {formatHeuresMinutes(tempsRubrique(s, 'gestion'))}
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -1572,6 +1607,7 @@ let DashboardTab = ({
                                                             <div className="text-sm text-gray-700 mb-3 bg-gray-50 p-2 rounded">
                                                                 <p><strong>Chef initial:</strong> {team.history[0].details.chef}</p>
                                                                 <p><strong>Membres initiaux:</strong> {team.history[0].details.membres.join(', ')}</p>
+                                                                {team.history[0].details.origine && <p><strong>Issue de la scission de</strong> {team.history[0].details.origine}</p>}
                                                             </div>
                                                         )}
                                                         
@@ -1615,6 +1651,30 @@ let DashboardTab = ({
                                                                                 <div key={histIdx} className="text-red-600">
                                                                                     <p>
                                                                                         • <strong>{timeOnly}</strong> - Dissolution de l'équipe
+                                                                                    </p>
+                                                                                </div>
+                                                                            );
+                                                                        } else if (entry.action === 'reactivation') {
+                                                                            return (
+                                                                                <div key={histIdx} className="text-green-700">
+                                                                                    <p>
+                                                                                        • <strong>{timeOnly}</strong> - Réactivation de l'équipe
+                                                                                    </p>
+                                                                                </div>
+                                                                            );
+                                                                        } else if (entry.action === 'scission') {
+                                                                            return (
+                                                                                <div key={histIdx} className="text-gray-700">
+                                                                                    <p>
+                                                                                        • <strong>{timeOnly}</strong> - Scission vers {entry.details.nouvelle_equipe}: {(entry.details.membres || []).join(', ')}
+                                                                                    </p>
+                                                                                </div>
+                                                                            );
+                                                                        } else if (entry.action === 'modification_mission') {
+                                                                            return (
+                                                                                <div key={histIdx} className="text-gray-700">
+                                                                                    <p>
+                                                                                        • <strong>{timeOnly}</strong> - Nouvelle mission : {entry.details.nouvelle_mission} (ancienne mission : {entry.details.ancienne_mission})
                                                                                     </p>
                                                                                 </div>
                                                                             );
@@ -1702,23 +1762,31 @@ let ProgressionTab = ({ events, pointsPhone, teams, masterSauveteursList }) => {
     const ppLettre = (pp) => typeof pp === 'object' ? pp.lettre : (pp ? pp.split(' - ')[0].trim() : null);
     const ppNom    = (pp) => typeof pp === 'object' ? pp.nom    : (pp ? (pp.split(' - ')[1] || pp).trim() : '');
 
-    const ppDefinis = (pointsPhone || []).filter(pp => {
-        const lettre = typeof pp === 'object' ? pp.lettre : pp;
-        return lettre && lettre !== 'PC';
-    }).map(pp => ({
-        lettre: ppLettre(pp), nom: ppNom(pp),
+    // Zone d'un point phone : 0 PC, 1 surface (et hors site), 2 entrée ou sortie de la cavité, 3 sous terre
+    const zoneDe = (pp) => {
+        const lettre = ppLettre(pp);
+        if (lettre === 'PC') return 0;
+        if (typeof pp !== 'object') return 3;
+        const type = pp.typePP || (pp.sousTerre ? 'souterre' : pp.estEntree ? 'entree' : '');
+        if (type === 'surface' || type === 'horssite') return 1;
+        if (type === 'entree' || type === 'sortie') return 2;
+        return 3;
+    };
+    const ppDefinis = (pointsPhone || []).filter(pp => ppLettre(pp)).map(pp => ({
+        lettre: ppLettre(pp), nom: ppLettre(pp) === 'PC' ? (ppNom(pp) || 'Poste de Commandement') : ppNom(pp), zone: zoneDe(pp),
         label: typeof pp === 'object' ? `${pp.lettre} – ${pp.nom}` : pp,
         ordre: typeof pp === 'object' && pp.ordre !== undefined ? parseFloat(pp.ordre) : 999
-    })).filter(p => p.lettre).sort((a, b) => a.ordre - b.ordre);
+    }));
 
     const lettresEvents = [...new Set(
-        events.filter(e => e.pointPhone).map(e => ppLettre(e.pointPhone)).filter(l => l && l !== 'PC')
+        events.filter(e => e.pointPhone).map(e => ppLettre(e.pointPhone)).filter(l => l)
     )].sort();
 
     const allPP = [...ppDefinis];
     lettresEvents.forEach(l => {
-        if (!allPP.find(p => p.lettre === l)) allPP.push({ lettre: l, nom: '', label: l, ordre: 9999 });
+        if (!allPP.find(p => p.lettre === l)) allPP.push({ lettre: l, nom: l === 'PC' ? 'Poste de Commandement' : '', label: l, zone: l === 'PC' ? 0 : 3, ordre: 9999 });
     });
+    allPP.sort((a, b) => a.zone - b.zone || a.ordre - b.ordre);
 
     const PALETTE = [
         '#3B82F6','#EF4444','#10B981','#F59E0B','#8B5CF6',
@@ -1777,20 +1845,24 @@ let ProgressionTab = ({ events, pointsPhone, teams, masterSauveteursList }) => {
             .sort((a, b) => getTs(a) - getTs(b))
             .forEach(e => {
                 const lettre = ppLettre(e.pointPhone);
-                if (!lettre || lettre === 'PC') return; // Ignorer le PC
+                if (!lettre) return;
                 if (!byTeam[e.equipe]) byTeam[e.equipe] = [];
+                // Départ du PC d'un renfort pour une équipe déjà partie : l'équipe, elle, ne remonte pas au PC
+                const precedent = byTeam[e.equipe][byTeam[e.equipe].length - 1];
+                const depart = e.departDuPC || /^Départ du PC/.test(e.evenement || '');
+                if (lettre === 'PC' && depart && precedent && precedent.lettre !== 'PC') return;
                 byTeam[e.equipe].push({ ts: getTs(e), lettre, dateHeure: e.dateHeure, evenement: e.evenement, numero: e.numero });
             });
         return byTeam;
     }, [events]);
 
     const eventsNoTeam = React.useMemo(() =>
-        events.filter(e => e.pointPhone && !e.equipe && ppLettre(e.pointPhone) !== 'PC')
+        events.filter(e => e.pointPhone && !e.equipe)
             .sort((a, b) => getTs(a) - getTs(b))
             .map(e => ({ ts: getTs(e), lettre: ppLettre(e.pointPhone), dateHeure: e.dateHeure, evenement: e.evenement, numero: e.numero }))
     , [events]);
 
-    const allTs = events.filter(e => e.pointPhone && ppLettre(e.pointPhone) !== 'PC').map(getTs).filter(t => t > 0);
+    const allTs = events.filter(e => e.pointPhone).map(getTs).filter(t => t > 0);
     const tsMin = allTs.length ? Math.min(...allTs) : Date.now() - 3600000;
     const tsMax = allTs.length ? Math.max(...allTs) : Date.now();
     const tsPad = Math.max((tsMax - tsMin) * 0.05, 300000);
@@ -1815,6 +1887,14 @@ let ProgressionTab = ({ events, pointsPhone, teams, masterSauveteursList }) => {
     const yOf   = (lettre) => (yIndex[lettre] !== undefined ? yIndex[lettre] * yStep : 0);
 
     const xOf = (ts) => ((ts - tStart) / tRange) * innerW;
+
+    const yEntree = (() => {
+        const entree = allPP.find(p => p.zone === 2);
+        if (entree) return yOf(entree.lettre);
+        const dessous = allPP.find(p => p.zone === 3);
+        const dessus = [...allPP].reverse().find(p => p.zone < 3);
+        return dessous && dessus ? (yOf(dessus.lettre) + yOf(dessous.lettre)) / 2 : null;
+    })();
 
     const xTicks = (() => {
         const ticks = [];
@@ -1861,7 +1941,7 @@ let ProgressionTab = ({ events, pointsPhone, teams, masterSauveteursList }) => {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">📍 Progression des Équipes</h2>
-                    <p className="text-sm text-gray-500 mt-1">Axe Y : points phone (entrée cavité en haut) · Axe X : temps</p>
+                    <p className="text-sm text-gray-500 mt-1">Axe Y : le PC et la surface en haut, l'entrée de la cavité (trait foncé), puis les points sous terre · Axe X : temps</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1">
@@ -1912,15 +1992,21 @@ let ProgressionTab = ({ events, pointsPhone, teams, masterSauveteursList }) => {
                 <div style={{ minWidth: chartWidth + 'px', padding: '16px' }}>
                     <svg width={chartWidth} height={chartHeight} style={{ display: 'block', userSelect: 'none' }}>
                         <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
-                            {allPP.map((pp, i) => (
+                            {yEntree !== null && <>
+                                <rect x={0} y={-15} width={innerW} height={yEntree + 15} fill="#ecfdf5"/>
+                                <rect x={0} y={yEntree} width={innerW} height={innerH - yEntree + 15} fill="#f5efe6"/>
+                                <text x={innerW - 6} y={-3} textAnchor="end" fontSize="11" fontWeight="bold" fill="#15803d">🌿 Surface</text>
+                                <text x={innerW - 6} y={yEntree + 16} textAnchor="end" fontSize="11" fontWeight="bold" fill="#78350f">🕳️ Sous terre</text>
+                            </>}
+                            {allPP.map((pp) => (
                                 <line key={pp.lettre} x1={0} y1={yOf(pp.lettre)} x2={innerW} y2={yOf(pp.lettre)}
-                                    stroke={i === 0 ? '#374151' : '#e5e7eb'} strokeWidth={i === 0 ? 2 : 1}
-                                    strokeDasharray={i === 0 ? 'none' : '4 3'}/>
+                                    stroke={pp.zone === 0 ? '#93c5fd' : '#d1d5db'} strokeWidth={1} strokeDasharray="4 3"/>
                             ))}
+                            {yEntree !== null && <line x1={0} y1={yEntree} x2={innerW} y2={yEntree} stroke="#1f2937" strokeWidth={3}/>}
                             {xTicks.map((tick, i) => (
                                 <line key={i} x1={tick.x} y1={0} x2={tick.x} y2={innerH} stroke="#f3f4f6" strokeWidth={1}/>
                             ))}
-                            <text x={-8} y={-10} textAnchor="end" fontSize="10" fill="#6b7280" fontStyle="italic">← entrée</text>
+                            {yEntree !== null && <text x={innerW - 6} y={yEntree - 5} textAnchor="end" fontSize="10" fill="#1f2937" fontStyle="italic">▼ entrée de la cavité</text>}
                             {allPP.map(pp => (
                                 <g key={pp.lettre} transform={`translate(0, ${yOf(pp.lettre)})`}>
                                     <text x={-10} y={0} textAnchor="end" dominantBaseline="middle" fontSize="13" fontWeight="bold" fill="#1e40af">{pp.lettre}</text>
@@ -2058,7 +2144,6 @@ className="bg-gray-900 text-xs rounded-lg px-3 py-2 shadow-xl max-w-xs"
                                     <td className="px-4 py-2">
                                         <span className="font-bold text-blue-700">{ppLettre(ev.pointPhone)}</span>
                                         {ppNom(ev.pointPhone) && <span className="text-gray-500 ml-1 text-xs">{ppNom(ev.pointPhone)}</span>}
-                                        {isPC && <span className="ml-1 text-xs text-gray-400 italic">(non tracé)</span>}
                                     </td>
                                     <td className="px-4 py-2 text-gray-700 max-w-xs truncate">{ev.evenement}</td>
                                 </tr>

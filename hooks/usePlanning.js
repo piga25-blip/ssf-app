@@ -28,7 +28,7 @@ const usePlanning = ({
         let minutesSinceStart = (now.getHours() * 60 + now.getMinutes()) - (startHour * 60);
         if (minutesSinceStart < 0) minutesSinceStart += 24 * 60;
         const slotEcoule = Math.floor(minutesSinceStart / 15) - 1;
-        const totalSlots = getTotalSlots(totalDays);
+        const totalSlots = getTotalSlots(totalDays, startHour);
         if (slotEcoule < 1 || slotEcoule >= totalSlots) return;
 
         const aCombler = [];
@@ -81,7 +81,7 @@ const usePlanning = ({
             let minutesSinceStart = (now.getHours() * 60 + now.getMinutes()) - (startHour * 60);
             if (minutesSinceStart < 0) minutesSinceStart += 24 * 60;
             const slotEcoule = Math.floor(minutesSinceStart / 15) - 1;
-            const totalSlots = getTotalSlots(totalDays);
+            const totalSlots = getTotalSlots(totalDays, startHour);
             if (slotEcoule < 0 || slotEcoule >= totalSlots) return;
             const sauveteursPropager = [];
             activeSauveteurIds.forEach(function(id) {
@@ -100,7 +100,7 @@ const usePlanning = ({
                 sauveteursPropager.push({ id, activite, slotDebut: slotSource + 1, slotFin: slotEcoule });
             });
             if (sauveteursPropager.length === 0) return;
-            const noms = [...new Set(sauveteursPropager.map(function(s) { return s.activite; }))];
+            const noms = [...new Set(sauveteursPropager.map(function(s) { const a = ACTIVITIES.find(function(act) { return act.id === s.activite; }); return a ? a.name : s.activite; }))];
             const duree = Math.max.apply(null, sauveteursPropager.map(function(s) { return s.slotFin - s.slotDebut + 1; })) * 15;
             const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
             if (!planningAutoPropagate) {

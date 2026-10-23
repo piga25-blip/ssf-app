@@ -48,7 +48,7 @@ let GestionEquipesModal = ({
         { id: 'Transmission', nom: '📡 Transmission', keywords: ['transmission', 'radio', 'communication', 'liaison', 'tel', 'phone', 'TPS', 'SPL'] },
         { id: 'Équipement', nom: '⚙️ Équipement', keywords: ['équipement', 'installation', 'montage', 'câble', 'tyrolienne', 'balancier'] },
         { id: 'Désobstruction', nom: '🔨 Désobstruction', keywords: ['désobstruction', 'déblai', 'déblayage', 'éboulis', 'obstacle', 'tir'] },
-        { id: 'Plongée', nom: '🤿 Plongée', keywords: ['plongée', 'siphon', 'immersion', 'eau', 'aquatique'] },
+        { id: 'Plongée', nom: '🌊 Plongée', keywords: ['plongée', 'siphon', 'immersion', 'eau', 'aquatique'] },
         { id: 'Gestion', nom: '📋 Gestion', keywords: ['gestion', 'coordi', 'organisation', 'pc', 'direction'] },
         { id: 'Divers', nom: '🎯 Divers', keywords: [] }
     ];
@@ -93,9 +93,15 @@ let GestionEquipesModal = ({
 
     // Fonction de détection automatique du type de mission
     const detectTypeMission = (missionText) => {
-        if (!missionText || missionText.trim() === '') {
+        // Sans mot-clé reconnu, seul un type proposé automatiquement est retiré : un type choisi
+        // à la main (ou celui d'une équipe en cours de modification) est gardé
+        const retirerSuggestion = () => {
+            if (!typeMissionSuggested) return;
             setTypeMission('');
             setTypeMissionSuggested(false);
+        };
+        if (!missionText || missionText.trim() === '') {
+            retirerSuggestion();
             return;
         }
 
@@ -120,8 +126,7 @@ let GestionEquipesModal = ({
         }
 
         // Aucun type trouvé
-        setTypeMission('');
-        setTypeMissionSuggested(false);
+        retirerSuggestion();
     };
 
     // Enlève les accents et met en minuscules, pour une recherche insensible à la casse/accents
@@ -232,6 +237,15 @@ let GestionEquipesModal = ({
             return;
         }
 
+        // Membres déjà dans une autre équipe : choisis ici en connaissance de cause, ou mis dans
+        // cette autre équipe entre-temps sur un autre poste. On le redit avant de les déplacer.
+        const deplaces = selectedMembres
+            .filter(id => membersInTeams.has(id))
+            .map(id => ({ nom: masterSauveteursList.find(s => s.id === id)?.name || id, equipe: membersInTeams.get(id).name }));
+        if (deplaces.length > 0 && !window.confirm(`⚠️ Déjà dans une autre équipe (peut-être ajouté entre-temps sur un autre poste) :\n${deplaces.map(d => `• ${d.nom} — ${d.equipe}`).join('\n')}\n\nLe(s) retirer de cette équipe pour l'affecter à l'Équipe ${nouvelleEquipe.numero} ?\n(Annuler pour revoir les membres.)`)) {
+            return;
+        }
+
         const chefNom = masterSauveteursList.find(s => s.id === selectedMembres[0])?.name || '';
         const membresNoms = selectedMembres.map(id => masterSauveteursList.find(s => s.id === id)?.name).filter(Boolean);
 
@@ -267,13 +281,15 @@ let GestionEquipesModal = ({
 
         const horodatage = new Date().toISOString();
         const evenements = [{ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: NUMERO_AUTO, fait: false }];
+        // L'équipe d'origine perd ces membres : c'est tracé
+        deplaces.forEach(d => evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `↪️ ${d.nom} retiré de ${d.equipe} pour l'Équipe ${nouvelleEquipe.numero}`, numero: NUMERO_AUTO, fait: false }));
 
         // Activité « Engagé » (« Gestion » pour une équipe de gestion) au quart d'heure actuel,
         // si l'heure est dans le planning : appliquée par l'action, avec sa ligne de main courante
         const slotIndex = indexCreneau({ startHour }, horodatage);
-        if (slotIndex >= 0 && slotIndex < getTotalSlots(totalDays)) {
+        if (slotIndex >= 0 && slotIndex < getTotalSlots(totalDays, startHour)) {
             const isGestion = nouvelleEquipe.mission.toLowerCase().includes('gestion');
-            evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Activité "${isGestion ? 'Gestion' : 'Engage'}" affectée à : ${membresNomsString}`, numero: NUMERO_AUTO, fait: false });
+            evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `👔 Activité "${isGestion ? 'Gestion - PC' : 'Engagé'}" affectée à : ${membresNomsString}`, numero: NUMERO_AUTO, fait: false });
         }
 
         // Équipe créée (ses membres quittent leur ancienne équipe), numéro mémorisé, planning, main courante
@@ -873,7 +889,7 @@ let GestionEquipesModal = ({
                                         </p>
                                         <div className="flex gap-2">
                                             {[
-                                                {val:'souterre', label:'🪨 Sous terre'},
+                                                {val:'souterre', label:'🕳️ Sous terre'},
                                                 {val:'surface', label:'🌿 Surface'},
                                                 {val:'horssite', label:'🚗 Hors site'}
                                             ].map(function(opt) {
@@ -1052,7 +1068,7 @@ let GestionEquipesModal = ({
                                                     <span className="text-lg font-black text-blue-800 whitespace-nowrap">{team.name}</span>
                                                     {(() => {
                                                         const lieu = team.lieu || (team.sousTerre ? 'souterre' : null);
-                                                        if (lieu === 'souterre') return <span title="Sous terre" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#78350f',color:'white',whiteSpace:'nowrap'}}>🪨 S.Terre</span>;
+                                                        if (lieu === 'souterre') return <span title="Sous terre" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#78350f',color:'white',whiteSpace:'nowrap'}}>🕳️ S.Terre</span>;
                                                         if (lieu === 'surface') return <span title="Surface" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#15803d',color:'white',whiteSpace:'nowrap'}}>🌿 Surface</span>;
                                                         if (lieu === 'horssite') return <span title="Hors site" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#4b5563',color:'white',whiteSpace:'nowrap'}}>🚗 Hors site</span>;
                                                         return <span title="Lieu non défini" style={{fontSize:'13px',fontWeight:'700',padding:'2px 6px',borderRadius:'4px',backgroundColor:'#f97316',color:'white',whiteSpace:'nowrap'}}>❓ Lieu ?</span>;
@@ -1392,9 +1408,13 @@ let GestionEquipesModal = ({
 
             {/* ── MODALE SCINDER ── */}
             {modalScindre && (() => {
+                // Cases cochées et numéro gardés dans modalScindre (état du parent) : un rafraîchissement
+                // de la fenêtre Équipes (planning, réseau…) ne les remet plus à leur valeur de départ
                 const ScindreModal = () => {
-                    const [membresSelec, setMembresSelec] = React.useState(modalScindre.membresSelec);
-                    const [newNum, setNewNum] = React.useState(modalScindre.team.name.replace('Équipe ','') + 'B');
+                    const membresSelec = modalScindre.membresSelec;
+                    const setMembresSelec = (f) => setModalScindre(m => m && ({ ...m, membresSelec: typeof f === 'function' ? f(m.membresSelec) : f }));
+                    const newNum = modalScindre.newNum ?? modalScindre.team.name.replace('Équipe ','') + 'B';
+                    const setNewNum = (v) => setModalScindre(m => m && ({ ...m, newNum: v }));
                     const team = modalScindre.team;
                     const baseNum = team.name.replace('Équipe ','');
                     const handleValider = () => {
@@ -1402,9 +1422,13 @@ let GestionEquipesModal = ({
                         if (!newNum.trim()) { alert('Saisissez un numéro'); return; }
                         const newName = 'Équipe ' + newNum.trim();
                         if (teams.find(t => t.name === newName)) { alert(`"${newName}" existe déjà`); return; }
-                        const newTeam = { id: 'T'+newNum.trim()+'_'+Date.now(), name: newName, mission: team.mission, ordreMission: team.ordreMission || '', typeMission: team.typeMission, lieu: team.lieu, sousTerre: team.sousTerre, members: membresSelec, status: 'active' };
+                        const listeDetaches = membresSelec.map(id=>{const s=masterSauveteursList.find(sv=>sv.id===id);return s?s.name:id;});
+                        const creation = new Date().toISOString();
+                        const newTeam = { id: 'T'+newNum.trim()+'_'+Date.now(), name: newName, mission: team.mission, ordreMission: team.ordreMission || '', typeMission: team.typeMission, lieu: team.lieu, sousTerre: team.sousTerre, members: membresSelec, status: 'active',
+                            createdAt: creation, dissolvedAt: null,
+                            history: [{ timestamp: creation, action: 'creation', details: { chef: listeDetaches[0], membres: listeDetaches, origine: team.name } }] };
                         const membresRestants = team.members.filter(id => !membresSelec.includes(id));
-                        const nomsDetaches = membresSelec.map(id=>{const s=masterSauveteursList.find(sv=>sv.id===id);return s?s.name:id;}).join(', ');
+                        const nomsDetaches = listeDetaches.join(', ');
                         // Trouver le dernier point phone connu de l'équipe source
                         const eventsEquipeSource = events
                             .filter(e => e.equipe === team.name && e.pointPhone)
@@ -1486,7 +1510,7 @@ let GestionEquipesModal = ({
                         </div>
                     );
                 };
-                return <ScindreModal />;
+                return ScindreModal();
             })()}
         </div>
     );

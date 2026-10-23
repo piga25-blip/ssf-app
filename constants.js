@@ -46,7 +46,7 @@ const ACTIVITIES = [
     { id: 'repos_domicile', name: 'Repos au domicile', color: '#add8e6', teamRequired: false },
     { id: 'repas_dejeuner', name: 'Repas - Déjeuner', color: '#ffdead', teamRequired: false },
     { id: 'quitter_secours', name: 'Quitter le secours', color: '#404040', teamRequired: false },
-    { id: 'gestion', name: 'Gestion - PC', color: '#ffff00', teamRequired: true },
+    { id: 'gestion', name: 'Gestion - PC', color: '#ffff00', teamRequired: false },
     { id: 'approche', name: 'Approche', color: '#4b0082', teamRequired: true },
     { id: 'souterre', name: 'Sous Terre', color: '#8b4513', teamRequired: true },
     { id: 'brancardage', name: 'Brancardage', color: '#ff0000', teamRequired: true },

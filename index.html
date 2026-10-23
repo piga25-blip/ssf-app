@@ -6,7 +6,7 @@
     <title>Application SSF Unifiée</title>
     <!-- ✏️ VERSION PAR DÉFAUT (mode serveur) — modifier ces deux lignes à chaque version -->
     <!-- En mode standalone (double-clic), la version est lue automatiquement dans le nom du fichier -->
-    <meta name="ssf-version" content="14.0.4">
+    <meta name="ssf-version" content="14.0.5">
     <!-- Bibliothèques intégrées - aucune dépendance externe -->
     <script crossorigin src="./libs/react.production.min.js"></script>
     <script crossorigin src="./libs/react-dom.production.min.js"></script>
@@ -67,6 +67,13 @@
            « Changer le code » (texte blanc invisible sans ces fonds) */
         .bg-blue-700 { background-color: rgb(29 78 216); }
         .hover\:bg-blue-800:hover { background-color: rgb(30 64 175); }
+        /* Liste des sauveteurs : bouton « Récupérer depuis la base nationale » (texte blanc
+           invisible sans ce fond) */
+        .bg-teal-700 { background-color: rgb(15 118 110); }
+        .hover\:bg-teal-800:hover { background-color: rgb(17 94 89); }
+        /* « 🕐 Sauvegardes auto » : couleur au survol */
+        .hover\:bg-teal-700:hover { background-color: rgb(15 118 110); }
+        .disabled\:opacity-60:disabled { opacity: 0.6; }
         .bg-green-700 { background-color: rgb(21 128 61); }
         .hover\:bg-green-800:hover { background-color: rgb(22 101 52); }
         .bg-gray-700 { background-color: rgb(55 65 81); }
@@ -400,7 +407,8 @@
             border: 2px solid #0055a4; 
             box-shadow: 0 4px 12px rgba(0, 85, 164, 0.3); 
             border-radius: 8px; 
-            z-index: 9999; 
+            /* sous les fenêtres (z-50 et plus) : la palette ne cache plus leurs boutons */
+            z-index: 40; 
         }
         
         .palette-title {
@@ -519,6 +527,13 @@
             }
         }
         
+        /* Impression de la synthèse : seule la zone de la synthèse est imprimée */
+        @media print {
+            body.impression-synthese * { visibility: hidden; }
+            body.impression-synthese .zone-synthese, body.impression-synthese .zone-synthese * { visibility: visible; }
+            body.impression-synthese .zone-synthese { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+
         /* Classes de contrôle pour l'impression sélective */
         body.print-synthese-only .section-detail,
         body.print-detail-only .section-synthese {
@@ -633,7 +648,7 @@
                 { id: 'intendance', nom: '🍽️ Intendance', couleur: 'orange' },
                 { id: 'incident', nom: '⚠️ Incident', couleur: 'yellow' },
                 { id: 'administratif', nom: '📋 Administratif', couleur: 'gray' },
-                { id: 'personnel', nom: '🧑‍⚕️ Personnel', couleur: 'cyan' },
+                { id: 'personnel', nom: '👤 Personnel', couleur: 'cyan' },
                 { id: 'autre', nom: '🎯 Autre', couleur: 'pink' }
             ]);
 
@@ -675,20 +690,22 @@
             const envoyerAction = useCallback((action) => {
                 const role = roleRef.current;
                 // Autre poste coupé du poste principal : saisie bloquée jusqu'au retour de la connexion
-                // (décision 1) ; rien n'est mis en attente
+                // (décision 1) ; rien n'est mis en attente. Renvoie false quand l'action n'est pas
+                // envoyée : la fenêtre de saisie garde alors ce qui a été tapé
                 if (role !== 'principal' && !connecteRef.current) {
-                    setNotification('🔴 Hors ligne : saisie impossible jusqu\'au retour de la connexion avec le poste principal.');
+                    setNotification('🔴 Hors ligne : saisie impossible jusqu\'au retour de la connexion avec le poste principal. Le texte tapé est conservé.');
                     setTimeout(() => setNotification(null), 6000);
-                    return;
+                    return false;
                 }
                 if (role === 'principal' || (role === 'saisie' && ACTIONS_SAISIE_DISTANTE.includes(action.type))) {
                     connexion.envoyer({ type: 'action', action });
-                    return;
+                    return true;
                 }
                 setNotification(role === 'saisie'
                     ? '⛔ Poste de saisie : cette action est réservée au poste principal.'
                     : '⛔ Poste en consultation seule : modification impossible.');
                 setTimeout(() => setNotification(null), 4000);
+                return false;
             }, []);
 
             // Numéros de main courante : attribués par donnees.js quand l'action est appliquée, dans
@@ -1473,7 +1490,7 @@
                                 {missionInfo && missionInfo.nomCavite ? (
                                     <div className="flex items-center gap-2 ml-2 px-3 py-1 rounded-lg text-sm" style={{background: missionInfo.typeSecours === 'exercice' ? '#fef3c7' : '#fee2e2', border: `1px solid ${missionInfo.typeSecours === 'exercice' ? '#f59e0b' : '#ef4444'}`}}>
                                         <span style={{fontWeight:'700', color: missionInfo.typeSecours === 'exercice' ? '#92400e' : '#b91c1c'}}>
-                                            {missionInfo.typeSecours === 'exercice' ? '🟡 EXERCICE' : '🔴 SECOURS'}
+                                            {missionInfo.typeSecours === 'exercice' ? '🎓 EXERCICE' : '🔴 SECOURS'}
                                         </span>
                                         <span className="text-gray-700">— {missionInfo.nomCavite}</span>
                                         {missionInfo.commune && <span className="text-gray-500">({missionInfo.commune})</span>}
@@ -1889,6 +1906,7 @@
                                     mcMode={mcMode}
                                     mcIdentifiant={mcIdentifiant}
                                     startHour={startHour}
+                                    currentSecretaire={currentSecretaire}
                                 />
                             </ModalErrorBoundary>
                         )}
@@ -2220,6 +2238,12 @@
                                     currentSecretaire={currentSecretaire}
                                     setCurrentSecretaire={setCurrentSecretaire}
                                     onClose={() => setShowSecretaireModal(false)}
+                                    masterSauveteursList={masterSauveteursList}
+                                    activeSauveteurIds={activeSauveteurIdsPresents}
+                                    planning={planning}
+                                    startHour={startHour}
+                                    totalDays={totalDays}
+                                    actions={actions}
                                 />
                             </ModalErrorBoundary>
                         )}

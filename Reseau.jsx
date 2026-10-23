@@ -60,7 +60,7 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                             <div className={`p-4 rounded-lg mb-4 border-2 ${reseau.actif ? 'bg-green-50 border-green-400' : 'bg-gray-50 border-gray-300'}`}>
                                 <div className="flex items-center justify-between gap-4">
                                     <div>
-                                        <p className="font-bold text-lg">{reseau.actif ? '🟢 Mode réseau activé' : '⚪ Mode réseau désactivé'}</p>
+                                        <p className="font-bold text-lg">{reseau.actif ? '✅ Mode réseau activé' : '⚪ Mode réseau désactivé'}</p>
                                         <p className="text-sm text-gray-600">
                                             {reseau.actif
                                                 ? (reseau.saisieDistante
@@ -140,7 +140,7 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                         <thead><tr className="text-left text-gray-500"><th className="py-1">Poste</th><th>Adresse</th><th>Rôle</th><th>Depuis</th></tr></thead>
                                         <tbody>
                                             {autres.map((p, i) => (
-                                                <tr key={i} className="border-t"><td className="py-1">🟢 {p.nom}</td><td className="font-mono">{p.adresse}</td><td>
+                                                <tr key={i} className="border-t"><td className="py-1">✅ {p.nom}</td><td className="font-mono">{p.adresse}</td><td>
                                                     <select value={p.role} onChange={(e) => connexion.envoyer({ type: 'roleDuPoste', idPoste: p.idPoste, role: e.target.value })}
                                                         className="border rounded px-1 py-0.5 text-sm" title="Rôle de ce poste">
                                                         <option value="saisie">✍️ Saisie</option>
@@ -172,7 +172,7 @@ let BandeauConsultation = ({ connexion, rescueId, surCopie }) => (
         <div style={{ background: connexion.connecte ? '#1e3a8a' : '#b91c1c', color: 'white', padding: '8px 16px', borderRadius: '8px',
             fontWeight: 600, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
             <span>{connexion.role === 'saisie' ? '✍️ Poste de saisie' : '👁 Poste en consultation seule'}{rescueId ? ' — ' + rescueId : ''}</span>
-            <span>{connexion.connecte ? '🟢 Connecté au poste principal' : '🔴 Connexion perdue — reconnexion en cours… (saisie impossible)'}</span>
+            <span>{connexion.connecte ? '✅ Connecté au poste principal' : '🔴 Connexion perdue — reconnexion en cours… (saisie impossible)'}</span>
         </div>
         {!connexion.connecte && surCopie && (
             <div style={{ background: '#fee2e2', color: '#991b1b', border: '2px solid #ef4444', padding: '8px 16px', borderRadius: '8px', marginTop: '6px',

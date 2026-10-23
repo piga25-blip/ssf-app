@@ -23,7 +23,7 @@ vm.runInContext(`
     const DEFAULT_TOTAL_DAYS = ${lire(/const DEFAULT_TOTAL_DAYS = (\d+);/)};
     const SLOTS_PER_HOUR = ${lire(/const SLOTS_PER_HOUR = (\d+);/)};
     const SLOTS_PER_DAY = 24 * SLOTS_PER_HOUR;
-    const getTotalSlots = (totalDays) => totalDays * SLOTS_PER_DAY;
+    const getTotalSlots = (totalDays, startHour = 0) => Math.max(SLOTS_PER_HOUR, totalDays * SLOTS_PER_DAY - (startHour || 0) * SLOTS_PER_HOUR);
 `, contexte);
 vm.runInContext(fs.readFileSync(path.join(RACINE, 'donnees.js'), 'utf8'), contexte, { filename: 'donnees.js' });
 const { reducteurDonnees, etatInitialDonnees, ACTIONS_DONNEES } = vm.runInContext('({ reducteurDonnees, etatInitialDonnees, ACTIONS_DONNEES })', contexte);
@@ -201,7 +201,7 @@ const base = () => {
 {
     let e = appliquer(base(), { type: 'SAUVETEURS/ARRIVEE', ids: ['S1', 'S2'], horodatage: iso(8), idEvenement: 'a', numero: 1 });
     e = appliquer(e, { type: 'PLANNING/AFFECTER', cellules: [{ id: 'S1', slot: 2 }, { id: 'S3', slot: 3 }], activite: 'souterre', evenement: null });
-    verifier('Planning : activité posée (ligne créée si besoin)', e.planning.S1[2] === 'souterre' && e.planning.S3[3] === 'souterre' && e.planning.S3.length === 3 * 96);
+    verifier('Planning : activité posée (ligne créée si besoin)', e.planning.S1[2] === 'souterre' && e.planning.S3[3] === 'souterre' && e.planning.S3.length === 3 * 96 - e.startHour * 4);
     verifier('Planning : sans ligne de main courante', e.events.length === 1);
     e = appliquer(e, { type: 'PLANNING/AFFECTER', cellules: [{ id: 'S2', slot: 1 }], activite: 'repos_site', evenement: ligne('p', '002') });
     verifier('Planning : avec ligne de main courante', e.events.length === 2);

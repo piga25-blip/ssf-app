@@ -29,8 +29,8 @@
     "EXT-006"
    ],
    "clotureInfo": {
-    "dateHeure": "14/03/2026 10:14:09",
-    "isoTimestamp": "2026-03-14T09:14:09.800Z"
+    "dateHeure": "14/03/2026 10:14:11",
+    "isoTimestamp": "2026-03-14T09:14:11.300Z"
    },
    "events": [
     {
@@ -58,7 +58,7 @@
     {
      "categorie": "equipe",
      "dateHeure": "14/03/2026 08:01:31",
-     "evenement": "👔 Activité \"Engage\" affectée à : MARTIN Alice, BERNARD Bruno, DUBOIS Chloé",
+     "evenement": "👔 Activité \"Engagé\" affectée à : MARTIN Alice, BERNARD Bruno, DUBOIS Chloé",
      "fait": false,
      "id": "ID_3",
      "isoTimestamp": "2026-03-14T07:01:31.000Z",
@@ -195,7 +195,7 @@
     {
      "categorie": "equipe",
      "dateHeure": "14/03/2026 08:50:43",
-     "evenement": "👔 Activité \"Engage\" affectée à : THOMAS David, ROBERT Emma",
+     "evenement": "👔 Activité \"Engagé\" affectée à : THOMAS David, ROBERT Emma",
      "fait": false,
      "id": "ID_12",
      "isoTimestamp": "2026-03-14T07:50:43.800Z",
@@ -372,14 +372,25 @@
      "secretaire": "Système"
     },
     {
-     "categorie": "secours",
-     "dateHeure": "14/03/2026 10:14:09",
-     "evenement": "🔒 CLÔTURE DU SECOURS — Gouffre du Test\nDate et heure de clôture : 14/03/2026 10:14:09",
+     "categorie": "intendance",
+     "dateHeure": "14/03/2026 10:09:11",
+     "evenement": "📅 Activité \"Repas - Déjeuner\" prolongée (recopie) pour : MARTIN Alice",
      "fait": false,
      "id": "ID_26",
-     "isoTimestamp": "2026-03-14T09:14:09.800Z",
-     "messageImportant": true,
+     "isoTimestamp": "2026-03-14T09:09:11.300Z",
+     "messageImportant": false,
      "numero": "026",
+     "secretaire": "Système"
+    },
+    {
+     "categorie": "secours",
+     "dateHeure": "14/03/2026 10:14:11",
+     "evenement": "🔒 CLÔTURE DU SECOURS — Gouffre du Test\nDate et heure de clôture : 14/03/2026 10:14:11",
+     "fait": false,
+     "id": "ID_27",
+     "isoTimestamp": "2026-03-14T09:14:11.300Z",
+     "messageImportant": true,
+     "numero": "027",
      "secretaire": "Système"
     }
    ],
@@ -424,13 +435,14 @@
    "mcConfigured": true,
    "mcIdentifiant": "",
    "mcMode": "principale",
+   "mcRecopie": null,
    "missionInfo": {
     "commune": "Testville",
     "delaiAlerteOccupation": 360,
     "nomCavite": "Gouffre du Test",
     "typeSecours": "exercice"
    },
-   "nextEventNumber": 27,
+   "nextEventNumber": 28,
    "nextPermanentNumber": 7,
    "planning": {
     "EXT-001": [
@@ -2316,8 +2328,7 @@
      "mission": "Logistique surface",
      "numero": "T2"
     }
-   ],
-   "mcRecopie": null
+   ]
   }
  }
 }

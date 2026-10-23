@@ -11,10 +11,11 @@ let PlanningTab = ({
     mcMode, mcIdentifiant, setActiveTab, setModalRepos,
     planningAutoPropagate, setPlanningAutoPropagate
 }) => {
-    const totalSlots = getTotalSlots(totalDays);
+    const totalSlots = getTotalSlots(totalDays, startHour);
     const [sortKey, setSortKey] = useState('entryOrder');
     const [sortDirection, setSortDirection] = useState('asc');
     const [statsMode, setStatsMode] = useState('total');
+    const [joursSaisis, setJoursSaisis] = useState(null);
     const [hoveredTeam, setHoveredTeam] = useState(null);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     
@@ -186,7 +187,18 @@ let PlanningTab = ({
         if (colIndex >= totalSlots) return;
         
         const cellKey = getCellKey(rowId, colIndex);
-        
+
+        // Ctrl (ou Cmd) + clic : ajoute la case à la sélection, ou l'en retire, comme dans un tableur
+        if (event.ctrlKey || event.metaKey) {
+            setSelectedCells(prev => {
+                const s = new Set(prev);
+                if (s.has(cellKey)) s.delete(cellKey); else s.add(cellKey);
+                return s;
+            });
+            setLastSelectedCell({ rowId, colIndex });
+            return;
+        }
+
         // Si on clique sur une cellule déjà sélectionnée ET qu'il y a plusieurs cellules sélectionnées
         // ne rien faire (permet de garder la sélection pour utiliser la poignée)
         // MAIS si c'est une sélection d'UNE SEULE cellule, on permet de refaire une sélection
@@ -319,6 +331,35 @@ let PlanningTab = ({
                     });
                     
                     actions.recopierPlanning(copies);
+
+                    // Comme pour la palette, la modification est tracée en main courante
+                    const parActivite = {};
+                    copies.forEach(({ id, idSource, slotSource }) => {
+                        const act = (planning[idSource] || [])[slotSource];
+                        if (!act || act === 'nondef' || act === 'effacer') return;
+                        const nom = masterSauveteursList.find(s => s.id === id)?.name;
+                        if (!nom) return;
+                        (parActivite[act] = parActivite[act] || new Set()).add(nom);
+                    });
+                    Object.entries(parActivite).forEach(([act, noms]) => {
+                        const activite = ACTIVITIES.find(a => a.id === act);
+                        // Même catégorie que pour la palette
+                        const categorie = ['mission_surface', 'approche', 'souterre', 'brancardage', 'plongee'].includes(act) ? 'progression'
+                            : ['engage', 'conseiller_technique', 'directeur_souterrain', 'gestion', 'mission_hors_site'].includes(act) ? 'equipe'
+                            : (['repos_site', 'repos_domicile'].includes(act) || act.includes('repas')) ? 'intendance'
+                            : ['disponible', 'quitter_secours'].includes(act) ? 'personnel' : 'autre';
+                        actions.ajouterLigneMC({
+                            id: nouvelId(),
+                            isoTimestamp: new Date().toISOString(),
+                            secretaire: 'Système',
+                            dateHeure: new Date().toLocaleString('fr-FR'),
+                            messageImportant: false,
+                            categorie,
+                            evenement: `📅 Activité "${activite ? activite.name : act}" prolongée (recopie) pour : ${[...noms].join(', ')}`,
+                            numero: NUMERO_AUTO,
+                            fait: false
+                        });
+                    });
                 }
             }
             // Nettoyer les états du mode poignée
@@ -346,7 +387,7 @@ let PlanningTab = ({
         
         setIsDragging(false);
         console.log('=== END handleMouseUp ===\n');
-    }, [isDragging, isFilling, selectedCells, fillPreviewCells, selectedActivityId, sauveteurToTeamMap, totalSlots, setSelectedCells, setLastSelectedCell, setIsDragging, setFillPreviewCells, setFillStartCell, setIsFilling, activeSauveteursDetails, sauveteurIdToIndexMap]);
+    }, [isDragging, isFilling, selectedCells, fillPreviewCells, selectedActivityId, sauveteurToTeamMap, totalSlots, setSelectedCells, setLastSelectedCell, setIsDragging, setFillPreviewCells, setFillStartCell, setIsFilling, activeSauveteursDetails, sauveteurIdToIndexMap, planning, masterSauveteursList, actions]);
 
     useEffect(() => {
         const handleGlobalMouseUp = () => handleMouseUp();
@@ -412,6 +453,8 @@ let PlanningTab = ({
 
     const fillHandlePos = getFillHandlePosition();
 
+    const limiteEcoulee = creneauxEcoules(startHour, events);
+
     const renderStatutCells = (sauveteurId, hasSelectedCells = false) => {
         const rowData = planning[sauveteurId] || [];
         const categories = {
@@ -421,9 +464,11 @@ let PlanningTab = ({
             pc: ['directeur_souterrain', 'conseiller_technique', 'gestion']
         };
 
-        // Calculer le CUMUL de tous les slots renseignés
+        // Calculer le CUMUL des slots renseignés jusqu'à l'heure actuelle (une activité posée à
+        // l'avance ne compte qu'une fois son heure passée)
         let sousTerreCount = 0, reposCount = 0, enSurfaceCount = 0, pcCount = 0;
-        rowData.forEach(function(activity) {
+        rowData.forEach(function(activity, slot) {
+            if (slot >= limiteEcoulee) return;
             if (!activity || activity === 'nondef' || activity === 'effacer') return;
             if (categories.sousTerre.includes(activity)) sousTerreCount++;
             else if (categories.repos.includes(activity)) reposCount++;
@@ -630,7 +675,7 @@ let PlanningTab = ({
         let minutesSinceStart = (now.getHours() * 60 + now.getMinutes()) - (startHour * 60);
         if (minutesSinceStart < 0) minutesSinceStart += 24 * 60;
         const slotEcoule = Math.floor(minutesSinceStart / 15) - 1;
-        const totalSlots = getTotalSlots(totalDays);
+        const totalSlots = getTotalSlots(totalDays, startHour);
         if (slotEcoule < 0 || slotEcoule >= totalSlots) { alert('Aucun creneau ecoule dans la plage du planning.'); return; }
         const sauveteursPropager = [];
         activeSauveteurIds.forEach(function(id) {
@@ -649,7 +694,7 @@ let PlanningTab = ({
             sauveteursPropager.push({ id, activite, slotDebut: slotSource + 1, slotFin: slotEcoule });
         });
         if (sauveteursPropager.length === 0) { alert('Aucun creneau vide a combler. Tous les sauveteurs sont a jour.'); return; }
-        const noms = [...new Set(sauveteursPropager.map(function(s) { return s.activite; }))];
+        const noms = [...new Set(sauveteursPropager.map(function(s) { const a = ACTIVITIES.find(function(act) { return act.id === s.activite; }); return a ? a.name : s.activite; }))];
         const duree = Math.max.apply(null, sauveteursPropager.map(function(s) { return s.slotFin - s.slotDebut + 1; })) * 15;
         const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const msg = 'Mise a jour - ' + heure + '\n\n' + sauveteursPropager.length + ' sauveteur(s), ' + duree + ' min max.\nActivites: ' + noms.join(', ') + '\n\nVoulez-vous remplir les creneaux vides ?';
@@ -688,8 +733,14 @@ let PlanningTab = ({
                     <label className="font-semibold mr-2">Jours (1-14):</label>
                     <input 
                         type="number" 
-                        value={totalDays}
-                        onChange={(e) => actions.reglerDureePlanning(Math.max(1, Math.min(14, parseInt(e.target.value, 10))))}
+                        value={joursSaisis ?? totalDays}
+                        onChange={(e) => {
+                            // Le champ peut être vide pendant la frappe : on n'enregistre qu'une durée valide (1 à 14)
+                            setJoursSaisis(e.target.value);
+                            const n = parseInt(e.target.value, 10);
+                            if (n >= 1 && n <= 14) actions.reglerDureePlanning(n);
+                        }}
+                        onBlur={() => setJoursSaisis(null)}
                         min="1" max="14"
                         className="px-3 py-2 border rounded w-20"
                     />
@@ -938,10 +989,10 @@ const PaletteActivites = ({
                     categorie = 'intendance';
                     icone = '🍽️';
                 }
-                // 🧑‍⚕️ Disponible
+                // 👤 Disponible
                 else if (activity.id === 'disponible') {
                     categorie = 'personnel';
-                    icone = '🧑‍⚕️';
+                    icone = '👤';
                 }
                 // 🚪 Quitter le secours
                 else if (activity.id === 'quitter_secours') {

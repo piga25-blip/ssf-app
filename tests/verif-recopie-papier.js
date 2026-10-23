@@ -7,6 +7,7 @@
 //    la main courante est renumérotée ; heure corrigée → rangée à nouveau.
 // 3. Autre poste (saisie) : la ligne qu'il recopie garde l'heure du papier (pas recalée par le serveur).
 // 4. Export des événements : repères de recopie présents.
+// 5. Main courante fusionnée : une ligne d'une autre main courante (PCA-003) se range à son heure.
 // Utilisation (depuis C:\Projets\SSF-Reseau) : node tests/verif-recopie-papier.js
 
 const path = require('path');
@@ -126,6 +127,17 @@ const NAVIGATEUR = path.join(__dirname, 'aides', 'navigateur');
         await p.waitForTimeout(2000);
         const exp = JSON.parse(fs.readFileSync(fichier, 'utf8'));
         controler('4. Export des événements : auteur du papier et repères de recopie', exp.mcRecopie && exp.mcRecopie.auteur === 'Paul PAPIER' && exp.events.length === 4 && exp.events.every(e => e.recopie));
+
+        // ===== 5. Après fusion sur le PC de terrain : une ligne papier se range à son heure
+        const ordre = await p.evaluate(() => {
+            const t = (h) => new Date('2026-10-23T' + h + ':00').toISOString();
+            const ev = [['001', '12:00'], ['002', '12:10'], ['002a', '12:05'], ['097', '14:50'], ['098', '15:01'],
+                ['PCA-001', '11:00'], ['PCA-003', '14:56'], ['PCA-004', '16:00']].map(([numero, h], id) => ({ id, numero, isoTimestamp: t(h) }));
+            const o = ordreMainCourante(ev);
+            return [...ev].sort((a, b) => o.get(a.id) - o.get(b.id)).map(e => e.numero).join(' ');
+        });
+        controler('5. Main courante fusionnée : les lignes d\'une autre main courante rangées à leur heure, les lignes insérées à leur numéro',
+            ordre === 'PCA-001 001 002 002a 097 PCA-003 098 PCA-004', ordre);
     } finally {
         for (const a of apps.reverse()) await a.close().catch(() => {});
         dossiers.forEach(d => fs.rmSync(d, { recursive: true, force: true }));

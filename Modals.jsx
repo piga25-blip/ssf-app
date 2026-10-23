@@ -80,10 +80,28 @@ GestionSecretairesModal = React.memo(GestionSecretairesModal);
 const GestionPlanningModal = ({ 
     masterSauveteursList, activeSauveteurIds, 
     teams, events, nextEventNumber,
-    planning, totalDays, onClose, actions, verifierEtPropagerAvantAction, mcMode, mcIdentifiant, startHour
+    planning, totalDays, onClose, actions, verifierEtPropagerAvantAction, mcMode, mcIdentifiant, startHour,
+    currentSecretaire
 }) => {
     const [selectedSauveteurs, setSelectedSauveteurs] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    // Fonction à l'arrivée : { id: 'gestion' | 'conseiller_technique' } (sinon « Disponible »)
+    const [fonctionArrivee, setFonctionArrivee] = useState({});
+    // Gestion cochée d'office (rôle de gestion, ou secrétaire de ce poste) ; conseiller technique
+    // seulement proposé : un CT ne vient pas toujours dans cette fonction
+    const fonctionsProposees = (s) => {
+        const f = fonctionsDuRole(s.role);
+        const secretaire = memePersonne(s.name, currentSecretaire);
+        return { gestion: f.gestion || secretaire, conseiller: f.conseiller, parDefaut: secretaire || (f.gestion && !f.conseiller) ? 'gestion' : null };
+    };
+    const choisirArrivant = (s, coche) => {
+        if (coche) {
+            setSelectedSauveteurs([...selectedSauveteurs, s.id]);
+            setFonctionArrivee({ ...fonctionArrivee, [s.id]: fonctionsProposees(s).parDefaut });
+        } else {
+            setSelectedSauveteurs(selectedSauveteurs.filter(id => id !== s.id));
+        }
+    };
     useCloseOnEscape(onClose);
 
     const listePrefectorale = masterSauveteursList
@@ -106,8 +124,11 @@ const GestionPlanningModal = ({
             return;
         }
         verifierEtPropagerAvantAction();
-        actions.arriveeSauveteurs(selectedSauveteurs);
+        const activites = {};
+        selectedSauveteurs.forEach(id => { if (fonctionArrivee[id] && !activeSauveteurIds.includes(id)) activites[id] = fonctionArrivee[id]; });
+        actions.arriveeSauveteurs(selectedSauveteurs, activites);
         setSelectedSauveteurs([]);
+        setFonctionArrivee({});
         alert('✅ Sauveteurs ajoutés au planning !');
     };
 
@@ -143,23 +164,42 @@ const GestionPlanningModal = ({
                                 className="w-full px-3 py-2 border rounded-lg mb-3"
                             />
                             <div className="max-h-80 overflow-y-auto space-y-2">
-                                {filteredListe.map(s => (
-                                    <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-green-100 rounded cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={selectedSauveteurs.includes(s.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedSauveteurs([...selectedSauveteurs, s.id]);
-                                                } else {
-                                                    setSelectedSauveteurs(selectedSauveteurs.filter(id => id !== s.id));
-                                                }
-                                            }}
-                                            className="w-4 h-4"
-                                        />
-                                        <span className="text-sm">{s.name}</span>
-                                    </label>
-                                ))}
+                                {filteredListe.map(s => {
+                                    const choisi = selectedSauveteurs.includes(s.id);
+                                    const proposees = fonctionsProposees(s);
+                                    const caseFonction = (activite, libelle, couleur) => (
+                                        <label className="flex items-center gap-1 text-xs cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={fonctionArrivee[s.id] === activite}
+                                                onChange={(e) => setFonctionArrivee({ ...fonctionArrivee, [s.id]: e.target.checked ? activite : null })}
+                                                className="w-3.5 h-3.5"
+                                            />
+                                            <span className="inline-block rounded-sm border border-gray-400" style={{ width: '12px', height: '12px', backgroundColor: couleur }}></span>
+                                            {libelle}
+                                        </label>
+                                    );
+                                    return (
+                                    <div key={s.id} className="p-2 hover:bg-green-100 rounded">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={choisi}
+                                                onChange={(e) => choisirArrivant(s, e.target.checked)}
+                                                className="w-4 h-4"
+                                            />
+                                            <span className="text-sm">{s.name}</span>
+                                            {s.role && <span className="text-xs text-gray-500 truncate">{s.role}</span>}
+                                        </label>
+                                        {choisi && (proposees.gestion || proposees.conseiller) && (
+                                            <div className="flex flex-wrap gap-3 ml-6 mt-1">
+                                                {proposees.gestion && caseFonction('gestion', 'arrive en gestion', '#ffff00')}
+                                                {proposees.conseiller && caseFonction('conseiller_technique', 'arrive comme conseiller technique', '#ffc0cb')}
+                                            </div>
+                                        )}
+                                    </div>
+                                    );
+                                })}
                             </div>
                             <button 
                                 onClick={handleArrivee}
@@ -350,9 +390,36 @@ try {
     );
 };
 // Modal de changement de secrétaire
-let SecretaireModal = ({ currentSecretaire, setCurrentSecretaire, onClose }) => {
+let SecretaireModal = ({ currentSecretaire, setCurrentSecretaire, onClose, masterSauveteursList = [], activeSauveteurIds = [], planning = {}, startHour, totalDays, actions }) => {
     const [newName, setNewName] = React.useState(currentSecretaire || '');
     useCloseOnEscape(onClose);
+    // Sauveteurs sur site, pour choisir le secrétaire dans la liste
+    const presents = activeSauveteurIds
+        .map(id => masterSauveteursList.find(s => s.id === id))
+        .filter(Boolean)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr', { sensitivity: 'base' }));
+    const sauveteurChoisi = presents.find(s => memePersonne(s.name, newName));
+
+    // Le secrétaire du poste, s'il est sur site, passe en « Gestion - PC » au créneau actuel
+    const mettreEnGestion = (sauveteur) => {
+        if (!sauveteur || !actions) return false;
+        const maintenant = new Date();
+        const slot = indexCreneau({ startHour }, maintenant.toISOString());
+        if (slot < 0 || slot >= getTotalSlots(totalDays, startHour)) return false;
+        if ((planning[sauveteur.id] || [])[slot] === 'gestion') return false;
+        actions.affecterPlanningDepuisMC({
+            id: nouvelId(),
+            isoTimestamp: maintenant.toISOString(),
+            secretaire: 'Système',
+            dateHeure: maintenant.toLocaleString('fr-FR'),
+            messageImportant: false,
+            categorie: 'equipe',
+            evenement: `👔 Activité "Gestion - PC" affectée à : ${sauveteur.name} (secrétaire de ce poste)`,
+            numero: NUMERO_AUTO,
+            fait: false
+        }, [sauveteur.id], 'gestion', slot);
+        return true;
+    };
 
     const handleSave = () => {
 if (!newName.trim()) {
@@ -362,7 +429,9 @@ if (!newName.trim()) {
 try {
     setCurrentSecretaire(newName.trim());
     localStorage.setItem('ssf_current_secretaire', newName.trim());
-    alert(`✅ Secrétaire enregistré : ${newName.trim()}\n\nCe nom sera automatiquement utilisé pour vos prochains événements.`);
+    const enGestion = mettreEnGestion(sauveteurChoisi);
+    alert(`✅ Secrétaire enregistré : ${newName.trim()}\n\nCe nom sera automatiquement utilisé pour vos prochains événements.`
+        + (enGestion ? `\n\n👔 ${sauveteurChoisi.name} passe en « Gestion - PC » au planning.` : ''));
 } catch (error) {
     console.error('Erreur enregistrement secrétaire :', error);
     alert('⚠️ Une erreur est survenue, mais la fenêtre va se fermer.');
@@ -408,6 +477,23 @@ try {
                     autoFocus
                     onKeyPress={(e) => e.key === 'Enter' && handleSave()}
                 />
+                {presents.length > 0 && (
+                    <div className="mt-3">
+                        <p className="text-xs text-gray-600 mb-1">Ou choisissez parmi les sauveteurs sur site (il passera en « Gestion - PC » au planning) :</p>
+                        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+                            {presents.map(s => (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => setNewName(s.name)}
+                                    className={`text-xs px-2 py-1 rounded border ${sauveteurChoisi && sauveteurChoisi.id === s.id ? 'bg-yellow-200 border-yellow-500 font-semibold' : 'bg-gray-50 border-gray-300 hover:bg-yellow-50'}`}
+                                >
+                                    {s.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="flex gap-3">
@@ -541,7 +627,7 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
                             </div>
                             <div onClick={() => setTypeSecours('exercice')}
                                 className={`p-4 border-4 rounded-xl cursor-pointer transition-all text-center ${typeSecours === 'exercice' ? 'border-amber-500 bg-amber-50 shadow-md' : 'border-gray-200 hover:border-amber-300'}`}>
-                                <div className="text-3xl">🟡</div>
+                                <div className="text-3xl">🎓</div>
                                 <div className="font-black text-lg text-amber-700 mt-1">EXERCICE</div>
                                 <div className="text-xs text-gray-500">Simulation / manœuvre</div>
                                 {typeSecours === 'exercice' && <div className="text-xl mt-1">✅</div>}
@@ -623,7 +709,7 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    {d.rescueId.toUpperCase().startsWith('EXERCICE') ? <span className="text-lg">🟡</span> : <span className="text-lg">🚨</span>}
+                                                    {d.rescueId.toUpperCase().startsWith('EXERCICE') ? <span className="text-lg">🎓</span> : <span className="text-lg">🚨</span>}
                                                     <span className="font-bold text-gray-800 truncate">{d.rescueId}</span>
                                                 </div>
                                                 <div className="text-xs text-gray-500 flex gap-4">

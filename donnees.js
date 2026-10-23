@@ -150,7 +150,7 @@ const affecterCreneau = (ligne, slot, activite) => {
 // ligne de planning ; rien si l'heure est hors du planning. Renvoie le nouveau planning.
 const affecterAuCreneauActuel = (etat, ids, horodatage, activite) => {
     const slot = indexCreneau(etat, horodatage);
-    if (slot < 0 || slot >= getTotalSlots(etat.totalDays)) return etat.planning;
+    if (slot < 0 || slot >= getTotalSlots(etat.totalDays, etat.startHour)) return etat.planning;
     const planning = { ...etat.planning };
     ids.forEach(id => { if (planning[id]) { const r = [...planning[id]]; r[slot] = activite; planning[id] = r; } });
     return planning;
@@ -263,9 +263,11 @@ const ACTIONS_DONNEES = {
 
     // Arrivée sur site : activation, n° permanent, créneau « disponible » au planning,
     // une ligne groupée de main courante. Un sauveteur déjà venu (parti puis revenu)
-    // garde son n° et sa ligne de planning.
+    // garde son n° et sa ligne de planning. a.activites : { id: 'gestion' | 'conseiller_technique' }
+    // pour ceux qui arrivent dans cette fonction (une ligne de main courante par fonction).
     'SAUVETEURS/ARRIVEE'(etat, a) {
-        const totalSlots = getTotalSlots(etat.totalDays);
+        const activites = a.activites || {};
+        const totalSlots = getTotalSlots(etat.totalDays, etat.startHour);
         const slot = indexCreneau(etat, a.horodatage);
         const dansPlanning = slot >= 0 && slot < totalSlots;
         let { activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber } = etat;
@@ -276,12 +278,12 @@ const ACTIONS_DONNEES = {
                 sauveteurPermanentNumbers = { ...sauveteurPermanentNumbers, [id]: nextPermanentNumber };
                 nextPermanentNumber++;
                 const ligne = Array(totalSlots).fill('nondef');
-                if (dansPlanning) ligne[slot] = 'disponible';
+                if (dansPlanning) ligne[slot] = activites[id] || 'disponible';
                 planning[id] = ligne;
             } else if (dansPlanning) {
                 const ligne = planning[id] ? [...planning[id]] : Array(totalSlots).fill('nondef');
                 while (ligne.length < totalSlots) ligne.push('nondef');
-                ligne[slot] = 'disponible';
+                ligne[slot] = activites[id] || 'disponible';
                 planning[id] = ligne;
             }
         });
@@ -290,9 +292,19 @@ const ACTIONS_DONNEES = {
             categorie: 'personnel',
             evenement: etat.mcMode === 'secondaire' ? `Sauveteurs requis : ${noms}` : `Arrivée de : ${noms}`,
         });
+        // Arrivée en gestion ou comme conseiller technique : ligne « 👔 Activité … affectée à »
+        const lignesFonction = dansPlanning ? ['gestion', 'conseiller_technique'].map((act, i) => {
+            const ids = a.ids.filter(id => activites[id] === act);
+            if (ids.length === 0) return null;
+            const nom = act === 'gestion' ? 'Gestion - PC' : 'Conseiller technique';
+            return evenementSysteme(etat, { ...a, idEvenement: a.idEvenement + '-' + (i + 1) }, {
+                categorie: 'equipe',
+                evenement: `👔 Activité "${nom}" affectée à : ${nomsSauveteurs(etat, ids).join(', ')}`,
+            });
+        }).filter(Boolean) : [];
         return {
             ...etat, activeSauveteurIds, sauveteurPermanentNumbers, nextPermanentNumber, planning,
-            events: [...etat.events, evenement],
+            events: [...etat.events, evenement, ...lignesFonction],
         };
     },
 
@@ -300,7 +312,7 @@ const ACTIONS_DONNEES = {
     // gardé au planning avec « Quitter le secours » sur le créneau actuel (les créneaux vides
     // qui précèdent reprennent la dernière activité), une ligne de main courante.
     'SAUVETEURS/DEPART'(etat, a) {
-        const totalSlots = getTotalSlots(etat.totalDays);
+        const totalSlots = getTotalSlots(etat.totalDays, etat.startHour);
         const slot = indexCreneau(etat, a.horodatage);
         const vide = v => !v || v === 'nondef' || v === 'effacer';
         const planning = { ...etat.planning };
@@ -493,7 +505,7 @@ const ACTIONS_DONNEES = {
     // Activité posée sur des cases de la grille (une ligne est créée si besoin) ; ligne de
     // main courante facultative (construite par l'appelant)
     'PLANNING/AFFECTER'(etat, { cellules, activite, evenement }) {
-        const totalSlots = getTotalSlots(etat.totalDays);
+        const totalSlots = getTotalSlots(etat.totalDays, etat.startHour);
         const planning = { ...etat.planning };
         cellules.forEach(({ id, slot }) => {
             const r = planning[id] ? [...planning[id]] : Array(totalSlots).fill('nondef');
@@ -676,7 +688,13 @@ const ACTIONS_DONNEES = {
         if (!etat.teams.some(t => t.id === idSource)) refuser("L'équipe à scinder n'existe plus (modifiée sur un autre poste ?).");
         if (etat.teams.some(t => t.id === nouvelleEquipe.id || t.name === nouvelleEquipe.name)) refuser(`« ${nouvelleEquipe.name} » existe déjà (créée sur un autre poste ?).`);
         const teams = etat.teams
-            .map(t => t.id === idSource ? { ...t, members: t.members.filter(m => !nouvelleEquipe.members.includes(m)) } : t)
+            .map(t => t.id !== idSource ? t : {
+                ...t, members: t.members.filter(m => !nouvelleEquipe.members.includes(m)),
+                history: [...(t.history || []), {
+                    timestamp: nouvelleEquipe.createdAt, action: 'scission',
+                    details: { nouvelle_equipe: nouvelleEquipe.name, membres: nouvelleEquipe.history?.[0]?.details?.membres || [] },
+                }],
+            })
             .concat([nouvelleEquipe]);
         return { ...etat, teams, events: [...etat.events, ...evenements] };
     },
@@ -765,7 +783,7 @@ const creerActionsDonnees = (dispatch) => {
         supprimerSauveteursInactifs: () => dispatch({ type: 'SAUVETEURS/LISTE_SUPPRIMER_INACTIFS' }),
         importerSauveteursListe: (sauveteurs) => dispatch({ type: 'SAUVETEURS/LISTE_IMPORTER', sauveteurs }),
         remplacerSauveteursListe: (sauveteurs) => dispatch({ type: 'SAUVETEURS/LISTE_REMPLACER', sauveteurs }),
-        arriveeSauveteurs: (ids) => dispatch({ type: 'SAUVETEURS/ARRIVEE', ids, ...ligneMC() }),
+        arriveeSauveteurs: (ids, activites = {}) => dispatch({ type: 'SAUVETEURS/ARRIVEE', ids, activites, ...ligneMC() }),
         departSauveteurs: (ids) => dispatch({ type: 'SAUVETEURS/DEPART', ids, ...ligneMC() }),
         numeroterSauveteursManquants: () => dispatch({ type: 'SAUVETEURS/NUMEROTER_MANQUANTS' }),
         // Points phones
