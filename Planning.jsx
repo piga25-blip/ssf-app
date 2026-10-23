@@ -15,6 +15,7 @@ let PlanningTab = ({
     const [sortKey, setSortKey] = useState('entryOrder');
     const [sortDirection, setSortDirection] = useState('asc');
     const [statsMode, setStatsMode] = useState('total');
+    const [joursSaisis, setJoursSaisis] = useState(null);
     const [hoveredTeam, setHoveredTeam] = useState(null);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     
@@ -186,7 +187,18 @@ let PlanningTab = ({
         if (colIndex >= totalSlots) return;
         
         const cellKey = getCellKey(rowId, colIndex);
-        
+
+        // Ctrl (ou Cmd) + clic : ajoute la case à la sélection, ou l'en retire, comme dans un tableur
+        if (event.ctrlKey || event.metaKey) {
+            setSelectedCells(prev => {
+                const s = new Set(prev);
+                if (s.has(cellKey)) s.delete(cellKey); else s.add(cellKey);
+                return s;
+            });
+            setLastSelectedCell({ rowId, colIndex });
+            return;
+        }
+
         // Si on clique sur une cellule déjà sélectionnée ET qu'il y a plusieurs cellules sélectionnées
         // ne rien faire (permet de garder la sélection pour utiliser la poignée)
         // MAIS si c'est une sélection d'UNE SEULE cellule, on permet de refaire une sélection
@@ -682,7 +694,7 @@ let PlanningTab = ({
             sauveteursPropager.push({ id, activite, slotDebut: slotSource + 1, slotFin: slotEcoule });
         });
         if (sauveteursPropager.length === 0) { alert('Aucun creneau vide a combler. Tous les sauveteurs sont a jour.'); return; }
-        const noms = [...new Set(sauveteursPropager.map(function(s) { return s.activite; }))];
+        const noms = [...new Set(sauveteursPropager.map(function(s) { const a = ACTIVITIES.find(function(act) { return act.id === s.activite; }); return a ? a.name : s.activite; }))];
         const duree = Math.max.apply(null, sauveteursPropager.map(function(s) { return s.slotFin - s.slotDebut + 1; })) * 15;
         const heure = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const msg = 'Mise a jour - ' + heure + '\n\n' + sauveteursPropager.length + ' sauveteur(s), ' + duree + ' min max.\nActivites: ' + noms.join(', ') + '\n\nVoulez-vous remplir les creneaux vides ?';
@@ -721,8 +733,14 @@ let PlanningTab = ({
                     <label className="font-semibold mr-2">Jours (1-14):</label>
                     <input 
                         type="number" 
-                        value={totalDays}
-                        onChange={(e) => actions.reglerDureePlanning(Math.max(1, Math.min(14, parseInt(e.target.value, 10))))}
+                        value={joursSaisis ?? totalDays}
+                        onChange={(e) => {
+                            // Le champ peut être vide pendant la frappe : on n'enregistre qu'une durée valide (1 à 14)
+                            setJoursSaisis(e.target.value);
+                            const n = parseInt(e.target.value, 10);
+                            if (n >= 1 && n <= 14) actions.reglerDureePlanning(n);
+                        }}
+                        onBlur={() => setJoursSaisis(null)}
                         min="1" max="14"
                         className="px-3 py-2 border rounded w-20"
                     />
