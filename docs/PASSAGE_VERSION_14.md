@@ -1,15 +1,15 @@
 # Passage de la version réseau en version officielle (14.0.0)
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
-Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026** (voir §6).
-Dernière mise à jour du document : 16/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, kits en 14.0.4).
+Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026** (voir §6).
+Dernière mise à jour du document : 24/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, kits en 14.0.5).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
 
 | Dossier | Branche | Rôle |
 |---|---|---|
-| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.4)** : contient désormais le code réseau. Les corrections futures se font ici. |
+| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.5)** : contient désormais le code réseau. Les corrections futures se font ici. |
 | `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
@@ -210,6 +210,18 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   `dist/Kit-essai-terrain-14/`, `Application-SSF-14.0.4-arm64.dmg` et `Application-SSF-14.0.4.dmg`
   (téléchargés depuis la release) dans `dist/Kit-essai-Mac-14/` ; fiches `docs/essai-terrain` et
   `docs/essai-mac` en 14.0.4, PDF refaits ; installateurs 14.0.3 retirés.
+- **Version 14.0.5 publiée** (23/10/2026, release `v14.0.5` « Latest », Windows et Mac, commit
+  `b9c51ce`) : corrections trouvées en revoyant les films de formation (bouton « 🏠 Retour PC »,
+  lignes d'une autre main courante rangées à leur heure, ligne gardée dans le formulaire hors
+  ligne, « arrive en gestion » cochée d'office pour les rôles de gestion, fenêtre « ✂️ Scinder »
+  qui garde ses cases au rafraîchissement, planning limité au dernier jour, Ctrl + clic,
+  synthèse et progression des équipes, colonnes Repos / Surface / PC du rapport, palette
+  d'activités sous les fenêtres, icônes visibles partout). Test `tests/verif-scinder.js` ajouté
+  à `npm test`.
+- **Kits passés en 14.0.5** (24/10/2026) : `Application-SSF-Setup-14.0.5.exe` dans
+  `dist/Kit-essai-terrain-14/`, `Application-SSF-14.0.5-arm64.dmg` et `Application-SSF-14.0.5.dmg`
+  (téléchargés depuis la release) dans `dist/Kit-essai-Mac-14/` ; fiches `docs/essai-terrain` et
+  `docs/essai-mac` en 14.0.5, PDF refaits ; installateurs 14.0.4 retirés.
 
 ## 7. Reste à faire
 
