@@ -1157,15 +1157,84 @@ PHASES.push(async (t, o) => {
 // Phase 8 — Fin de secours
 PHASES.push(async (t, o) => {
     const p = t.page;
-    await t.chapitre('Évacuation et sauvegarde');
-    await t.dire(dicte('La victime est sortie de la cavité, prise en charge au poste médical avancé. Puis : victime évacuée vers l\'hôpital de Pontarlier.'), 'Deux lignes importantes : la première au point F ; la seconde sans point phone, car l\'hôpital est hors du site. Catégorie « Secours » détectée.');
-    await o.ligne({ texte: 'La victime est sortie de la cavité, prise en charge au poste médical avancé.', pp: PP.F, important: true });
-    await o.ligne({ texte: 'Victime évacuée vers l\'hôpital de Pontarlier.', important: true });
+    await t.chapitre('Le suivi de la civière');
+    await t.dire(dicte('Message venant de DUBOIS Chloé : fiche bilan numéro 2, trauma de la jambe droite, attelle posée, victime stable.'),
+        '« Message venant de » DUBOIS Chloé remplit l\'équipe 2 ; point E, le point victime ; puis le texte mot pour mot. Important.');
+    await t.vite(() => o.ligne({ venant: 'DUBOIS Chloé', pp: PP.E, texte: 'Fiche bilan numéro 2 : trauma de la jambe droite, attelle posée, victime stable.', important: true }), 0.5);
+    await o.planning();
+    await o.voirLigne('Fiche bilan numéro 2', 'La catégorie est « 🚑 Secours », pas « Progression » : les mots « fiche bilan », « trauma » et « victime » la déclenchent.',
+        'La catégorie « Secours » passe avant toutes les autres : ces lignes se retrouvent d\'un coup d\'œil.');
+    await t.dire(dicte('Message venant de DUBOIS Chloé : soins terminés, le blessé est conditionné dans la civière.'));
+    await t.vite(() => o.ligne({ venant: 'DUBOIS Chloé', pp: PP.E, texte: 'Soins terminés, le blessé est conditionné dans la civière.' }), 0.5);
+    await o.planning();
+    await o.voirLigne('Soins terminés', 'Encore « Secours » : cette fois avec « soins », « blessé » et « civière ».');
+    await t.dire(dicte('Message venant de MARTIN Alice : départ de la civière du point victime, brancardage par les équipes 1 et 2.'),
+        'MARTIN Alice remplit l\'équipe 1, qui porte la civière. Point E. Important : la civière part.');
+    await t.vite(() => o.ligne({ venant: 'MARTIN Alice', pp: PP.E, texte: 'Départ de la civière du point victime, brancardage par les équipes 1 et 2.', important: true }), 0.5);
+    await o.planning();
+    await o.voirLigne('Départ de la civière', '« Brancardage » est le dernier mot de la liste : victime, blessé, civière, fiche bilan, soins, trauma, brancardage. Chacun suffit pour la catégorie « Secours ».');
+    await t.avancer(10, 'Dix minutes plus tard…');
+    await t.dire(dicte('Message venant de MARTIN Alice : civière à la base du P40.'), 'À chaque point phone, une ligne : on suit la civière comme une équipe.');
+    await t.vite(() => o.ligne({ venant: 'MARTIN Alice', pp: PP.C, texte: 'Civière à la base du P40.' }), 0.5);
+    await o.planning();
+    await o.voirLigne('Civière à la base', 'Équipe 1, point C, catégorie « Secours ».');
+    await t.avancer(10, 'Dix minutes plus tard…');
+    await t.dire(dicte('Message venant de MARTIN Alice : civière en tête du P40.'));
+    await t.vite(() => o.ligne({ venant: 'MARTIN Alice', pp: PP.B, texte: 'Civière en tête du P40.' }), 0.5);
+    await o.planning();
+    const tsTeteP40 = await o.maintenant();
+    await o.voirLigne('Civière en tête', 'Équipe 1, point B.');
+    await t.avancer(10, 'Dix minutes plus tard…');
+    await t.dire(dicte('Message venant de MARTIN Alice : civière sortie de la cavité, les équipes 1 et 2 l\'accompagnent au poste médical avancé.'),
+        'Point A, l\'entrée : la civière sort, l\'équipe reste en surface. Sens « 🌿 Reste à l\'entrée ». Important.');
+    await t.vite(() => o.ligne({ venant: 'MARTIN Alice', pp: PP.A, sens: '🌿 Reste à l\'entrée', texte: 'Civière sortie de la cavité, les équipes 1 et 2 l\'accompagnent au poste médical avancé.', important: true }), 0.5);
+    await o.planning();
+    const tsSortie = await o.maintenant();
+    await t.dire('L\'équipe 2 sort avec la civière : une ligne pour elle aussi, au point A.');
+    await t.vite(() => o.ligne({ equipe: 'Équipe 2', pp: PP.A, sens: '🌿 Reste à l\'entrée' }), 0.5);
+    await o.planning();
+    await o.voirLigne('Civière sortie', 'La sortie de la civière, en rouge : c\'est une ligne importante.');
+    await o.voirPlanning('MARTIN Alice', 'Au planning, les équipes 1 et 2 passent de « Sous Terre » à « Mission surface ».');
+    await t.dire(dicte('Message venant de DUBOIS Chloé : victime prise en charge par le SAMU au poste médical avancé.'), 'Point F, le parking. Important.');
+    await t.vite(() => o.ligne({ venant: 'DUBOIS Chloé', pp: PP.F, texte: 'Victime prise en charge par le SAMU au poste médical avancé.', important: true }), 0.5);
+    await o.planning();
+    await t.dire(dicte('Message venant du SAMU : départ de la victime en ambulance.'), 'Sans point phone : l\'ambulance quitte le site. Important.');
+    await t.vite(() => o.ligne({ venant: 'SAMU', texte: 'Départ de la victime en ambulance.', important: true }), 0.5);
+    await o.voirLigne('Départ de la victime', 'La dernière ligne du suivi : la victime a quitté le site.');
+    await t.chapitre('Retrouver les lignes « Secours »');
+    await t.dire('« 🔍 Recherche Avancée », filtre « 🏷️ Catégories » : on ne garde que « 🚑 Secours ».');
+    await t.clic(t.bouton('Recherche Avancée'));
+    await t.clic(t.bouton(/Catégories \(/));
+    await t.clic(t.bouton('Tout décocher'));
+    await t.cocher(t.etiquette('🚑 Secours').locator('input'));
+    const resultats = p.getByText(/Résultats : \d+ événement/).first();
+    await t.viser(resultats);
+    const liste = p.locator('div.max-h-96.overflow-y-auto:visible').first();
+    if (process.env.FILM_RAPIDE) await t.decrire('S8-secours');
+    await t.dire(`${(await resultats.innerText()).match(/\d+/)[0]} lignes « Secours » : tout ce qui concerne la victime, de l\'alerte du CODIS au départ en ambulance.`,
+        'Pratique pour le compte rendu au SAMU ou au directeur des opérations.');
+    await t.viser(liste);
+    await liste.evaluate(async (l) => { for (let i = 0; i < 40; i++) { l.scrollTop += l.scrollHeight / 40; await new Promise(r => setTimeout(r, 80)); } });
+    await t.dire('En bas de la liste, la civière point par point : le bilan, le départ du point victime, la base et la tête du P40, la sortie, le poste médical avancé, l\'ambulance.');
+    await o.fermer();
+    await t.dire('La remontée de la civière se lit aussi sur le graphique de progression.');
+    await t.vite(() => t.clic(t.bouton('Tableau de Bord')));
+    await t.vite(() => t.clic(t.bouton('Progression Équipes')));
+    const graphe = p.locator('svg[width]:visible').filter({ has: p.locator('text', { hasText: 'entrée de la cavité' }) }).first();
+    for (const nom of ['Équipe 3', 'Équipe 4', 'Équipe 5', 'Équipe 6', 'Équipe 2B']) {
+        const puce = p.locator('button:visible', { has: p.locator('svg') }).filter({ hasText: new RegExp('^' + nom + ' \\(') }).first();
+        if (await puce.count()) await t.vite(() => t.clic(puce), 0.3);
+    }
+    if (process.env.FILM_RAPIDE) await t.decrire('S8-graphe');
+    await t.viser(graphe);
+    await t.dire('Équipes 1 et 2 seules : l\'équipe 1, avec la civière, remonte du point victime par C, B et A ; l\'équipe 2 sort avec elle en A, puis accompagne la victime jusqu\'au parking, F.');
+    await t.vite(() => t.clic(t.bouton(/Main Courante/)));
+    await t.chapitre('Sauvegarde');
     await t.dire(dicte('Par précaution, exportez tout avant de fermer l\'application.'), '« Exporter Tout » : tout le secours dans un seul fichier, à archiver.');
     await t.clic(t.bouton('Exporter Tout'));
     const idPrincipal = await p.locator('input[placeholder="Ex: GouffreA_2025"]').inputValue();
     await t.chapitre('Recopier une main courante papier');
-    await t.dire(dicte('L\'adjudant ROUX a tenu une main courante papier au parking. Recopiez-la sur un PC de base arrière.'),
+    await t.dire(dicte('ROUX Pierre, responsable du PCA parking, a tenu une main courante papier. Recopiez-la sur un PC de base arrière.'),
         'On relance l\'application, nouveau dossier, mode « PC Base Arrière » avec l\'identifiant PCA, et « Recopie d\'une main courante papier ».');
     await p.reload();
     await p.waitForFunction(() => document.querySelector('#root')?.children.length > 0, null, { timeout: 60000 });
@@ -1185,8 +1254,10 @@ PHASES.push(async (t, o) => {
     if (await p.locator('h2:visible', { hasText: 'Secrétaire de ce PC' }).count()) { await t.saisir(t.champ('Ex: Martin DUPONT'), SECRETAIRE_2); await t.clic(t.bouton(/^✓ Enregistrer$/)); }
     await t.dire('Pour chaque ligne du papier : l\'heure écrite, puis le texte. Les lignes se rangent dans l\'ordre chronologique et sont numérotées PCA-001, PCA-002…');
     const maintenant = await o.maintenant();
-    for (const [min, txt] of [[-70, 'Route d\'accès fermée par la gendarmerie.'], [-100, 'Véhicule du SSF 25 arrivé au parking.'], [-30, 'Ambulance du SAMU arrivée au parking.']]) {
-        const hh = o.heure(maintenant + min * 60000);
+    // L'ambulance est arrivée entre deux lignes du PC : civière en tête du P40, puis sortie de la cavité
+    const ambulance = (tsTeteP40 + tsSortie) / 2;
+    for (const [ts, txt] of [[maintenant - 70 * 60000, 'Route d\'accès fermée par la gendarmerie.'], [maintenant - 100 * 60000, 'Véhicule du SSF 25 arrivé au parking.'], [ambulance, 'Ambulance du SAMU arrivée au parking.']]) {
+        const hh = o.heure(ts);
         await o.valeur(p.locator('input[type="time"]:visible').first(), hh);
         await t.saisir(t.champ('Description...'), txt);
         await t.clic(t.bouton(/^✓ ENREGISTRER$/));
@@ -1213,8 +1284,24 @@ PHASES.push(async (t, o) => {
     await t.dire(dicte('Intégrez la main courante papier.'), '« Importer MC (aperçu) » montre la fusion chronologique avant de confirmer. Les lignes recopiées portent « 📝 papier ».');
     await t.clic(t.bouton('Importer MC (aperçu)'));
     await t.fichier(p.getByText('Cliquez pour sélectionner un fichier'), p.locator('#mc-file-input'), fichierPCA);
-    await t.rythme(3);
+    await t.rythme(1.5);
+    // Dans l'aperçu (ordre chronologique) : la ligne du papier entre deux lignes du PC
+    const ligneApercu = (texte) => o.modale().locator('tbody tr', { hasText: texte }).first();
+    await ligneApercu('Ambulance du SAMU').evaluate(tr => tr.scrollIntoView({ block: 'center' }));
+    if (process.env.FILM_RAPIDE) await t.decrire('S8-apercu');
+    await t.viser(ligneApercu('Civière en tête'));
+    await t.viser(ligneApercu('Ambulance du SAMU'));
+    await t.viser(ligneApercu('Civière sortie'));
+    await t.dire('Dans l\'aperçu, rangé par heure : l\'arrivée de l\'ambulance, notée sur le papier (badge PCA), vient entre deux lignes du PC de terrain : « civière en tête du P40 » et « civière sortie de la cavité ».');
     await t.clic(t.bouton('Confirmer la Fusion'));
+    // La main courante est rangée par numéro : un clic sur « Date/Heure » la range par heure
+    await t.dire('Dans la main courante, la ligne garde son numéro, PCA-003. Pour la lire à sa place, on range le tableau par heure : clic sur l\'en-tête « Date/Heure ».');
+    await t.clic(p.locator('th:visible', { hasText: 'Date/Heure' }).first());
+    if (process.env.FILM_RAPIDE) await t.decrire('S8-fusion');
+    await o.voirLigne('Ambulance du SAMU arrivée', 'La ligne du papier, « 📝 papier », au nom de ROUX Pierre, entre « civière sortie de la cavité » au-dessus et « civière en tête du P40 » au-dessous.',
+        'Rangée par heure, la main courante fusionnée raconte le secours dans l\'ordre, quel que soit le poste qui a noté la ligne.');
+    await t.clic(p.locator('th:visible', { hasText: /^N°/ }).first());
+    await t.dire('Un clic sur « N° » remet l\'ordre habituel, par numéro.');
     await t.chapitre('Clôture et rapport');
     await t.dire(dicte('Faites une sauvegarde maintenant.'), 'Les sauvegardes automatiques se téléchargent ou se restaurent depuis cette fenêtre.');
     await t.clic(t.bouton('Sauvegardes auto'));
@@ -1229,10 +1316,48 @@ PHASES.push(async (t, o) => {
     await o.ligne({ texte: 'Matériel récupéré et rangé.' });
     await t.clic(t.bouton('Clôturer le secours'));
     await t.clic(t.bouton('Heure actuelle'));
-    await t.dire(dicte('Sortez le rapport de fin de mission.'), 'Tableau de bord, « Générer un Rapport » : aperçu, puis export PDF (et Excel en rouvrant l\'aperçu).');
+    await t.dire(dicte('Sortez le rapport de fin de mission.'), 'Tableau de bord, « Générer un Rapport » : un aperçu, puis l\'export en PDF ou en Excel.');
     await t.clic(t.bouton('Tableau de Bord'));
     await t.clic(t.bouton('Générer un Rapport'));
-    await t.rythme(4);
+    const rapport = p.locator('h2:visible', { hasText: 'Prévisualisation du Rapport' }).locator('xpath=ancestor::div[contains(@class,"flex-col")][1]');
+    const titre = (texte, balise = 'h3') => rapport.locator(balise, { hasText: texte }).first();
+    await t.viser(titre('RAPPORT DE FIN DE MISSION', 'h1'));
+    await t.dire('Le rapport a trois parties : les statistiques générales, le temps de chaque sauveteur, la chronologie des équipes. En haut, l\'heure où il a été généré.');
+    await t.viser(titre('Liste des Sauveteurs Engagés').locator('xpath=..'));
+    if (process.env.FILM_RAPIDE) await t.decrire('S8-rapport-1');
+    await t.dire('Première partie. Les sauveteurs inscrits au planning, comptés par origine : SSF du département, SSF des autres départements, et les autres services, comme la gendarmerie, les pompiers ou le radioamateur.');
+    await t.viser(titre('Mobilisation Effective').locator('xpath=..'));
+    await t.dire('La mobilisation : les sauveteurs venus sur site, ceux restés disponibles hors équipe, le nombre d\'équipes constituées et le total des membres en équipe.');
+    await t.viser(titre('Main Courante').locator('xpath=..'));
+    await t.dire('La main courante : le nombre de lignes enregistrées, papier comprises.',
+        'La main courante elle-même ne figure pas dans le rapport : on la joint en l\'imprimant depuis son onglet, avec « Imprimer main courante ».');
+    await t.viser(titre('2. TEMPS PAR SAUVETEUR', 'h2').locator('xpath=..'));
+    if (process.env.FILM_RAPIDE) await t.decrire('S8-rapport-2');
+    await t.dire('Deuxième partie, le temps par sauveteur, du plus long au plus court : le total, puis sous terre (brancardage et plongée compris), en repos (repas compris), en surface (approche comprise) et au PC (gestion, direction, conseiller technique).',
+        'Les temps sont lus dans le planning, jusqu\'à l\'heure actuelle : un planning bien tenu donne un rapport juste.');
+    const suivant = rapport.locator('button', { hasText: 'Suivant »' });
+    if (await suivant.count() && await suivant.isEnabled()) {
+        await t.clic(suivant);
+        await t.dire('Quinze sauveteurs par page : « Suivant » montre les autres.');
+        await t.vite(() => t.clic(rapport.locator('button', { hasText: '« Précédent' })));
+    }
+    await t.viser(titre('3. CHRONOLOGIE DES ÉQUIPES', 'h2'));
+    const carte = (nom) => rapport.locator('div.border.rounded-lg', { has: p.locator('h3', { hasText: new RegExp('^' + nom + ' - ') }) }).first();
+    await t.viser(carte('Équipe 1'));
+    if (process.env.FILM_RAPIDE) await t.decrire('S8-rapport-3');
+    await t.dire('Troisième partie, une fiche par équipe : sa mission, « mission terminée » ou « en cours », l\'heure de création et celle de dissolution, l\'ordre de mission, le chef et les membres du départ.',
+        'Puis l\'historique des changements : pour l\'équipe 1, l\'arrivée de THOMAS David, les départs de BERNARD Bruno vers l\'équipe 3 et de ROBERT Emma vers la 2B.');
+    await t.viser(carte('Équipe 2'));
+    await t.dire('Pour l\'équipe 2, la scission : PETIT Félix part dans la 2B.');
+    await t.viser(carte('Équipe 2B'));
+    if (process.env.FILM_RAPIDE) await t.decrire('S8-rapport-4');
+    await t.dire('La fiche de la 2B dit qu\'elle est issue de la scission de l\'équipe 2, puis donne sa nouvelle mission, l\'arrivée de ROBERT Emma et sa dissolution au retour au PC.');
+    await t.viser(carte('Équipe 3'));
+    await t.dire('Pour l\'équipe 3, le changement de chef : SIMON Julien.');
+    await t.viser(carte('Équipe 5'));
+    await t.dire('Toutes les équipes y sont, dissoutes comprises, avec l\'heure de chaque changement : le compte rendu du secours se rédige à partir de ce rapport.');
+    await t.viser(t.bouton('Exporter en PDF'));
+    await t.dire('Le PDF reprend ces trois parties, chacune sur sa page ; l\'Excel en fait trois feuilles : Statistiques, Temps Sauveteurs et Équipes.');
     await t.clic(t.bouton('Exporter en PDF'));
     await t.clic(t.bouton('Main Courante'));
     await t.dire(dicte('Archivez le secours. Voici ce qu\'on ne touche pas.'), '« Exporter Tout » une dernière fois. Le mode maintenance (RESET APPLI, VIDER STORAGE) efface des secours : on le montre, on ne clique jamais.');
@@ -1290,21 +1415,23 @@ const presentation = () => executer('S0-presentation', "Présentation de l'exerc
 // ── Un film par phase ───────────────────────────────────────────────────
 const film = (n, id, titre) => executer(id, titre, async (t) => {
     const o = outils(t);
+    // À partir de la phase 6 (mode réseau), le PC principal date les lignes des autres postes à
+    // l'heure réelle : l'horloge du PC, partie plus tôt et avancée par les phases précédentes
+    // (pauses, rappels), est amenée à l'heure réelle avant la phase 6 et les suivantes
+    const heureReelle = async () => {
+        const ecart = Date.now() - await t.page.evaluate(() => Date.now());
+        if (ecart > 0) await t.page.clock.fastForward(ecart);
+        await t.page.waitForTimeout(5000);
+    };
     for (let k = 0; k < n - 1; k++) {   // phases précédentes, non filmées
         // Phases 7 et 8 : 4 minutes entre deux progressions des phases 1 à 5, pour que le graphique
         // de progression ressemble à celui d'une vraie séance
         o.etaler = n >= 7 && k < 5 ? 4 : 0;
+        if (k >= 5) await heureReelle();
         await PHASES[k](t, o);
     }
     o.etaler = 0;
-    // À partir de la phase 6 (mode réseau), le PC principal date les lignes des autres postes à
-    // l'heure réelle : l'horloge du PC, partie plus tôt et avancée par les phases précédentes
-    // (pauses, rappels), est amenée à l'heure réelle avant le film
-    if (n >= 6) {
-        const ecart = Date.now() - await t.page.evaluate(() => Date.now());
-        if (ecart > 0) await t.page.clock.fastForward(ecart);
-        await t.page.waitForTimeout(5000);
-    }
+    if (n >= 6) await heureReelle();
     await t.debutFilm();
     await PHASES[n - 1](t, o);
 // Phases 1 à 5 : séance commencée à 9 h ce jour (jamais à cheval sur minuit, quelle que soit
