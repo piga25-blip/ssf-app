@@ -1418,9 +1418,13 @@ let GestionEquipesModal = ({
                         if (!newNum.trim()) { alert('Saisissez un numéro'); return; }
                         const newName = 'Équipe ' + newNum.trim();
                         if (teams.find(t => t.name === newName)) { alert(`"${newName}" existe déjà`); return; }
-                        const newTeam = { id: 'T'+newNum.trim()+'_'+Date.now(), name: newName, mission: team.mission, ordreMission: team.ordreMission || '', typeMission: team.typeMission, lieu: team.lieu, sousTerre: team.sousTerre, members: membresSelec, status: 'active' };
+                        const listeDetaches = membresSelec.map(id=>{const s=masterSauveteursList.find(sv=>sv.id===id);return s?s.name:id;});
+                        const creation = new Date().toISOString();
+                        const newTeam = { id: 'T'+newNum.trim()+'_'+Date.now(), name: newName, mission: team.mission, ordreMission: team.ordreMission || '', typeMission: team.typeMission, lieu: team.lieu, sousTerre: team.sousTerre, members: membresSelec, status: 'active',
+                            createdAt: creation, dissolvedAt: null,
+                            history: [{ timestamp: creation, action: 'creation', details: { chef: listeDetaches[0], membres: listeDetaches, origine: team.name } }] };
                         const membresRestants = team.members.filter(id => !membresSelec.includes(id));
-                        const nomsDetaches = membresSelec.map(id=>{const s=masterSauveteursList.find(sv=>sv.id===id);return s?s.name:id;}).join(', ');
+                        const nomsDetaches = listeDetaches.join(', ');
                         // Trouver le dernier point phone connu de l'équipe source
                         const eventsEquipeSource = events
                             .filter(e => e.equipe === team.name && e.pointPhone)

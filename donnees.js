@@ -688,7 +688,13 @@ const ACTIONS_DONNEES = {
         if (!etat.teams.some(t => t.id === idSource)) refuser("L'équipe à scinder n'existe plus (modifiée sur un autre poste ?).");
         if (etat.teams.some(t => t.id === nouvelleEquipe.id || t.name === nouvelleEquipe.name)) refuser(`« ${nouvelleEquipe.name} » existe déjà (créée sur un autre poste ?).`);
         const teams = etat.teams
-            .map(t => t.id === idSource ? { ...t, members: t.members.filter(m => !nouvelleEquipe.members.includes(m)) } : t)
+            .map(t => t.id !== idSource ? t : {
+                ...t, members: t.members.filter(m => !nouvelleEquipe.members.includes(m)),
+                history: [...(t.history || []), {
+                    timestamp: nouvelleEquipe.createdAt, action: 'scission',
+                    details: { nouvelle_equipe: nouvelleEquipe.name, membres: nouvelleEquipe.history?.[0]?.details?.membres || [] },
+                }],
+            })
             .concat([nouvelleEquipe]);
         return { ...etat, teams, events: [...etat.events, ...evenements] };
     },

@@ -586,6 +586,15 @@ let DashboardTab = ({
     const [modalSauveteurPage, setModalSauveteurPage] = React.useState(0);
     useCloseOnEscape(showReportPreview ? () => setShowReportPreview(false) : null);
 
+    // Colonnes du temps par sauveteur (rapport, PDF, Excel) : activités du planning regroupées
+    const RUBRIQUES_TEMPS = {
+        souterre: ['souterre', 'brancardage', 'plongee'],
+        repos: ['repos_site', 'repos_domicile', 'repas_dejeuner'],
+        surface: ['approche', 'mission_surface'],
+        gestion: ['gestion', 'directeur_souterrain', 'conseiller_technique']
+    };
+    const tempsRubrique = (s, rubrique) => RUBRIQUES_TEMPS[rubrique].reduce((total, id) => total + (s.activites[id] || 0), 0);
+
     // Fonction pour générer un rapport de fin de mission
     const generateMissionReport = () => {
         const { jsPDF } = window.jspdf;
@@ -695,10 +704,10 @@ let DashboardTab = ({
         const sauveteurData = allSauveteurs.map(s => [
             s.nom,
             `${s.totalHeures.toFixed(1)}h`,
-            `${(s.activites['souterre'] || 0).toFixed(1)}h`,
-            `${(s.activites['repos'] || 0).toFixed(1)}h`,
-            `${(s.activites['surface'] || 0).toFixed(1)}h`,
-            `${(s.activites['gestion'] || 0).toFixed(1)}h`
+            `${tempsRubrique(s, 'souterre').toFixed(1)}h`,
+            `${tempsRubrique(s, 'repos').toFixed(1)}h`,
+            `${tempsRubrique(s, 'surface').toFixed(1)}h`,
+            `${tempsRubrique(s, 'gestion').toFixed(1)}h`
         ]);
 
         // Afficher tous les sauveteurs avec pagination automatique
@@ -795,6 +804,10 @@ let DashboardTab = ({
                     yPos += 4;
                     doc.text(`Membres initiaux: ${team.history[0].details.membres.join(', ')}`, 14, yPos);
                     yPos += 5;
+                    if (team.history[0].details.origine) {
+                        doc.text(`Issue de la scission de ${team.history[0].details.origine}`, 14, yPos);
+                        yPos += 5;
+                    }
                     doc.setFont(undefined, 'normal');
                 }
 
@@ -831,6 +844,17 @@ let DashboardTab = ({
                             doc.setTextColor(200, 0, 0);
                             doc.text(`  • ${timeOnly} - Dissolution de l'équipe`, 14, yPos);
                             doc.setTextColor(0, 0, 0);
+                            yPos += 5;
+                        } else if (entry.action === 'reactivation') {
+                            doc.text(`  • ${timeOnly} - Réactivation de l'équipe`, 14, yPos);
+                            yPos += 5;
+                        } else if (entry.action === 'scission') {
+                            doc.text(`  • ${timeOnly} - Scission vers ${entry.details.nouvelle_equipe}: ${(entry.details.membres || []).join(', ')}`, 14, yPos);
+                            yPos += 5;
+                        } else if (entry.action === 'modification_mission') {
+                            doc.text(`  • ${timeOnly} - Nouvelle mission: ${entry.details.nouvelle_mission}`, 14, yPos);
+                            yPos += 4;
+                            doc.text(`    (ancienne mission: ${entry.details.ancienne_mission})`, 14, yPos);
                             yPos += 5;
                         }
                     });
@@ -911,10 +935,10 @@ let DashboardTab = ({
                 .map(s => [
                     s.nom,
                     s.totalHeures.toFixed(1),
-                    (s.activites['souterre'] || 0).toFixed(1),
-                    (s.activites['repos'] || 0).toFixed(1),
-                    (s.activites['surface'] || 0).toFixed(1),
-                    (s.activites['gestion'] || 0).toFixed(1),
+                    tempsRubrique(s, 'souterre').toFixed(1),
+                    tempsRubrique(s, 'repos').toFixed(1),
+                    tempsRubrique(s, 'surface').toFixed(1),
+                    tempsRubrique(s, 'gestion').toFixed(1),
                     (s.activites['disponible'] || 0).toFixed(1),
                     (s.activites['engage'] || 0).toFixed(1)
                 ])
@@ -1475,16 +1499,16 @@ let DashboardTab = ({
                                                                         {formatHeuresMinutes(s.totalHeures)}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {formatHeuresMinutes(s.activites['souterre'] || 0)}
+                                                                        {formatHeuresMinutes(tempsRubrique(s, 'souterre'))}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {formatHeuresMinutes(s.activites['repos'] || 0)}
+                                                                        {formatHeuresMinutes(tempsRubrique(s, 'repos'))}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {formatHeuresMinutes(s.activites['surface'] || 0)}
+                                                                        {formatHeuresMinutes(tempsRubrique(s, 'surface'))}
                                                                     </td>
                                                                     <td className="border border-gray-300 px-3 py-2 text-center">
-                                                                        {formatHeuresMinutes(s.activites['gestion'] || 0)}
+                                                                        {formatHeuresMinutes(tempsRubrique(s, 'gestion'))}
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -1583,6 +1607,7 @@ let DashboardTab = ({
                                                             <div className="text-sm text-gray-700 mb-3 bg-gray-50 p-2 rounded">
                                                                 <p><strong>Chef initial:</strong> {team.history[0].details.chef}</p>
                                                                 <p><strong>Membres initiaux:</strong> {team.history[0].details.membres.join(', ')}</p>
+                                                                {team.history[0].details.origine && <p><strong>Issue de la scission de</strong> {team.history[0].details.origine}</p>}
                                                             </div>
                                                         )}
                                                         
@@ -1626,6 +1651,30 @@ let DashboardTab = ({
                                                                                 <div key={histIdx} className="text-red-600">
                                                                                     <p>
                                                                                         • <strong>{timeOnly}</strong> - Dissolution de l'équipe
+                                                                                    </p>
+                                                                                </div>
+                                                                            );
+                                                                        } else if (entry.action === 'reactivation') {
+                                                                            return (
+                                                                                <div key={histIdx} className="text-green-700">
+                                                                                    <p>
+                                                                                        • <strong>{timeOnly}</strong> - Réactivation de l'équipe
+                                                                                    </p>
+                                                                                </div>
+                                                                            );
+                                                                        } else if (entry.action === 'scission') {
+                                                                            return (
+                                                                                <div key={histIdx} className="text-gray-700">
+                                                                                    <p>
+                                                                                        • <strong>{timeOnly}</strong> - Scission vers {entry.details.nouvelle_equipe}: {(entry.details.membres || []).join(', ')}
+                                                                                    </p>
+                                                                                </div>
+                                                                            );
+                                                                        } else if (entry.action === 'modification_mission') {
+                                                                            return (
+                                                                                <div key={histIdx} className="text-gray-700">
+                                                                                    <p>
+                                                                                        • <strong>{timeOnly}</strong> - Nouvelle mission : {entry.details.nouvelle_mission} (ancienne mission : {entry.details.ancienne_mission})
                                                                                     </p>
                                                                                 </div>
                                                                             );
