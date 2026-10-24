@@ -87,12 +87,14 @@ const GestionPlanningModal = ({
     const [searchTerm, setSearchTerm] = useState('');
     // Fonction à l'arrivée : { id: 'gestion' | 'conseiller_technique' } (sinon « Disponible »)
     const [fonctionArrivee, setFonctionArrivee] = useState({});
-    // Gestion cochée d'office (rôle de gestion, ou secrétaire de ce poste) ; conseiller technique
-    // seulement proposé : un CT ne vient pas toujours dans cette fonction
+    // Fonction cochée d'office (plus simple à décocher qu'à chercher) : secrétaire de ce poste en
+    // gestion ; sinon conseiller technique pour un rôle de CT, même s'il a aussi un rôle de
+    // gestion (un CT a souvent les deux) ; sinon gestion pour un rôle de gestion
     const fonctionsProposees = (s) => {
         const f = fonctionsDuRole(s.role);
         const secretaire = memePersonne(s.name, currentSecretaire);
-        return { gestion: f.gestion || secretaire, conseiller: f.conseiller, parDefaut: secretaire || (f.gestion && !f.conseiller) ? 'gestion' : null };
+        const parDefaut = secretaire ? 'gestion' : f.conseiller ? 'conseiller_technique' : f.gestion ? 'gestion' : null;
+        return { gestion: f.gestion || secretaire, conseiller: f.conseiller, parDefaut };
     };
     const choisirArrivant = (s, coche) => {
         if (coche) {

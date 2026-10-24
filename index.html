@@ -6,7 +6,7 @@
     <title>Application SSF Unifiée</title>
     <!-- ✏️ VERSION PAR DÉFAUT (mode serveur) — modifier ces deux lignes à chaque version -->
     <!-- En mode standalone (double-clic), la version est lue automatiquement dans le nom du fichier -->
-    <meta name="ssf-version" content="14.0.6">
+    <meta name="ssf-version" content="14.0.7">
     <!-- Bibliothèques intégrées - aucune dépendance externe -->
     <script crossorigin src="./libs/react.production.min.js"></script>
     <script crossorigin src="./libs/react-dom.production.min.js"></script>
@@ -407,8 +407,9 @@
             border: 2px solid #0055a4; 
             box-shadow: 0 4px 12px rgba(0, 85, 164, 0.3); 
             border-radius: 8px; 
-            /* sous les fenêtres (z-50 et plus) : la palette ne cache plus leurs boutons */
-            z-index: 40; 
+            /* au-dessus du tableau du planning (en-têtes et colonnes fixes : 150 au plus), sous les
+               fenêtres (.modal-overlay 1000, Mode réseau 300) : elle ne cache pas leurs boutons */
+            z-index: 200;
         }
         
         .palette-title {
