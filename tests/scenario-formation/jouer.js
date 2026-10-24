@@ -425,7 +425,7 @@ const ecrireRapport = () => {
     const vague1 = ['GIRARD Antoine', 'MARTIN Alice', 'BERNARD Bruno', 'DUBOIS Chloé', 'ROBERT Emma', 'PETIT Félix', 'DURAND Gaëlle', 'MOREAU Inès', 'SIMON Julien', 'ROUX Pierre', 'BLANC Olivier', 'VIDAL Claire'];
     // Case « arrive en gestion » / « arrive comme conseiller technique » sous un nom coché
     const caseFonction = (nom, libelle) => p.locator('div.p-2:visible', { has: p.getByText(nom, { exact: true }) }).first().locator('label', { hasText: libelle }).locator('input');
-    await etape('2.0:39', 'Arrivée des 12, secrétaire comprise : gestion cochée (VIDAL, ROUX), CT proposé non coché (GIRARD, SIMON)', async () => {
+    await etape('2.0:39', 'Arrivée des 12, secrétaire comprise : gestion cochée (VIDAL, ROUX), CT coché (GIRARD, SIMON) puis décoché', async () => {
         await ouvrirEnregistrement();
         await champ('🔍 Rechercher...').fill('gir'); await attendre(200); await champ('🔍 Rechercher...').fill('');
         for (const n of vague1) await p.locator('label:visible', { hasText: n }).first().locator('input').check();
@@ -434,7 +434,11 @@ const ecrireRapport = () => {
         for (const n of ['GIRARD Antoine', 'SIMON Julien']) {
             const c = caseFonction(n, 'conseiller technique');
             verifier(await c.count() > 0, `« arrive comme conseiller technique » absente pour ${n}`);
-            verifier(!(await c.isChecked()), `« arrive comme conseiller technique » cochée pour ${n}`);
+            verifier(await c.isChecked(), `« arrive comme conseiller technique » non cochée pour ${n}`);
+            const g = caseFonction(n, 'arrive en gestion');
+            verifier(await g.count() === 0 || !(await g.isChecked()), `« arrive en gestion » cochée pour ${n} (le CT est privilégié)`);
+            await c.uncheck();
+            verifier(!(await c.isChecked()), `« arrive comme conseiller technique » reste cochée pour ${n}`);
         }
         await b('Arrivée (12)').click(); await attendre(500);
     });

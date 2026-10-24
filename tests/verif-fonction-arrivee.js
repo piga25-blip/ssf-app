@@ -2,8 +2,8 @@
 // VÉRIFICATION : fonction de surface à l'arrivée (gestion, conseiller technique)
 // ============================================
 // 1. Fenêtre d'arrivée : « arrive en gestion » cochée d'office pour un rôle de gestion et pour
-//    le secrétaire du poste ; « arrive comme conseiller technique » proposée sans être cochée ;
-//    rien pour les autres rôles.
+//    le secrétaire du poste ; « arrive comme conseiller technique » cochée d'office pour un rôle
+//    de CT, même avec un rôle de gestion (CT privilégié) ; rien pour les autres rôles.
 // 2. Arrivée : planning en « Gestion - PC » / « Conseiller technique » au créneau actuel et
 //    lignes de main courante « 👔 Activité … affectée à ».
 // 3. « Gestion - PC » posée depuis la palette sur un sauveteur sans équipe.
@@ -53,13 +53,15 @@ executer('_verif-fonction-arrivee', 'vérification', async (t) => {
     for (const [, nom] of LISTE.filter(([, n]) => n !== 'MOREL Paul')) await t.cocher(t.etiquette(nom).locator('input[type="checkbox"]'));
     controler('ROUX (gestion matériel) : « arrive en gestion » cochée', await caseFonction('ROUX Pierre', 'arrive en gestion').isChecked());
     controler('VIDAL (secrétaire du poste) : « arrive en gestion » cochée', await caseFonction('VIDAL Claire', 'arrive en gestion').isChecked());
-    controler('SIMON (CT) : conseiller technique proposé, non coché',
-        (await caseFonction('SIMON Julien', 'conseiller technique').count()) === 1 && !(await caseFonction('SIMON Julien', 'conseiller technique').isChecked()));
-    controler('GIRARD (CT, gestion PC) : les deux proposés, aucun coché',
+    controler('SIMON (CT) : « arrive comme conseiller technique » cochée', await caseFonction('SIMON Julien', 'conseiller technique').isChecked());
+    controler('GIRARD (CT, gestion PC) : les deux proposés, conseiller technique coché (privilégié)',
         (await caseFonction('GIRARD Antoine', 'arrive en gestion').count()) === 1 && !(await caseFonction('GIRARD Antoine', 'arrive en gestion').isChecked())
-        && !(await caseFonction('GIRARD Antoine', 'conseiller technique').isChecked()));
+        && await caseFonction('GIRARD Antoine', 'conseiller technique').isChecked());
     controler('THOMAS (évacuation) : aucune case', (await bloc('THOMAS David').locator('label', { hasText: 'arrive' }).count()) === 0);
-    await t.cocher(caseFonction('SIMON Julien', 'conseiller technique'));
+    // Décocher reste possible : GIRARD arrive « Disponible »
+    await caseFonction('GIRARD Antoine', 'conseiller technique').uncheck();
+    controler('GIRARD : conseiller technique décoché, gestion non cochée', !(await caseFonction('GIRARD Antoine', 'conseiller technique').isChecked())
+        && !(await caseFonction('GIRARD Antoine', 'arrive en gestion').isChecked()));
 
     // 2. Arrivée
     await t.clic(t.bouton('Arrivée'));
