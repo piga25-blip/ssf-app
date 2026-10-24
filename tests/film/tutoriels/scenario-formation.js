@@ -374,7 +374,7 @@ PHASES.push(async (t, o) => {
         'Ils arriveront en « Gestion - PC » (jaune) au planning, sans équipe à créer.');
     await t.viser(caseFonction('SIMON Julien', 'conseiller technique'));
     await t.dire('Sous GIRARD Antoine et SIMON Julien, conseillers techniques, la case « arrive comme conseiller technique » est déjà cochée : leur rôle dans la liste commence par CT.',
-        'Pour GIRARD, qui a aussi un rôle de gestion, c'est la fonction de conseiller technique qui est cochée.');
+        'Pour GIRARD, qui a aussi un rôle de gestion, c\'est la fonction de conseiller technique qui est cochée.');
     await t.dire('Mais CT est une qualification, pas forcément leur fonction sur ce secours. Ici, GIRARD va diriger le secours et SIMON vient comme équipier transmission : on décoche les deux cases.');
     for (const n of ['GIRARD Antoine', 'SIMON Julien']) await t.clic(caseFonction(n, 'conseiller technique').locator('input'));
     await t.viser(caseFonction('GIRARD Antoine', 'conseiller technique'));
