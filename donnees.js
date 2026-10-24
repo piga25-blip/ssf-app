@@ -212,6 +212,16 @@ const nomsSauveteurs = (etat, ids) => ids
     .filter(Boolean)
     .map(s => s.name);
 
+// Équipe en fin de mission : conservée (équipes dissoutes, réactivable), date et historique notés
+const equipeDissoute = (t, horodatage) => ({
+    ...t, status: 'dissolved', dissolvedAt: horodatage,
+    history: [...(t.history || []), { timestamp: horodatage, action: 'dissolution', details: {} }],
+});
+// Équipes actives vidées de tous leurs membres par l'action (création, ajout, scission…) :
+// dissoutes au lieu de rester vides parmi les équipes actives
+const dissoudreEquipesVidees = (avant, teams, horodatage) => teams.map(t =>
+    t.status !== 'dissolved' && t.members.length === 0 && avant.some(a => a.id === t.id && a.members.length > 0) ? equipeDissoute(t, horodatage) : t);
+
 // ---------- Actions ----------
 
 const ACTIONS_DONNEES = {
@@ -558,8 +568,8 @@ const ACTIONS_DONNEES = {
     'EQUIPES/CREER'(etat, { equipe, horodatage, evenements }) {
         if (etat.teams.some(t => t.id === equipe.id)) refuser(`L'équipe « ${equipe.name} » existe déjà (créée sur un autre poste ?) : choisissez un autre numéro.`);
         if (etat.usedTeamNumbers.some(u => u.numero === equipe.id)) refuser(`Le numéro de « ${equipe.name} » a déjà été utilisé : choisissez un autre numéro.`);
-        const teams = etat.teams
-            .map(t => t.members.some(id => equipe.members.includes(id)) ? { ...t, members: t.members.filter(id => !equipe.members.includes(id)) } : t)
+        const teams = dissoudreEquipesVidees(etat.teams, etat.teams
+            .map(t => t.members.some(id => equipe.members.includes(id)) ? { ...t, members: t.members.filter(id => !equipe.members.includes(id)) } : t), horodatage)
             .concat([equipe]);
         const activite = equipe.mission.toLowerCase().includes('gestion') ? 'gestion' : 'engage';
         return {
@@ -585,10 +595,7 @@ const ACTIONS_DONNEES = {
     'EQUIPES/DISSOUDRE'(etat, { id, horodatage, evenement }) {
         const equipe = etat.teams.find(t => t.id === id);
         if (!equipe) return etat;
-        const teams = etat.teams.map(t => t.id !== id ? t : {
-            ...t, status: 'dissolved', dissolvedAt: horodatage,
-            history: [...(t.history || []), { timestamp: horodatage, action: 'dissolution', details: {} }],
-        });
+        const teams = etat.teams.map(t => t.id !== id ? t : equipeDissoute(t, horodatage));
         return {
             ...etat, teams,
             planning: affecterAuCreneauActuel(etat, equipe.members, horodatage, 'disponible'),
@@ -612,7 +619,7 @@ const ACTIONS_DONNEES = {
     },
 
     // Ajout de membres : ils quittent leur ancienne équipe ; « Engagé » (ou « Gestion ») au créneau actuel
-    'EQUIPES/AJOUTER_MEMBRES'(etat, { id, membres, horodatage, evenement }) {
+    'EQUIPES/AJOUTER_MEMBRES'(etat, { id, membres, horodatage, evenement, evenementsDissolution = [] }) {
         const equipe = etat.teams.find(t => t.id === id);
         if (!equipe || equipe.status === 'dissolved') refuser("Cette équipe n'existe plus ou a terminé sa mission (modifiée sur un autre poste ?).");
         const teams = etat.teams.map(t => {
@@ -626,28 +633,35 @@ const ACTIONS_DONNEES = {
         });
         const activite = equipe && equipe.mission.toLowerCase().includes('gestion') ? 'gestion' : 'engage';
         return {
-            ...etat, teams,
+            ...etat, teams: dissoudreEquipesVidees(etat.teams, teams, horodatage),
             planning: affecterAuCreneauActuel(etat, membres, horodatage, activite),
-            events: [...etat.events, evenement],
+            events: [...etat.events, evenement, ...evenementsDissolution],
         };
     },
 
-    // Membre libéré vers le PC : « Disponible » au créneau actuel ; une équipe vidée disparaît
-    'EQUIPES/LIBERER_MEMBRE'(etat, { idEquipe, idMembre, horodatage, evenement }) {
+    // Membre libéré vers le PC : « Disponible » au créneau actuel. Le dernier membre libéré
+    // termine la mission comme « Fin de mission » : l'équipe est dissoute (conservée avec son
+    // dernier membre et son historique, réactivable) au lieu de disparaître
+    'EQUIPES/LIBERER_MEMBRE'(etat, { idEquipe, idMembre, horodatage, evenement, evenementDissolution }) {
         const nom = nomsSauveteurs(etat, [idMembre])[0];
-        const teams = etat.teams.map(t => t.id !== idEquipe ? t : {
-            ...t, members: t.members.filter(m => m !== idMembre),
-            history: [...(t.history || []), { timestamp: horodatage, action: 'retrait_membre', details: { membre: nom, destination: 'PC' } }],
-        }).filter(t => t.members.length > 0);
+        const teams = etat.teams.map(t => {
+            if (t.id !== idEquipe) return t;
+            if (t.status !== 'dissolved' && t.members.length === 1 && t.members[0] === idMembre) return equipeDissoute(t, horodatage);
+            return {
+                ...t, members: t.members.filter(m => m !== idMembre),
+                history: [...(t.history || []), { timestamp: horodatage, action: 'retrait_membre', details: { membre: nom, destination: 'PC' } }],
+            };
+        });
         return {
             ...etat, teams,
             planning: affecterAuCreneauActuel(etat, [idMembre], horodatage, 'disponible'),
-            events: evenement ? [...etat.events, evenement] : etat.events,
+            events: [...etat.events, ...[evenement, evenementDissolution].filter(Boolean)],
         };
     },
 
-    // Membre déplacé d'une équipe à une autre ; une équipe vidée disparaît
-    'EQUIPES/DEPLACER_MEMBRE'(etat, { idOrigine, idDestination, idMembre, horodatage, evenement }) {
+    // Membre déplacé d'une équipe à une autre ; une équipe vidée est dissoute (conservée avec
+    // son historique) au lieu de disparaître
+    'EQUIPES/DEPLACER_MEMBRE'(etat, { idOrigine, idDestination, idMembre, horodatage, evenement, evenementDissolution }) {
         const nom = nomsSauveteurs(etat, [idMembre])[0];
         const origine = etat.teams.find(t => t.id === idOrigine);
         const destination = etat.teams.find(t => t.id === idDestination);
@@ -662,8 +676,8 @@ const ACTIONS_DONNEES = {
                 history: [...(t.history || []), { timestamp: horodatage, action: 'ajout_membres', details: { membres: [nom], origine: origine.name } }],
             };
             return t;
-        }).filter(t => t.members.length > 0);
-        return { ...etat, teams, events: evenement ? [...etat.events, evenement] : etat.events };
+        });
+        return { ...etat, teams: dissoudreEquipesVidees(etat.teams, teams, horodatage), events: [...etat.events, ...[evenement, evenementDissolution].filter(Boolean)] };
     },
 
     // Nouvel ordre des membres (le premier est le chef). changementChef : un membre a été
@@ -694,9 +708,10 @@ const ACTIONS_DONNEES = {
                     timestamp: nouvelleEquipe.createdAt, action: 'scission',
                     details: { nouvelle_equipe: nouvelleEquipe.name, membres: nouvelleEquipe.history?.[0]?.details?.membres || [] },
                 }],
-            })
-            .concat([nouvelleEquipe]);
-        return { ...etat, teams, events: [...etat.events, ...evenements] };
+            });
+        // Tous les membres détachés (autre poste) : l'équipe d'origine est dissoute
+        const teams2 = dissoudreEquipesVidees(etat.teams, teams, nouvelleEquipe.createdAt).concat([nouvelleEquipe]);
+        return { ...etat, teams: teams2, events: [...etat.events, ...evenements] };
     },
 
     // ===== Dossier =====
@@ -815,9 +830,9 @@ const creerActionsDonnees = (dispatch) => {
         modifierEquipe: (id, champs, ancienneMission, evenement) => dispatch({ type: 'EQUIPES/MODIFIER', id, champs, ancienneMission, horodatage: new Date().toISOString(), evenement }),
         dissoudreEquipe: (id, horodatage, evenement) => dispatch({ type: 'EQUIPES/DISSOUDRE', id, horodatage, evenement }),
         reactiverEquipe: (id, horodatage, evenement) => dispatch({ type: 'EQUIPES/REACTIVER', id, horodatage, evenement }),
-        ajouterMembresEquipe: (id, membres, horodatage, evenement) => dispatch({ type: 'EQUIPES/AJOUTER_MEMBRES', id, membres, horodatage, evenement }),
-        libererMembre: (idEquipe, idMembre, horodatage, evenement) => dispatch({ type: 'EQUIPES/LIBERER_MEMBRE', idEquipe, idMembre, horodatage, evenement }),
-        deplacerMembre: (idOrigine, idDestination, idMembre, horodatage, evenement) => dispatch({ type: 'EQUIPES/DEPLACER_MEMBRE', idOrigine, idDestination, idMembre, horodatage, evenement }),
+        ajouterMembresEquipe: (id, membres, horodatage, evenement, evenementsDissolution = []) => dispatch({ type: 'EQUIPES/AJOUTER_MEMBRES', id, membres, horodatage, evenement, evenementsDissolution }),
+        libererMembre: (idEquipe, idMembre, horodatage, evenement, evenementDissolution = null) => dispatch({ type: 'EQUIPES/LIBERER_MEMBRE', idEquipe, idMembre, horodatage, evenement, evenementDissolution }),
+        deplacerMembre: (idOrigine, idDestination, idMembre, horodatage, evenement, evenementDissolution = null) => dispatch({ type: 'EQUIPES/DEPLACER_MEMBRE', idOrigine, idDestination, idMembre, horodatage, evenement, evenementDissolution }),
         reordonnerMembres: (id, membres, changementChef, horodatage, evenement) => dispatch({ type: 'EQUIPES/REORDONNER_MEMBRES', id, membres, changementChef, horodatage, evenement }),
         scinderEquipe: (idSource, nouvelleEquipe, evenements) => dispatch({ type: 'EQUIPES/SCINDER', idSource, nouvelleEquipe, evenements }),
         // Dossier (les lignes de main courante chargées reçoivent des identifiants uniques)

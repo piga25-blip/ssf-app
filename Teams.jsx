@@ -197,6 +197,11 @@ let GestionEquipesModal = ({
         return liste.filter(s => normaliserTexte(s.name).includes(q));
     };
 
+    // Équipes actives dont tous les membres font partie de « ids » (elles seraient vidées)
+    const equipesVideesPar = (ids) => teams.filter(t => t.status !== 'dissolved' && t.members.length > 0 && t.members.every(id => ids.includes(id)));
+    const lignesDissolution = (equipes, horodatage, vers) => equipes.map(t => ({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe',
+        evenement: `🔚 Dissolution ${t.name}\nTous ses membres passent dans ${vers}`, equipe: t.name, numero: NUMERO_AUTO, fait: false }));
+
     const creerEquipe = () => {
         setNumeroError('');
         
@@ -242,7 +247,10 @@ let GestionEquipesModal = ({
         const deplaces = selectedMembres
             .filter(id => membersInTeams.has(id))
             .map(id => ({ nom: masterSauveteursList.find(s => s.id === id)?.name || id, equipe: membersInTeams.get(id).name }));
-        if (deplaces.length > 0 && !window.confirm(`⚠️ Déjà dans une autre équipe (peut-être ajouté entre-temps sur un autre poste) :\n${deplaces.map(d => `• ${d.nom} — ${d.equipe}`).join('\n')}\n\nLe(s) retirer de cette équipe pour l'affecter à l'Équipe ${nouvelleEquipe.numero} ?\n(Annuler pour revoir les membres.)`)) {
+        // Équipes dont tous les membres passent dans la nouvelle : dissoutes
+        const videes = equipesVideesPar(selectedMembres);
+        const avisVidees = videes.length > 0 ? `\n\n${videes.map(t => t.name).join(', ')} n'aura plus de membre : elle sera dissoute.` : '';
+        if (deplaces.length > 0 && !window.confirm(`⚠️ Déjà dans une autre équipe (peut-être ajouté entre-temps sur un autre poste) :\n${deplaces.map(d => `• ${d.nom} — ${d.equipe}`).join('\n')}\n\nLe(s) retirer de cette équipe pour l'affecter à l'Équipe ${nouvelleEquipe.numero} ?${avisVidees}\n(Annuler pour revoir les membres.)`)) {
             return;
         }
 
@@ -283,6 +291,7 @@ let GestionEquipesModal = ({
         const evenements = [{ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: NUMERO_AUTO, fait: false }];
         // L'équipe d'origine perd ces membres : c'est tracé
         deplaces.forEach(d => evenements.push({ id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `↪️ ${d.nom} retiré de ${d.equipe} pour l'Équipe ${nouvelleEquipe.numero}`, numero: NUMERO_AUTO, fait: false }));
+        if (mcMode !== 'secondaire') evenements.push(...lignesDissolution(videes, horodatage, `Équipe ${nouvelleEquipe.numero}`));
 
         // Activité « Engagé » (« Gestion » pour une équipe de gestion) au quart d'heure actuel,
         // si l'heure est dans le planning : appliquée par l'action, avec sa ligne de main courante
@@ -396,10 +405,14 @@ let GestionEquipesModal = ({
             : `➕ Ajout à ${team.name} : ${membresNoms}`;
         const evenement = { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: evenementMessage, numero: NUMERO_AUTO, fait: false };
 
-        // Membres ajoutés (retirés de leur ancienne équipe), « Engagé » au créneau actuel, main courante
-        actions.ajouterMembresEquipe(teamId, selectedNewMembres, horodatage, evenement);
+        // Équipes dont tous les membres passent dans celle-ci : dissoutes
+        const videes = equipesVideesPar(selectedNewMembres).filter(t => t.id !== teamId);
+        const avisVidees = videes.length > 0 ? `\n\n${videes.map(t => t.name).join(', ')} n'a plus de membre : elle est dissoute (voir « Équipes dissoutes »).` : '';
 
-        alert(`✅ ${selectedNewMembres.length} membre(s) ajouté(s) à l'équipe !`);
+        // Membres ajoutés (retirés de leur ancienne équipe), « Engagé » au créneau actuel, main courante
+        actions.ajouterMembresEquipe(teamId, selectedNewMembres, horodatage, evenement, mcMode === 'secondaire' ? [] : lignesDissolution(videes, horodatage, team.name));
+
+        alert(`✅ ${selectedNewMembres.length} membre(s) ajouté(s) à l'équipe !${avisVidees}`);
         setAddingMembersToTeam(null);
         setSelectedNewMembres([]);
         setSearchAddMembers('');
@@ -419,6 +432,17 @@ let GestionEquipesModal = ({
         const membre = masterSauveteursList.find(s => s.id === memberId);
         if (!membre) return;
 
+        // Dernier membre qui part : l'équipe est dissoute comme par « Fin de mission » (ligne
+        // « Dissolution », équipe gardée dans les équipes dissoutes) au lieu de disparaître
+        const dernierMembre = equipeOrigine.members.length === 1 && equipeOrigine.members[0] === memberId;
+        const ligneDissolution = (horodatage, vers) => dernierMembre && (!mcMode || mcMode === 'principale')
+            ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔚 Dissolution ${equipeOrigine.name}
+Dernier membre : ${membre.name} → ${vers}`, equipe: equipeOrigine.name, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
+            : null;
+        const avisDissolution = dernierMembre ? `
+
+${equipeOrigine.name} n'a plus de membre : elle est dissoute (voir « Équipes dissoutes »).` : '';
+
         // Retour au PC
         if (destination === 'PC' || destination === '**PC**') {
             const horodatage = new Date().toISOString();
@@ -427,10 +451,11 @@ let GestionEquipesModal = ({
             const evenement = (!mcMode || mcMode === 'principale')
                 ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `↩️ ${membre.name} libéré de ${equipeOrigine.name} vers PC`, pointPhone: pointPhonePC, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
                 : null;
-            // Retiré de l'équipe (une équipe vidée disparaît), « Disponible » au créneau actuel
-            actions.libererMembre(equipeOrigineId, memberId, horodatage, evenement);
+            // Retiré de l'équipe (dernier membre : équipe dissoute), « Disponible » au créneau actuel
+            const dissolution = ligneDissolution(horodatage, 'PC');
+            actions.libererMembre(equipeOrigineId, memberId, horodatage, evenement, dissolution && { ...dissolution, pointPhone: pointPhonePC });
             setMouvements({...mouvements, [memberId]: ''});
-            alert('✅ Membre libéré au PC');
+            alert('✅ Membre libéré au PC' + avisDissolution);
         }
         // Déplacement vers une autre équipe
         else {
@@ -455,16 +480,20 @@ let GestionEquipesModal = ({
             const evenement = (!mcMode || mcMode === 'principale')
                 ? { id: nouvelId(), isoTimestamp: horodatage, secretaire: 'Système', dateHeure: new Date(horodatage).toLocaleString('fr-FR'), messageImportant: false, categorie: 'equipe', evenement: `🔄 ${membre.name} : ${equipeOrigine.name} → ${equipeDest.name}`, numero: NUMERO_AUTO_SANS_PREFIXE, fait: false }
                 : null;
-            // Une équipe vidée disparaît
-            actions.deplacerMembre(equipeOrigineId, equipeDest.id, memberId, horodatage, evenement);
+            // Une équipe vidée est dissoute
+            actions.deplacerMembre(equipeOrigineId, equipeDest.id, memberId, horodatage, evenement, ligneDissolution(horodatage, equipeDest.name));
             setMouvements({...mouvements, [memberId]: ''});
-            alert('✅ Membre déplacé');
+            alert('✅ Membre déplacé' + avisDissolution);
         }
     };
 
     const reactiverEquipe = (teamId) => {
         const team = teams.find(t => t.id === teamId);
         if (!team) return;
+        if (team.members.length === 0) {
+            alert(team.name + " n'a plus de membre (le dernier est parti dans une autre équipe) : elle ne peut pas être réactivée. Créez une nouvelle équipe.");
+            return;
+        }
 
         if (!window.confirm('Reactiver ' + team.name + ' ? Mission : ' + team.mission + ' - Les membres redeviendront engages.')) return;
 
@@ -1419,6 +1448,7 @@ let GestionEquipesModal = ({
                     const baseNum = team.name.replace('Équipe ','');
                     const handleValider = () => {
                         if (membresSelec.length === 0) { alert('Sélectionnez au moins un membre à détacher'); return; }
+                        if (team.members.every(id => membresSelec.includes(id))) { alert(`Gardez au moins un membre dans ${team.name} : pour changer son numéro ou sa mission, utilisez « ✏️ Modifier ».`); return; }
                         if (!newNum.trim()) { alert('Saisissez un numéro'); return; }
                         const newName = 'Équipe ' + newNum.trim();
                         if (teams.find(t => t.name === newName)) { alert(`"${newName}" existe déjà`); return; }

@@ -238,17 +238,49 @@ const base = () => {
     verifier('Équipes : réordonner sans changement de chef → pas d\'historique', e.teams[1].history.length === 1);
     e = appliquer(e, { type: 'EQUIPES/AJOUTER_MEMBRES', id: 'T1', membres: ['S3'], horodatage: iso(10), evenement: ligne('am', '005') });
     verifier('Équipes : ajout de membre (retiré de son équipe)', JSON.stringify(e.teams[0].members) === '["S1","S3"]' && JSON.stringify(e.teams[1].members) === '["S2"]' && e.planning.S3[8] === 'engage');
-    e = appliquer(e, { type: 'EQUIPES/DEPLACER_MEMBRE', idOrigine: 'T2', idDestination: 'T1', idMembre: 'S2', horodatage: iso(10, 15), evenement: null });
-    verifier('Équipes : déplacement (équipe vidée supprimée)', e.teams.length === 1 && e.teams[0].members.includes('S2'));
+    e = appliquer(e, { type: 'EQUIPES/DEPLACER_MEMBRE', idOrigine: 'T2', idDestination: 'T1', idMembre: 'S2', horodatage: iso(10, 15), evenement: null, evenementDissolution: ligne('dd', '005b') });
+    const t2 = e.teams.find(t => t.id === 'T2');
+    verifier('Équipes : déplacement du dernier membre → équipe vidée dissoute (conservée, historique, ligne)',
+        e.teams.length === 2 && e.teams[0].members.includes('S2') && t2.status === 'dissolved' && t2.dissolvedAt === iso(10, 15)
+        && t2.members.length === 0 && t2.history[t2.history.length - 1].action === 'dissolution' && e.events[e.events.length - 1].id === 'dd', t2);
     e = appliquer(e, { type: 'EQUIPES/LIBERER_MEMBRE', idEquipe: 'T1', idMembre: 'S3', horodatage: iso(10, 30), evenement: ligne('l', '006') });
     verifier('Équipes : libération vers le PC (« disponible »)', !e.teams[0].members.includes('S3') && e.planning.S3[10] === 'disponible');
     e = appliquer(e, { type: 'EQUIPES/SCINDER', idSource: 'T1', nouvelleEquipe: equipe('T1B', ['S2']), evenements: [ligne('s', '007')] });
-    verifier('Équipes : scission', JSON.stringify(e.teams[0].members) === '["S1"]' && e.teams[1].id === 'T1B');
+    verifier('Équipes : scission', JSON.stringify(e.teams[0].members) === '["S1"]' && e.teams[2].id === 'T1B');
+    {
+        const avant = e.events.length;
+        const l = appliquer(e, { type: 'EQUIPES/LIBERER_MEMBRE', idEquipe: 'T1B', idMembre: 'S2', horodatage: iso(10, 45), evenement: ligne('lb', '007b'), evenementDissolution: ligne('db', '007c') });
+        const t1b = l.teams.find(t => t.id === 'T1B');
+        verifier('Équipes : dernier membre libéré vers le PC → fin de mission (gardé dans l\'équipe, « disponible », 2 lignes)',
+            t1b && t1b.status === 'dissolved' && JSON.stringify(t1b.members) === '["S2"]' && t1b.history[t1b.history.length - 1].action === 'dissolution'
+            && l.planning.S2[11] === 'disponible' && l.events.length === avant + 2 && l.teams.length === 3, t1b);
+        // Sans ligne de dissolution (dernier membre devenu seul après un changement sur un autre poste)
+        const sansLigne = appliquer(e, { type: 'EQUIPES/LIBERER_MEMBRE', idEquipe: 'T1B', idMembre: 'S2', horodatage: iso(10, 45), evenement: null });
+        verifier('Équipes : dernier membre libéré sans ligne de dissolution → dissoute quand même',
+            sansLigne.teams.find(t => t.id === 'T1B').status === 'dissolved' && sansLigne.events.length === avant);
+    }
     e = appliquer(e, { type: 'EQUIPES/DISSOUDRE', id: 'T1', horodatage: iso(11), evenement: null });
     verifier('Équipes : ajout de membres à une équipe terminée → refusé', refusee({ ...e, teams: e.teams.map(t => t.id === 'T1' ? { ...t, status: 'dissolved' } : t) }, { type: 'EQUIPES/AJOUTER_MEMBRES', id: 'T1', membres: ['S2'], horodatage: iso(11), evenement: ligne('z', '009') }, 'terminé sa mission'));
     verifier('Équipes : fin de mission (conservée, « disponible »)', e.teams[0].status === 'dissolved' && e.teams[0].dissolvedAt === iso(11) && e.planning.S1[12] === 'disponible');
     e = appliquer(e, { type: 'EQUIPES/REACTIVER', id: 'T1', horodatage: iso(11, 15), evenement: ligne('ra', '008') });
     verifier('Équipes : réactivation (« engage »)', e.teams[0].status === 'active' && e.teams[0].dissolvedAt === null && e.planning.S1[13] === 'engage');
+}
+
+// ===== Équipe vidée par une création, un ajout ou une scission : dissoute, pas laissée vide
+{
+    let e = appliquer(base(), { type: 'SAUVETEURS/ARRIVEE', ids: ['S1', 'S2', 'S3'], horodatage: iso(8), idEvenement: 'a', numero: 1 });
+    const equipe = (id, membres) => ({ id, name: 'Équipe ' + id.slice(1), mission: 'Reconnaissance', members: membres, status: 'active', createdAt: iso(9), history: [] });
+    e = appliquer(e, { type: 'EQUIPES/CREER', equipe: equipe('T1', ['S1']), horodatage: iso(9), evenements: [] });
+    e = appliquer(e, { type: 'EQUIPES/CREER', equipe: equipe('T2', ['S2']), horodatage: iso(9), evenements: [] });
+    e = appliquer(e, { type: 'EQUIPES/CREER', equipe: equipe('T3', ['S1', 'S3']), horodatage: iso(9, 30), evenements: [ligne('c3', '002'), ligne('d1', '003')] });
+    const t1 = e.teams.find(t => t.id === 'T1');
+    verifier('Équipe vidée par une création → dissoute (historique)', t1.status === 'dissolved' && t1.dissolvedAt === iso(9, 30) && t1.history[t1.history.length - 1].action === 'dissolution', t1);
+    e = appliquer(e, { type: 'EQUIPES/AJOUTER_MEMBRES', id: 'T3', membres: ['S2'], horodatage: iso(10), evenement: ligne('am', '004'), evenementsDissolution: [ligne('d2', '005')] });
+    const t2 = e.teams.find(t => t.id === 'T2');
+    verifier('Équipe vidée par un ajout de membres → dissoute (+ ligne)', t2.status === 'dissolved' && e.events[e.events.length - 1].id === 'd2', t2);
+    const s = appliquer(e, { type: 'EQUIPES/SCINDER', idSource: 'T3', nouvelleEquipe: equipe('T3B', ['S1', 'S2', 'S3']), evenements: [] });
+    verifier('Équipe vidée par une scission (autre poste) → dissoute', s.teams.find(t => t.id === 'T3').status === 'dissolved');
+    verifier('Équipe déjà dissoute : pas dissoute une seconde fois', t1.history.filter(h => h.action === 'dissolution').length === 1 && e.teams.find(t => t.id === 'T1').history.length === t1.history.length);
 }
 
 // ===== Recopie d'une main courante papier (PC Base Arrière)
