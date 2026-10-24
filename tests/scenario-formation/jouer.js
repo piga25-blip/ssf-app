@@ -577,7 +577,7 @@ const ecrireRapport = () => {
     // ══ PHASE 4 ══════════════════════════════════════════════════════════
     await etape('4.1:15', 'Équipe 1 Départ PC sous terre → fenêtre planning Approche', async () => {
         await ligne({ equipe: 'Équipe 1', depart: true, lieu: 'Sous terre' });
-        await fenetrePlanning({ titre: 'approche' });
+        await fenetrePlanning({ titre: '— Approche' });
         await contient('"Approche" affectée à : Toute l\'équipe (Équipe 1)');
         await attendreActivite('MARTIN Alice', 'Approche');
     });
@@ -585,7 +585,7 @@ const ecrireRapport = () => {
         await p.locator('input[list="expediteurs-list"]:visible').fill('MARTIN Alice');
         const eq = await p.locator('input[list="equipe-list"]:visible').inputValue();
         await ligne({ pp: PP.A, sens: '🕳️ Entre sous terre' });
-        await fenetrePlanning({ titre: 'souterre' });
+        await fenetrePlanning({ titre: '— Sous Terre' });
         verifier(eq === 'Équipe 1', `équipe remplie seule : « ${eq} »`);
         verifier((await p.locator('table tbody tr', { hasText: 'Message de : MARTIN Alice' }).first().innerText()).includes('Entre sous terre'), 'ligne sans « Entre sous terre »');
         await attendreActivite('ROBERT Emma', 'Sous Terre');
@@ -837,7 +837,7 @@ const ecrireRapport = () => {
     PP.C = 'C - Base du P40, relais TPS';
     await etape('5.2:23', 'Équipe 2B sort et rentre au PC (Approche)', async () => {
         await ligne({ equipe: 'Équipe 2B', pp: PP.A, sens: '🏠 Sort — rentre au PC' });
-        await fenetrePlanning({ titre: 'approche' });
+        await fenetrePlanning({ titre: '— Approche' });
         verifier((await p.locator('table tbody tr', { hasText: 'Équipe 2B' }).filter({ hasNotText: 'Planning' }).first().innerText()).includes('Sort de sous terre — rentre au PC'), 'ligne sans « Sort de sous terre — rentre au PC »');
         await attendreActivite('PETIT Félix', 'Approche');
         await attendreActivite('ROBERT Emma', 'Approche');
@@ -851,14 +851,14 @@ const ecrireRapport = () => {
     });
     await etape('5.2:25b', 'Équipe 3 au point A, reste à l\'entrée (Mission de surface)', async () => {
         await ligne({ equipe: 'Équipe 3', pp: PP.A, sens: '🌿 Reste à l\'entrée' });
-        await fenetrePlanning({ titre: 'mission_surface' });
+        await fenetrePlanning({ titre: '— Mission de surface' });
     });
     await etape('5.2:26', 'Équipe 5 hors site, Départ PC 🚗', async () => {
         await equipes();
         await creerEquipe({ lieu: '🚗 Hors site', titre: 'Chercher la civière au dépôt de Besançon', membres: ['LEFEBVRE Léo', 'MICHEL Manon'] });
         await fermer();
         await ligne({ equipe: 'Équipe 5', depart: true, lieu: 'Hors site' });
-        await fenetrePlanning({ titre: 'mission_hors_site' });
+        await fenetrePlanning({ titre: '— Mission hors du site' });
         await attendreActivite('LEFEBVRE Léo', 'Mission hors du site');
     });
     await etape('5.2:27', 'Arrivée de FAURE et BOYER, équipe 6 de surface, Départ PC 🌿', async () => {
@@ -870,7 +870,7 @@ const ecrireRapport = () => {
         await contient('Équipe 6');
         await fermer();
         await ligne({ equipe: 'Équipe 6', depart: true, lieu: 'Surface' });
-        await fenetrePlanning({ titre: 'mission_surface' });
+        await fenetrePlanning({ titre: '— Mission de surface' });
         await attendreActivite('BOYER Marc', 'Mission de surface');
     });
     await etape('5.2:28', 'Message de BOYER pour le PC au point G (relais radio)', async () => {
@@ -1399,7 +1399,7 @@ const ecrireRapport = () => {
     await etape('8.4:00', 'Mode maintenance : boutons visibles, non cliqués', async () => {
         await p.locator('#toggle-maintenance').check(); await attendre(200);
         verifier(await p.locator('button[title="Effacer les données du secours actuel uniquement"]').isVisible(), 'RESET APPLI absent');
-        verifier(await p.locator('button[title="Vider TOUT le stockage du navigateur (tous les secours)"]').isVisible(), 'VIDER STORAGE absent');
+        verifier(await p.locator('button[title="Vider TOUT le stockage de ce PC (tous les secours)"]').isVisible(), 'VIDER STORAGE absent');
         await p.locator('#toggle-maintenance').uncheck();
     });
     await etape('8.4:01', 'Relance, supprimer le dossier PCA, Tout supprimer (liste)', async () => {

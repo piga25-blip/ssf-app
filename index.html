@@ -6,7 +6,7 @@
     <title>Application SSF Unifiée</title>
     <!-- ✏️ VERSION PAR DÉFAUT (mode serveur) — modifier ces deux lignes à chaque version -->
     <!-- En mode standalone (double-clic), la version est lue automatiquement dans le nom du fichier -->
-    <meta name="ssf-version" content="14.0.7">
+    <meta name="ssf-version" content="14.0.8">
     <!-- Bibliothèques intégrées - aucune dépendance externe -->
     <script crossorigin src="./libs/react.production.min.js"></script>
     <script crossorigin src="./libs/react-dom.production.min.js"></script>
@@ -1211,7 +1211,7 @@
                     });
                     alert('✅ Application réinitialisée (secours actuel uniquement).');
                 } else if (type === 'LOCAL_STORAGE') {
-                    if (!window.confirm('🚨 VIDER TOUT LE STORAGE\n\nCette action va supprimer TOUS les secours enregistrés dans ce navigateur !\n\nÊtes-vous ABSOLUMENT certain ?')) {
+                    if (!window.confirm('🚨 VIDER TOUT LE STORAGE\n\nCette action va supprimer TOUS les secours enregistrés sur ce PC !\n\nÊtes-vous ABSOLUMENT certain ?')) {
                         return;
                     }
                     if (!window.confirm('⚠️ DERNIÈRE CONFIRMATION\n\nTOUS les secours seront perdus définitivement !\n\nContinuer ?')) {
@@ -1234,7 +1234,7 @@
                         startHour: Math.max(0, new Date().getHours() - 1),
                         totalDays: DEFAULT_TOTAL_DAYS,
                     });
-                    alert('✅ Tout le stockage du navigateur a été vidé.\n\nTous les secours ont été supprimés.');
+                    alert('✅ Tout le stockage de ce PC a été vidé.\n\nTous les secours ont été supprimés.');
                 }
             };
 
@@ -1738,7 +1738,7 @@
                                             <button 
                                                 onClick={() => handleMaintenanceClear('LOCAL_STORAGE')}
                                                 className="bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 font-bold text-xs shadow-sm transition-all"
-                                                title="Vider TOUT le stockage du navigateur (tous les secours)"
+                                                title="Vider TOUT le stockage de ce PC (tous les secours)"
                                             >
                                                 ⚠️ VIDER STORAGE
                                             </button>

@@ -2144,7 +2144,7 @@ let MainCouranteTab = ({
                         ? `🏠 Retour au PC — ${modalSelectionMembres.team.name}`
                         : modalSelectionMembres.pointPhoneOnly
                         ? `📍 Qui est au point phone ? (${modalSelectionMembres.team?.name || ''})`
-                        : `Mise à jour planning — ${modalSelectionMembres.activite}`}
+                        : `Mise à jour planning — ${(ACTIVITIES.find(a => a.id === modalSelectionMembres.activite) || {}).name || modalSelectionMembres.activite}`}
                 </h3>
                 <p style={{fontSize:'12px',color:'#6b7280',marginBottom:'12px'}}>
                     {modalSelectionMembres.retourPC
