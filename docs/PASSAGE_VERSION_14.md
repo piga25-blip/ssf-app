@@ -231,9 +231,10 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 - **Films** : à retourner une fois les remarques des conseillers techniques traitées (bouton
   renommé, nouvelle liste, tri par spécialité, base nationale) ; les scripts sont à jour sauf
   pour la base nationale.
-- **Essai sur un vrai Mac**, avec le kit `dist/Kit-essai-Mac-14/` : ni l'application 14 (serveur
-  intégré, reprise des données, pare-feu macOS — partie Mac de `serveur/parefeu.js`) ni le
-  bootstrapper Mac n'ont été essayés sur un Mac.
+- **Essai sur un vrai Mac** : un testeur a installé la version 14 sur un Mac et elle fonctionne
+  (retour du 24/10/2026). Restent à confirmer avec lui : le mode d'installation utilisé
+  (bootstrapper ou .dmg), le mode réseau et le pare-feu macOS (partie Mac de
+  `serveur/parefeu.js`), la reprise des données d'une version 13.
 - **Mise à jour automatique sur Mac** : l'application n'étant pas signée par Apple, elle ne
   fonctionnera probablement pas. Vérifiable maintenant : un Mac en 14.0.0 ou 14.0.1 doit se voir
   proposer la 14.0.2. Sinon, les utilisateurs Mac relanceront le bootstrapper à chaque nouvelle version.

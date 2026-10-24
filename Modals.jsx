@@ -749,7 +749,7 @@ onConfirm({ typeSecours: null, nomCavite: null, commune: null, delaiAlerteOccupa
 
         {/* Pied de page fixe avec boutons d'action */}
         <div className="flex-shrink-0 border-t bg-gray-50 px-6 py-4 flex items-center justify-between gap-3">
-            <p className="text-xs text-gray-400">Les données sont sauvegardées localement sur ce navigateur.</p>
+            <p className="text-xs text-gray-400">Les données sont enregistrées au fur et à mesure dans des fichiers sur ce PC.</p>
             <div className="flex items-center gap-3">
                 {onglet === 'nouveau' && (
                     <button onClick={handleConfirmNouveau}
