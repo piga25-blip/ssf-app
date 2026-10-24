@@ -1,15 +1,15 @@
 # Passage de la version réseau en version officielle (14.0.0)
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
-Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026** (voir §6).
-Dernière mise à jour du document : 24/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, kits en 14.0.5).
+Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026**, **14.0.6**, **14.0.7** et **14.0.8 publiés le 24/10/2026** (voir §6).
+Dernière mise à jour du document : 24/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, 14.0.6 à 14.0.8, kits en 14.0.8).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
 
 | Dossier | Branche | Rôle |
 |---|---|---|
-| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.5)** : contient désormais le code réseau. Les corrections futures se font ici. |
+| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.8)** : contient désormais le code réseau. Les corrections futures se font ici. |
 | `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
@@ -223,6 +223,23 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   `dist/Kit-essai-terrain-14/`, `Application-SSF-14.0.5-arm64.dmg` et `Application-SSF-14.0.5.dmg`
   (téléchargés depuis la release) dans `dist/Kit-essai-Mac-14/` ; fiches `docs/essai-terrain` et
   `docs/essai-mac` en 14.0.5, PDF refaits ; installateurs 14.0.4 retirés.
+- **Version 14.0.6 publiée** (24/10/2026, release `v14.0.6`, Windows et Mac, merge `16d4a23`) :
+  une équipe vidée de tous ses membres (dernier membre libéré ou déplacé, membres pris par une
+  autre équipe, scission) est dissoute automatiquement, avec une ligne à la main courante ;
+  réactivation et scission refusées pour une équipe vide. Test `tests/verif-dernier-membre.js`
+  ajouté à `npm test`.
+- **Version 14.0.7 publiée** (24/10/2026, release `v14.0.7`, Windows et Mac, merge `2a3b730`) :
+  à l'arrivée, la fonction de conseiller technique est cochée d'office (priorité au CT sur la
+  gestion) ; palette d'activités remise au-dessus du planning.
+- **Version 14.0.8 publiée** (24/10/2026, release `v14.0.8` « Latest », Windows et Mac, merge
+  `266194b`) : textes affichés mis à jour (données « dans des fichiers sur ce PC » à la place du
+  navigateur, nom de l'activité dans le titre de la fenêtre « Mise à jour planning », messages
+  de « VIDER STORAGE »). Test `tests/verif-textes.js` ajouté à `npm test`. Notice Word mise à
+  jour (puce « Nouveautés des 14.0.6 à 14.0.8 »), copiée dans les kits.
+- **Kits passés en 14.0.8** (24/10/2026) : `Application-SSF-Setup-14.0.8.exe` dans
+  `dist/Kit-essai-terrain-14/`, `Application-SSF-14.0.8-arm64.dmg` et `Application-SSF-14.0.8.dmg`
+  (téléchargés depuis la release) dans `dist/Kit-essai-Mac-14/` ; fiches `docs/essai-terrain` et
+  `docs/essai-mac` en 14.0.8, PDF refaits ; installateurs 14.0.5 retirés.
 
 ## 7. Reste à faire
 
@@ -249,7 +266,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 ## 8. Retour en arrière, en cas de problème
 
 - La mise à jour automatique ne sait pas revenir à une version plus ancienne : un problème se
-  corrige en publiant une nouvelle version, par exemple **14.0.5** (depuis `C:\Projets\SSF`, `main`).
+  corrige en publiant une nouvelle version, par exemple **14.0.9** (depuis `C:\Projets\SSF`, `main`).
 - En urgence sur un PC : réinstaller la 13.42.1 (release GitHub v13.42.1). Comme l'ancienne
   mémoire n'est jamais effacée, la 13 retrouve les secours **tels qu'ils étaient avant la mise à
   jour** ; ce qui a été saisi avec la 14 serait à reprendre par « Exporter Tout » (14) puis
