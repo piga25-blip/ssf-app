@@ -1,15 +1,15 @@
 # Passage de la version réseau en version officielle (14.0.0)
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
-Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026**, **14.0.6**, **14.0.7** et **14.0.8 publiés le 24/10/2026** (voir §6).
-Dernière mise à jour du document : 24/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, 14.0.6 à 14.0.8, kits en 14.0.8).
+Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026**, **14.0.6**, **14.0.7** et **14.0.8 publiés le 24/10/2026**, **14.0.9 publié le 25/10/2026** (voir §6).
+Dernière mise à jour du document : 25/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, 14.0.6 à 14.0.8, kits en 14.0.8, 14.0.9).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
 
 | Dossier | Branche | Rôle |
 |---|---|---|
-| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.8)** : contient désormais le code réseau. Les corrections futures se font ici. |
+| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.9)** : contient désormais le code réseau. Les corrections futures se font ici. |
 | `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
@@ -231,7 +231,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 - **Version 14.0.7 publiée** (24/10/2026, release `v14.0.7`, Windows et Mac, merge `2a3b730`) :
   à l'arrivée, la fonction de conseiller technique est cochée d'office (priorité au CT sur la
   gestion) ; palette d'activités remise au-dessus du planning.
-- **Version 14.0.8 publiée** (24/10/2026, release `v14.0.8` « Latest », Windows et Mac, merge
+- **Version 14.0.8 publiée** (24/10/2026, release `v14.0.8`, Windows et Mac, merge
   `266194b`) : textes affichés mis à jour (données « dans des fichiers sur ce PC » à la place du
   navigateur, nom de l'activité dans le titre de la fenêtre « Mise à jour planning », messages
   de « VIDER STORAGE »). Test `tests/verif-textes.js` ajouté à `npm test`. Notice Word mise à
@@ -240,6 +240,12 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   `dist/Kit-essai-terrain-14/`, `Application-SSF-14.0.8-arm64.dmg` et `Application-SSF-14.0.8.dmg`
   (téléchargés depuis la release) dans `dist/Kit-essai-Mac-14/` ; fiches `docs/essai-terrain` et
   `docs/essai-mac` en 14.0.8, PDF refaits ; installateurs 14.0.5 retirés.
+- **Version 14.0.9 publiée** (25/10/2026, release `v14.0.9` « Latest », Windows et Mac, merge
+  `5d1248e`) : garde-fou contre les doublons à l'import de main courante (« Importer MC (aperçu) »)
+  et d'événements (« Importer Événements ») : une ligne déjà présente (même numéro et même
+  date/heure) n'est pas réimportée ; fichier déjà importé en entier : message, rien d'importé.
+  Contrôles ajoutés à `tests/verif-actions.js` ; scénario de formation 125/125, étape 0:48 adaptée
+  (le réimport est refusé). Kits et fiches restés en 14.0.8.
 
 ## 7. Reste à faire
 
