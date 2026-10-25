@@ -255,7 +255,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   sur GitHub depuis le dépôt) n'était pas concerné par les dossiers personnels.
 - **Kits passés en 14.0.9** (25/10/2026) : installateur Windows reconstruit (83 Mo) dans
   `dist/Kit-essai-terrain-14/`, `.dmg` 14.0.9 de la release dans `dist/Kit-essai-Mac-14/` ; fiches
-  en 14.0.9, PDF refaits ; installateurs 14.0.8 retirés des kits. Notice inchangée.
+  en 14.0.9, PDF refaits ; installateurs 14.0.8 retirés des kits. Notice Word : puce « Nouveautés de la 14.0.9 », copiée dans les kits.
 
 ## 7. Reste à faire
 
