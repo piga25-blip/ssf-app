@@ -981,7 +981,7 @@ reader.readAsText(file);
     // Fusionne et trie par date/heure : pour l'aperçu, puis de nouveau à la confirmation sur
     // l'état le plus récent (un événement ajouté pendant l'aperçu n'est pas perdu)
     const fusionner = (base, data) => {
-const importedEvents = data.events || [];
+const importedEvents = separerDejaImportes(base, data.events || []).nouveaux;
 const allEvents = [...base, ...importedEvents];
 
 // Trier par timestamp (convertir dateHeure en timestamp pour comparaison)
@@ -1017,10 +1017,12 @@ if (!importedData) return;
 
 try {
     // Fusion triée par date/heure et prochain numéro au-delà des numéros importés (action nommée)
-    const importedEvents = importedData.events || [];
-    actions.importerMCSecondaire(importedEvents);
+    // (les lignes déjà présentes sont écartées, ici pour le message et dans l'action elle-même)
+    const { nouveaux, doublons } = separerDejaImportes(events, importedData.events || []);
+    actions.importerMCSecondaire(nouveaux);
 
-    alert(`✓ ${importedEvents.length} événement(s) de la MC "${importedData.mcIdentifiant}" fusionné(s) avec succès !`);
+    alert(`✓ ${nouveaux.length} événement(s) de la MC "${importedData.mcIdentifiant}" fusionné(s) avec succès !` +
+        (doublons.length ? `\n${doublons.length} déjà présent(s), non importé(s) en double.` : ''));
 } catch (error) {
     console.error('Erreur lors de la fusion des événements importés :', error);
     alert('❌ Une erreur est survenue pendant la fusion. La fenêtre va se fermer sans appliquer la fusion.');
@@ -1028,6 +1030,10 @@ try {
     onClose();
 }
     };
+
+    // Lignes du fichier déjà présentes dans la main courante (MC déjà importée)
+    const tri = importedData ? separerDejaImportes(events, importedData.events || []) : { nouveaux: [], doublons: [] };
+    const dejaImportes = tri.doublons, nouveauxAImporter = tri.nouveaux.length;
 
     const getSourceBadge = (event) => {
 if (!event.numero || !event.numero.match(/^[A-Z]+[0-9]*-/)) {
@@ -1114,6 +1120,14 @@ return <span className="bg-amber-500 text-white px-2 py-1 rounded text-xs font-b
                         </div>
                     </div>
 
+                    {dejaImportes.length > 0 && (
+                        <div className={`${nouveauxAImporter === 0 ? 'bg-red-50 border-red-300 text-red-900' : 'bg-amber-50 border-amber-300 text-amber-900'} border-2 rounded-lg p-4 mb-6 font-semibold`}>
+                            {nouveauxAImporter === 0
+                                ? `⚠️ Les ${dejaImportes.length} événements de cette MC sont déjà dans la main courante : elle a déjà été importée. Il n'y a rien à fusionner.`
+                                : `⚠️ ${dejaImportes.length} événement(s) de cette MC sont déjà dans la main courante (déjà importés) : ils ne seront pas remis en double. ${nouveauxAImporter} nouvel(s) événement(s) seront fusionnés.`}
+                        </div>
+                    )}
+
                     <div className="mb-6">
                         <h3 className="font-bold text-lg mb-3">📊 Aperçu de la fusion chronologique</h3>
                         <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto border">
@@ -1143,7 +1157,8 @@ return <span className="bg-amber-500 text-white px-2 py-1 rounded text-xs font-b
                     <div className="flex gap-4">
                         <button
                             onClick={confirmMerge}
-                            className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-bold text-lg"
+                            disabled={nouveauxAImporter === 0}
+                            className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             ✓ Confirmer la Fusion
                         </button>

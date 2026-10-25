@@ -1329,8 +1329,17 @@
                             return;
                         }
 
-                        const nbRecopiees = data.events.filter(ev => ev.recopie).length;
-                        const confirmMessage = `📥 Importer ${data.events.length} événement(s) de ${data.mcIdentifiant || 'MC Secondaire'} ?\n\n` +
+                        // Garde-fou : les lignes déjà présentes (fichier déjà importé) ne sont pas remises en double
+                        const { nouveaux, doublons } = separerDejaImportes(events, data.events);
+                        if (nouveaux.length === 0) {
+                            alert(`⚠️ Ces ${data.events.length} événement(s) de ${data.mcIdentifiant || 'MC Secondaire'} sont déjà dans la main courante : ce fichier a déjà été importé.\n\nRien n'a été importé.`);
+                            e.target.value = null;
+                            return;
+                        }
+
+                        const nbRecopiees = nouveaux.filter(ev => ev.recopie).length;
+                        const confirmMessage = `📥 Importer ${nouveaux.length} événement(s) de ${data.mcIdentifiant || 'MC Secondaire'} ?\n\n` +
+                            (doublons.length ? `⚠️ ${doublons.length} autre(s) événement(s) du fichier sont déjà dans la main courante (déjà importés) : ils ne seront pas remis en double.\n\n` : '') +
                             (nbRecopiees ? `📝 Dont ${nbRecopiees} recopié(s) d'une main courante papier${data.mcRecopie && data.mcRecopie.auteur ? ' rédigée par ' + data.mcRecopie.auteur : ''} (date et heure écrites sur le papier).\n\n` : '') +
                             `Les événements seront insérés chronologiquement dans la main courante principale.\n` +
                             `Date d'export: ${new Date(data.timestamp).toLocaleString('fr-FR')}`;
@@ -1365,7 +1374,7 @@
                         };
 
                         // Fusion des événements importés
-                        const importedEvents = data.events.map(event => ({
+                        const importedEvents = nouveaux.map(event => ({
                             ...event,
                             id: nouvelId(),
                             importedFrom: data.mcIdentifiant || 'MC Secondaire',
@@ -1388,7 +1397,8 @@
                         // Résumé du résultat
                         const plusAncien = mergedEvents[0]?.dateHeure || '?';
                         const plusRecent = mergedEvents[mergedEvents.length - 1]?.dateHeure || '?';
-                        alert(`✅ ${importedEvents.length} événement(s) importé(s) depuis ${data.mcIdentifiant || 'MC Secondaire'} !\n\nFusion chronologique : ${mergedEvents.length} événements au total\nDu : ${plusAncien}\nAu : ${plusRecent}`);
+                        alert(`✅ ${importedEvents.length} événement(s) importé(s) depuis ${data.mcIdentifiant || 'MC Secondaire'} !` +
+                            (doublons.length ? `\n${doublons.length} déjà présent(s), non importé(s) en double.` : '') + `\n\nFusion chronologique : ${mergedEvents.length} événements au total\nDu : ${plusAncien}\nAu : ${plusRecent}`);
                     } catch (error) {
                         alert('❌ Erreur lors de l\'importation du fichier.');
                         console.error(error);
