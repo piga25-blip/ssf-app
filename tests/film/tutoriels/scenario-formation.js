@@ -375,10 +375,8 @@ PHASES.push(async (t, o) => {
     await t.viser(caseFonction('SIMON Julien', 'conseiller technique'));
     await t.dire('Sous GIRARD Antoine et SIMON Julien, conseillers techniques, la case « arrive comme conseiller technique » est déjà cochée : leur rôle dans la liste commence par CT.',
         'Pour GIRARD, qui a aussi un rôle de gestion, c\'est la fonction de conseiller technique qui est cochée.');
-    await t.dire('Mais CT est une qualification, pas forcément leur fonction sur ce secours. Ici, GIRARD va diriger le secours et SIMON vient comme équipier transmission : on décoche les deux cases.');
-    for (const n of ['GIRARD Antoine', 'SIMON Julien']) await t.clic(caseFonction(n, 'conseiller technique').locator('input'));
-    await t.viser(caseFonction('GIRARD Antoine', 'conseiller technique'));
-    await t.dire('Les deux cases sont décochées : ils arriveront « Disponible ».');
+    await t.dire('On laisse les deux cases cochées : ils arriveront en « CT » au planning, et non en « Disponible ».',
+        'GIRARD prendra ensuite la direction du secours souterrain, et SIMON partira comme équipier transmission : le planning suivra ces changements.');
     await t.clic(t.bouton('Arrivée (12)'));
     await t.viser(p.locator('h3:visible', { hasText: 'Sur site' }));
     if (process.env.FILM_RAPIDE) await t.decrire('S2-arrivees');
@@ -389,14 +387,14 @@ PHASES.push(async (t, o) => {
         'Dans la main courante, l\'application a écrit seule la ligne « Arrivée de : » avec les 12 noms, à l\'heure de l\'arrivée.',
         'Catégorie « Personnel », secrétaire « Système » : les arrivées sont tracées sans rien saisir.');
     await o.voirLigne('"Gestion - PC" affectée',
-        'Juste après, une seconde ligne : « Activité "Gestion - PC" affectée à : ROUX Pierre, VIDAL Claire ».');
+        'Juste après, deux lignes de plus : « Activité "Gestion - PC" affectée à : ROUX Pierre, VIDAL Claire », et « Activité "Conseiller technique" affectée à : GIRARD Antoine, SIMON Julien ».');
     await o.voirPlanning('VIDAL Claire',
-        'Au planning, chacun a sa ligne, avec son numéro d\'arrivée, et « Disponible » (vert foncé) à partir de l\'heure d\'arrivée. ROUX Pierre (N° 10) et VIDAL Claire (N° 12) sont en « Gestion - PC » (jaune).');
+        'Au planning, chacun a sa ligne, avec son numéro d\'arrivée, et « Disponible » (vert foncé) à partir de l\'heure d\'arrivée. ROUX Pierre (N° 10) et VIDAL Claire (N° 12) sont en « Gestion - PC » (jaune), GIRARD Antoine et SIMON Julien en « Conseiller technique » (rose).');
 
     await t.chapitre('Le directeur du secours souterrain');
-    await t.dire(dicte('GIRARD Antoine prend la direction des opérations souterraines.'), 'On l\'écrit d\'abord dans la main courante. Pas de mot-clé reconnu : on choisit la catégorie « Personnel ».');
-    await o.ligne({ texte: 'GIRARD Antoine prend la direction des opérations souterraines.', categorie: 'personnel' });
-    await o.voirLigne('direction des opérations', 'La ligne est enregistrée en « Personnel », la catégorie choisie.');
+    await t.dire(dicte('GIRARD Antoine prend la direction du secours souterrain.'), 'On l\'écrit d\'abord dans la main courante. Pas de mot-clé reconnu : on choisit la catégorie « Personnel ».');
+    await o.ligne({ texte: 'GIRARD Antoine prend la direction du secours souterrain.', categorie: 'personnel' });
+    await o.voirLigne('direction du secours souterrain', 'La ligne est enregistrée en « Personnel », la catégorie choisie.');
     await t.dire('Puis on le note au planning, à la main : on sélectionne sa case actuelle, et on clique « Directeur Secours Souterrain » dans la palette.',
         'Le directeur du secours souterrain n\'est dans aucune équipe : seule la palette peut le noter au planning.');
     await t.clic(t.bouton('Planning Opérationnel'));

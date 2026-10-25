@@ -425,7 +425,7 @@ const ecrireRapport = () => {
     const vague1 = ['GIRARD Antoine', 'MARTIN Alice', 'BERNARD Bruno', 'DUBOIS Chloé', 'ROBERT Emma', 'PETIT Félix', 'DURAND Gaëlle', 'MOREAU Inès', 'SIMON Julien', 'ROUX Pierre', 'BLANC Olivier', 'VIDAL Claire'];
     // Case « arrive en gestion » / « arrive comme conseiller technique » sous un nom coché
     const caseFonction = (nom, libelle) => p.locator('div.p-2:visible', { has: p.getByText(nom, { exact: true }) }).first().locator('label', { hasText: libelle }).locator('input');
-    await etape('2.0:39', 'Arrivée des 12, secrétaire comprise : gestion cochée (VIDAL, ROUX), CT coché (GIRARD, SIMON) puis décoché', async () => {
+    await etape('2.0:39', 'Arrivée des 12, secrétaire comprise : gestion cochée (VIDAL, ROUX), CT coché (GIRARD, SIMON) et laissé coché', async () => {
         await ouvrirEnregistrement();
         await champ('🔍 Rechercher...').fill('gir'); await attendre(200); await champ('🔍 Rechercher...').fill('');
         for (const n of vague1) await p.locator('label:visible', { hasText: n }).first().locator('input').check();
@@ -437,8 +437,6 @@ const ecrireRapport = () => {
             verifier(await c.isChecked(), `« arrive comme conseiller technique » non cochée pour ${n}`);
             const g = caseFonction(n, 'arrive en gestion');
             verifier(await g.count() === 0 || !(await g.isChecked()), `« arrive en gestion » cochée pour ${n} (le CT est privilégié)`);
-            await c.uncheck();
-            verifier(!(await c.isChecked()), `« arrive comme conseiller technique » reste cochée pour ${n}`);
         }
         await b('Arrivée (12)').click(); await attendre(500);
     });
@@ -451,14 +449,17 @@ const ecrireRapport = () => {
     await etape('2.0:44', 'Lignes « Arrivée de : … » et « Gestion - PC » affectée à ROUX, VIDAL (Système)', async () => {
         await contient('Arrivée de :');
         await contient('"Gestion - PC" affectée à : ROUX Pierre, VIDAL Claire');
+        await contient('"Conseiller technique" affectée à : GIRARD Antoine, SIMON Julien');
     });
-    await etape('2.0:45', 'Planning : arrivés en Disponible, VIDAL et ROUX en Gestion - PC', async () => {
+    await etape('2.0:45', 'Planning : arrivés en Disponible, VIDAL et ROUX en Gestion - PC, GIRARD et SIMON en CT', async () => {
         await attendreActivite('MARTIN Alice', 'Disponible');
         await attendreActivite('VIDAL Claire', 'Gestion - PC');
         await attendreActivite('ROUX Pierre', 'Gestion - PC');
+        await attendreActivite('GIRARD Antoine', 'Conseiller technique');
+        await attendreActivite('SIMON Julien', 'Conseiller technique');
     });
     await etape('2.0:47', 'Ligne GIRARD, catégorie Personnel à la main', async () => {
-        await champ('Description...').fill('GIRARD Antoine prend la direction des opérations souterraines.');
+        await champ('Description...').fill('GIRARD Antoine prend la direction du secours souterrain.');
         await attendre(300);
         const c = await categorieForm();
         await p.locator('select:visible', { has: p.locator('option[value="progression"]') }).first().selectOption('personnel');
