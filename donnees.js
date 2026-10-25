@@ -198,6 +198,20 @@ const idsUniques = (events) => {
     });
 };
 
+// Garde-fou des imports de main courante : une ligne importée est déjà présente quand une
+// ligne a le même numéro et la même date/heure (le texte compte si la ligne n'a pas de numéro).
+// Une ligne modifiée depuis le premier import n'est donc pas réimportée non plus.
+const cleLigneMC = (ev) => [ev.numero || '', ev.dateHeure || '', ev.numero ? '' : (ev.evenement || '').trim()].join('|');
+const separerDejaImportes = (existants, importes) => {
+    const vus = new Set(existants.map(cleLigneMC));
+    const nouveaux = [], doublons = [];
+    importes.forEach(ev => {
+        const cle = cleLigneMC(ev);
+        if (vus.has(cle)) doublons.push(ev); else { vus.add(cle); nouveaux.push(ev); }
+    });
+    return { nouveaux, doublons };
+};
+
 // Prochain identifiant libre « EXT-nnn » de la liste des sauveteurs
 const prochainIdExterne = (etat) => {
     const nums = etat.masterSauveteursList.map(s => (String(s.id).match(/^EXT-(\d{1,4})$/) || [])[1]).filter(Boolean).map(Number);
@@ -476,8 +490,9 @@ const ACTIONS_DONNEES = {
     },
 
     // Import d'une main courante secondaire : fusion triée par date/heure affichée, puis
-    // prochain numéro au-delà des numéros importés
+    // prochain numéro au-delà des numéros importés ; les lignes déjà présentes sont écartées
     'MC/IMPORTER_SECONDAIRE'(etat, { evenements }) {
+        evenements = separerDejaImportes(etat.events, evenements).nouveaux;
         const fusion = [...etat.events, ...evenements]
             .sort((a, b) => dateHeureAffichee(a.dateHeure) - dateHeureAffichee(b.dateHeure));
         const maxNum = Math.max(0, ...evenements.map(e => {
@@ -488,8 +503,9 @@ const ACTIONS_DONNEES = {
     },
 
     // Import d'événements (« Importer Événements ») : fusion strictement chronologique ; à
-    // égalité, les lignes locales avant les importées
+    // égalité, les lignes locales avant les importées ; les lignes déjà présentes sont écartées
     'MC/IMPORTER_EVENEMENTS'(etat, { evenements }) {
+        evenements = separerDejaImportes(etat.events, evenements).nouveaux;
         const fusion = [...etat.events, ...evenements].sort((a, b) => {
             const ta = horodatageEvenement(a), tb = horodatageEvenement(b);
             if (ta !== tb) return ta - tb;

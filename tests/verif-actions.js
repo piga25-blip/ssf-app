@@ -195,6 +195,24 @@ const base = () => {
     let i = { ...base(), events: [{ id: 'l1', isoTimestamp: iso(9), numero: '001' }, { id: 'l2', isoTimestamp: iso(11), numero: '002' }] };
     i = appliquer(i, { type: 'MC/IMPORTER_EVENEMENTS', evenements: [{ id: 'x1', isoTimestamp: iso(9), numero: 'A-001', importedFrom: 'A' }, { id: 'x2', isoTimestamp: iso(10), numero: 'A-002', importedFrom: 'A' }] });
     verifier('Import d\'événements : ordre chronologique', i.events.map(v => v.id).join('|') === 'l1|x1|x2|l2');
+
+    // Garde-fou : un fichier déjà importé n'est pas remis en double (même numéro et même date/heure)
+    const lignesB = [{ id: 'b1', numero: 'B-001', dateHeure: '14/03/2026 09:30:00', evenement: 'Départ équipe 1' },
+                     { id: 'b2', numero: 'B-002', dateHeure: '14/03/2026 10:30:00', evenement: 'Équipe 1 au P40' }];
+    let d = appliquer(base(), { type: 'MC/IMPORTER_SECONDAIRE', evenements: lignesB });
+    const nbApres1 = d.events.length;
+    d = appliquer(d, { type: 'MC/IMPORTER_SECONDAIRE', evenements: lignesB });
+    verifier('Import MC secondaire deux fois : pas de doublon', d.events.length === nbApres1, d.events.map(v => v.numero));
+    d = appliquer(d, { type: 'MC/IMPORTER_SECONDAIRE', evenements: [...lignesB, { id: 'b3', numero: 'B-003', dateHeure: '14/03/2026 11:30:00', evenement: 'Retour' }] });
+    verifier('Import MC secondaire complétée : seule la nouvelle ligne arrive', d.events.length === nbApres1 + 1 && d.events.filter(v => v.numero === 'B-001').length === 1);
+    d = appliquer(d, { type: 'MC/IMPORTER_EVENEMENTS', evenements: lignesB.map(v => ({ ...v, id: 'autre-' + v.id, importedFrom: 'B' })) });
+    verifier('Import d\'événements déjà importés : pas de doublon', d.events.length === nbApres1 + 1);
+    const { separerDejaImportes } = vm.runInContext('({ separerDejaImportes })', contexte);
+    const s = separerDejaImportes(d.events, [{ numero: 'B-002', dateHeure: '14/03/2026 10:30:00', evenement: 'texte modifié' },
+        { numero: 'B-002', dateHeure: '15/03/2026 10:30:00', evenement: 'Équipe 1 au P40' }, { dateHeure: '14/03/2026 12:00:00', evenement: 'sans numéro' },
+        { dateHeure: '14/03/2026 12:00:00', evenement: 'sans numéro' }]);
+    verifier('Garde-fou : même numéro et même heure = déjà importé, autre jour = nouveau, sans numéro comparé au texte',
+        s.doublons.length === 2 && s.nouveaux.length === 2, s);
 }
 
 // ===== Planning
