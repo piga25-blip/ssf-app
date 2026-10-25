@@ -1334,11 +1334,11 @@ const ecrireRapport = () => {
         verifier(m1 >= 0 && m1 < m2 && m2 < m3, `main courante : rangs ${m1}, ${m2}, ${m3} (PCA-003 pas à son heure)`);
         verifier(mc[m2].includes('PCA-003'), `numéro de la ligne papier : ${mc[m2].slice(0, 40)}`);
     });
-    await etape('8.3:48', 'Importer Événements : confirmation puis Annuler', async () => {
-        await viderMsgs(); await annulerProchaine();
+    await etape('8.3:48', 'Importer Événements, même fichier : refusé, déjà importé (garde-fou)', async () => {
+        await viderMsgs();
         const n1 = await p.locator('table tbody tr').count();
         await p.locator('label', { hasText: 'Importer Événements' }).locator('input[type="file"]').setInputFiles(fichierPCA); await attendre(800);
-        await msgContient('Importer 3 événement(s)');
+        await msgContient('ce fichier a déjà été importé');
         const n2 = await p.locator('table tbody tr').count();
         verifier(n1 === n2, `lignes : ${n1} → ${n2}`);
     });
