@@ -6,14 +6,18 @@ directories:
   output: dist
   buildResources: assets
 
+# Liste blanche : seuls les fichiers de l'application entrent dans le paquet (les dossiers
+# personnels non suivis par git, posés dans le projet, n'y entrent jamais ; les dépendances
+# de production de node_modules sont ajoutées par electron-builder)
 files:
-  - "**/*"
-  - "!dist/**"
-  - "!.git/**"
-  - "!.claude/**"
+  - "*.js"
+  - "*.jsx"
+  - "index.html"
+  - "package.json"
+  - "hooks/**"
+  - "libs/**"
+  - "serveur/**"
   - "!App_SSF_*"
-  - "!docs/**"
-  - "!tests/**"
 
 win:
   icon: assets/SSF.ico
