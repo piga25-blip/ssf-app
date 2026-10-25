@@ -245,7 +245,17 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   et d'événements (« Importer Événements ») : une ligne déjà présente (même numéro et même
   date/heure) n'est pas réimportée ; fichier déjà importé en entier : message, rien d'importé.
   Contrôles ajoutés à `tests/verif-actions.js` ; scénario de formation 125/125, étape 0:48 adaptée
-  (le réimport est refusé). Kits et fiches restés en 14.0.8.
+  (le réimport est refusé).
+- **Paquet Windows : liste blanche** (25/10/2026, commit `48cd358`) : `electron-builder.yml` prenait
+  tout le dossier du projet (`**/*`), si bien que les dossiers non suivis posés dans `C:\Projets\SSF`
+  (« Prix hammel », « Forum association », « Analyser ») et `bootstrapper*`, `dist-mac-test` entraient
+  dans l'installateur Windows (14.0.8 : 298 Mo ; 14.0.9 première construction : 387 Mo). Désormais
+  seuls les scripts de la racine, `index.html`, `package.json`, `hooks/`, `libs/`, `serveur/` et les
+  dépendances de production y entrent : installateur 14.0.9 reconstruit, 83 Mo. Le paquet Mac (construit
+  sur GitHub depuis le dépôt) n'était pas concerné par les dossiers personnels.
+- **Kits passés en 14.0.9** (25/10/2026) : installateur Windows reconstruit (83 Mo) dans
+  `dist/Kit-essai-terrain-14/`, `.dmg` 14.0.9 de la release dans `dist/Kit-essai-Mac-14/` ; fiches
+  en 14.0.9, PDF refaits ; installateurs 14.0.8 retirés des kits. Notice inchangée.
 
 ## 7. Reste à faire
 
