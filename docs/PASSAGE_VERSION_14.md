@@ -2,7 +2,7 @@
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
 Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026**, **14.0.6**, **14.0.7** et **14.0.8 publiés le 24/10/2026**, **14.0.9 publié le 25/10/2026**, **14.0.10 publié le 18/11/2026** (voir §6).
-Dernière mise à jour du document : 18/11/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, 14.0.6 à 14.0.8, kits en 14.0.8, 14.0.9, 14.0.10).
+Dernière mise à jour du document : 18/11/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, 14.0.6 à 14.0.8, kits en 14.0.8, 14.0.9, 14.0.10, kits en 14.0.10).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
@@ -263,8 +263,12 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   de connexion d'un smartphone, le routeur de terrain et la Livebox fonctionnent. Cause la plus
   probable : isolation des appareils (Wi-Fi « invité » d'une box, Wi-Fi publics). L'aide liste :
   même réseau, Wi-Fi qui bloque, adresse, pare-feu ou antivirus, et la solution sûre (partage de
-  connexion ou routeur apporté ; Internet inutile). Installateur Windows : 79 Mo. Kits, fiches et
-  notice Word **pas encore** passés en 14.0.10.
+  connexion ou routeur apporté ; Internet inutile). Installateur Windows : 79 Mo.
+- **Kits passés en 14.0.10** (18/11/2026) : installateur Windows dans `dist/Kit-essai-terrain-14/`,
+  `.dmg` 14.0.10 de la release dans `dist/Kit-essai-Mac-14/` ; fiches en 14.0.10, PDF refaits
+  (Edge sans en-tête) ; la fiche terrain renvoie à la nouvelle rubrique d'aide (« En cas de problème
+  de connexion ») ; installateurs 14.0.9 retirés des kits. Notice Word : puce « Nouveautés de la
+  14.0.10 » et exemple de numéro en 14.0.10, copiée dans les kits.
 
 ## 7. Reste à faire
 
