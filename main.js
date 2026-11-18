@@ -15,6 +15,7 @@ const { creerMoteur } = require('./serveur/moteur');
 const { creerCanal } = require('./serveur/canal');
 const { creerPrecompilation } = require('./serveur/precompilation');
 const { creerPareFeu } = require('./serveur/parefeu');
+const { creerProfilReseau } = require('./serveur/profil-reseau');
 const { reprendreMemoireNavigateur, reglagesARecopier, marquerReglagesRecopies } = require('./serveur/migration');
 const { recupererBaseNationale, deconnecterBaseNationale } = require('./serveur/base-nationale');
 
@@ -72,12 +73,26 @@ app.whenReady().then(async () => {
   const pareFeu = ((process.env.SSF_TEST_USER_DATA && !process.env.SSF_PARE_FEU_NOM) || process.env.SSF_PARE_FEU === '0') ? null
     : creerPareFeu({ nomRegle: process.env.SSF_PARE_FEU_NOM || app.getName(), appMac: process.platform === 'darwin' ? path.resolve(process.execPath, '..', '..', '..') : null });
   let etatPareFeu = { statut: pareFeu ? 'inconnu' : 'non-gere' };
-  const verifierPareFeu = async () => { if (pareFeu) etatPareFeu = await pareFeu.etat(); };
+  // Profil du réseau (Windows : public / privé) : lu avec le pare-feu ; pendant les tests, seulement
+  // simulé (SSF_PROFIL_RESEAU_TEST = public | prive), jamais lu ni modifié pour de vrai
+  const profilReseau = process.env.SSF_PROFIL_RESEAU_TEST ? creerProfilReseau({ simulation: process.env.SSF_PROFIL_RESEAU_TEST })
+    : (pareFeu ? creerProfilReseau() : null);
+  let profils = [];
+  let profilRefuse = false;
+  const lireProfils = async () => { if (profilReseau) profils = await profilReseau.lire(); };
+  const verifierPareFeu = async () => {
+    await Promise.all([pareFeu ? pareFeu.etat().then(e => { etatPareFeu = e; }) : null, lireProfils()]);
+  };
   if (reglages.modeReseau) verifierPareFeu().then(() => canalSSF && canalSSF.informerPrincipal());
   const reseau = {
     infos: () => ({ actif: serveurSSF.hote === '0.0.0.0', port: serveurSSF.port, saisieDistante: !!reglages.saisieDistante, code: reglages.codeSession,
       // Le code QR contient le code de session : la tablette se connecte sans le saisir
-      adresses: adressesReseau().map(a => ({ ...a, qr: codeQR(`http://${a.adresse}:${serveurSSF.port}/?code=${reglages.codeSession || ''}`) })),
+      adresses: adressesReseau().map(a => {
+        const p = profils.find(x => x.interface === a.interface);
+        return { ...a, qr: codeQR(`http://${a.adresse}:${serveurSSF.port}/?code=${reglages.codeSession || ''}`),
+          ...(p ? { profil: p.profil, nomReseau: p.nom, bloqueTout: p.bloqueTout } : {}) };
+      }),
+      profilRefuse,
       pareFeu: { ...etatPareFeu, systeme: pareFeu ? pareFeu.systeme : null } }),
     basculer: async (actif) => {
       await serveurSSF.changerHote(actif ? '0.0.0.0' : '127.0.0.1');
@@ -86,9 +101,9 @@ app.whenReady().then(async () => {
       reglages.modeReseau = actif;
       if (actif && !reglages.codeSession) reglages.codeSession = nouveauCode();
       enregistrerReglages();
-      if (actif && pareFeu) {
+      if (actif && (pareFeu || profilReseau)) {
         await verifierPareFeu();
-        if (!['autorise', 'inutile'].includes(etatPareFeu.statut)) etatPareFeu = await pareFeu.autoriser();
+        if (pareFeu && !['autorise', 'inutile'].includes(etatPareFeu.statut)) etatPareFeu = await pareFeu.autoriser();
       }
       return reseau.infos();
     },
@@ -101,6 +116,14 @@ app.whenReady().then(async () => {
     // Bouton « Autoriser dans le pare-feu » (si la confirmation a été refusée à l'activation)
     autoriserPareFeu: async () => {
       if (pareFeu) etatPareFeu = await pareFeu.autoriser();
+      return reseau.infos();
+    },
+    // Bouton « Passer ce réseau en privé » (Windows demande confirmation)
+    passerEnPrive: async (nomInterface) => {
+      if (profilReseau && profils.some(p => p.interface === nomInterface)) {
+        profilRefuse = (await profilReseau.passerEnPrive(nomInterface)).refuse;
+        await lireProfils();
+      }
       return reseau.infos();
     },
   };

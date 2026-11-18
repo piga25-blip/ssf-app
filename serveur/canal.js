@@ -12,7 +12,7 @@
 // Toute action acceptée est renvoyée à TOUS les postes, dans l'ordre où le serveur l'a appliquée.
 //
 // Messages poste → serveur : bonjour, ouvrir, action, lister, supprimer, toutSupprimer, renommer, modeReseau,
-//   saisieDistante, roleDuPoste, changerCode
+//   saisieDistante, roleDuPoste, changerCode, pareFeuVerifier, pareFeuAutoriser, profilPrive
 // Messages serveur → poste : bienvenue, etat, action, accepte, refus, postes, dossiers, reseau, role, code-requis
 
 const { WebSocketServer } = require('ws');
@@ -124,6 +124,13 @@ const creerCanal = ({ serveurHttp, moteur, jetonPrincipal, versionApp, reseau = 
                         reseau.autoriserPareFeu()
                             .then(infos => { for (const [s, p] of postes) if (p.role === 'principal') envoyer(s, { type: 'reseau', ...infos }); })
                             .catch(e => refuser('Pare-feu : ' + e.message));
+                        return;
+                    }
+                    case 'profilPrive': {
+                        if (!reseau || !reseau.passerEnPrive) { refuser('Réglage du profil réseau indisponible'); return; }
+                        reseau.passerEnPrive(String(msg.interface || ''))
+                            .then(infos => { for (const [s, p] of postes) if (p.role === 'principal') envoyer(s, { type: 'reseau', ...infos }); })
+                            .catch(e => refuser('Profil réseau : ' + e.message));
                         return;
                     }
                     case 'saisieDistante': {
