@@ -33,6 +33,44 @@ const EtatPareFeu = ({ pareFeu, connexion }) => {
     );
 };
 
+// Profil du réseau d'une adresse (Windows) : « public » pour tout réseau inconnu (nouvelle box,
+// Wi-Fi d'un gîte, partage de connexion…), ce qui peut empêcher les autres postes de se connecter.
+// Bouton pour le passer en privé (Windows demande confirmation). a : une adresse de reseau.adresses
+const ProfilReseau = ({ a, refuse, connexion }) => {
+    const [enCours, setEnCours] = React.useState(false);
+    // Chaque réponse du serveur (même un nouveau refus) recrée l'objet a : fin de l'attente
+    React.useEffect(() => { setEnCours(false); }, [a]);
+    if (!a.profil) return null;
+    const nom = a.nomReseau ? `« ${a.nomReseau} »` : 'ce réseau';
+    const typeProfil = a.profil === 'public' ? 'public' : a.profil === 'domaine' ? 'd\'entreprise (domaine)' : 'privé';
+    return (
+        <div className="mt-2 text-sm">
+            {a.profil === 'public' ? (
+                <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 text-gray-800">
+                    <p>⚠️ Windows considère {nom} comme un <strong>réseau public</strong> : il peut empêcher les autres postes de se connecter à ce poste.</p>
+                    {refuse && <p className="text-red-700 mt-1">Le changement a été refusé ou annulé.</p>}
+                    <button onClick={() => { setEnCours(true); connexion.envoyer({ type: 'profilPrive', interface: a.interface }); }} disabled={enCours}
+                        className="mt-2 bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 rounded disabled:opacity-50">
+                        {enCours ? '… répondre Oui à la demande de l\'ordinateur' : '🏠 Passer ce réseau en privé'}
+                    </button>
+                    <span className="block text-xs text-gray-600 mt-1">
+                        À faire seulement sur un réseau de confiance : votre routeur, la box du lieu du secours, le partage de connexion d'un smartphone.
+                        Windows peut demander « Voulez-vous autoriser cette application… » : répondre Oui.
+                    </span>
+                </div>
+            ) : (
+                <p className="text-green-800">🏠 Windows considère {nom} comme un réseau {typeProfil}.</p>
+            )}
+            {a.bloqueTout && (
+                <p className="bg-red-50 border border-red-300 rounded-lg px-3 py-2 mt-2 text-red-800">
+                    ⛔ Le pare-feu Windows bloque toutes les connexions entrantes sur les réseaux de type {typeProfil}.
+                    Dans Sécurité Windows › Pare-feu et protection du réseau › Réseau {typeProfil}, décochez « Bloquer toutes les connexions entrantes ».
+                </p>
+            )}
+        </div>
+    );
+};
+
 // Aide quand un autre poste n'arrive pas à se connecter. Le plus souvent, c'est le réseau Wi-Fi
 // qui empêche les appareils de se joindre (Wi-Fi « invité » d'une box, Wi-Fi public : isolation
 // des appareils), pas l'application. aucunPoste : mise en avant tant qu'aucun poste n'est connecté.
@@ -55,7 +93,8 @@ const AideConnexion = ({ aucunPoste }) => (
                 Si plusieurs adresses sont affichées, essayez chacune.
             </p>
             <p>
-                <strong>4. Pare-feu ou antivirus de ce poste.</strong> Vérifiez la ligne « Pare-feu » ci-dessus.
+                <strong>4. Pare-feu, réseau public ou antivirus de ce poste.</strong> Vérifiez la ligne « Pare-feu » ci-dessus,
+                et sous l'adresse que Windows ne considère pas ce réseau comme public (sinon <span className="font-semibold">🏠 Passer ce réseau en privé</span>).
                 Un antivirus (Kaspersky, Norton, Avast, Bitdefender…) peut aussi bloquer sur un réseau qu'il ne connaît pas :
                 déclarez ce réseau comme « privé », « domestique » ou « de confiance » dans l'antivirus.
             </p>
@@ -135,9 +174,10 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                         <p className="text-red-600 text-sm">⚠️ Aucun réseau détecté sur ce poste. Branchez-le au réseau local (câble ou Wi-Fi).</p>
                                     ) : reseau.adresses.map(a => (
                                         <div key={a.adresse} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-2 gap-3">
-                                            <div>
+                                            <div className="min-w-0">
                                                 <span className="font-mono text-xl font-bold text-blue-800">http://{a.adresse}:{reseau.port}</span>
                                                 <span className="block text-xs text-gray-500">{a.interface} — tablette : photographiez le code</span>
+                                                <ProfilReseau a={a} refuse={reseau.profilRefuse} connexion={connexion} />
                                             </div>
                                             {a.qr && <img alt={'Code QR http://' + a.adresse + ':' + reseau.port} title="À photographier avec l'appareil photo d'une tablette"
                                                 src={'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(a.qr)} style={{ width: '112px', height: '112px', flexShrink: 0 }} />}
