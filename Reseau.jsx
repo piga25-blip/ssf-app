@@ -33,6 +33,46 @@ const EtatPareFeu = ({ pareFeu, connexion }) => {
     );
 };
 
+// Aide quand un autre poste n'arrive pas à se connecter. Le plus souvent, c'est le réseau Wi-Fi
+// qui empêche les appareils de se joindre (Wi-Fi « invité » d'une box, Wi-Fi public : isolation
+// des appareils), pas l'application. aucunPoste : mise en avant tant qu'aucun poste n'est connecté.
+const AideConnexion = ({ aucunPoste }) => (
+    <details className={`rounded-lg px-3 py-2 mt-3 text-sm border ${aucunPoste ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200'}`}>
+        <summary className="font-semibold cursor-pointer">❓ Un autre poste n'arrive pas à se connecter ?</summary>
+        <div className="mt-2 space-y-2 text-gray-800">
+            <p>
+                <strong>1. Même réseau.</strong> L'autre poste doit être relié au même Wi-Fi (même nom de réseau) que ce poste.
+                Un répéteur ou une deuxième box peut créer un réseau différent : comparez le début des adresses
+                (par exemple 192.168.1.x des deux côtés).
+            </p>
+            <p>
+                <strong>2. Wi-Fi qui bloque.</strong> Le Wi-Fi « invité » d'une box et les Wi-Fi publics (gîte, mairie, camping,
+                hôtel, entreprise) empêchent souvent les appareils de communiquer entre eux, même si Internet fonctionne.
+                L'application ne peut rien y faire : changez de réseau (point 5).
+            </p>
+            <p>
+                <strong>3. Adresse.</strong> Tapez l'adresse en entier, avec http:// et le numéro après les deux-points.
+                Si plusieurs adresses sont affichées, essayez chacune.
+            </p>
+            <p>
+                <strong>4. Pare-feu ou antivirus de ce poste.</strong> Vérifiez la ligne « Pare-feu » ci-dessus.
+                Un antivirus (Kaspersky, Norton, Avast, Bitdefender…) peut aussi bloquer sur un réseau qu'il ne connaît pas :
+                déclarez ce réseau comme « privé », « domestique » ou « de confiance » dans l'antivirus.
+            </p>
+            <p>
+                <strong>5. Solution sûre : votre propre réseau.</strong> Activez le partage de connexion d'un smartphone
+                (point d'accès), ou branchez un petit routeur Wi-Fi apporté avec le matériel, puis reliez ce poste et
+                tous les autres à ce réseau. Internet n'est pas nécessaire pour travailler en réseau.
+            </p>
+        </div>
+        <p className="text-xs text-gray-600 mt-2">
+            Pour savoir d'où vient le problème : si le navigateur de l'autre poste reste longtemps sans réponse
+            (« délai dépassé », « site inaccessible »), c'est le réseau (points 1, 2 ou 5) ou le pare-feu (point 4).
+            Si la page de l'application s'affiche et demande le code, la connexion fonctionne.
+        </p>
+    </details>
+);
+
 let ModeReseauModal = ({ connexion, onClose }) => {
     useCloseOnEscape(onClose);
     const reseau = connexion.reseau;
@@ -116,8 +156,8 @@ let ModeReseauModal = ({ connexion, onClose }) => {
                                     )}
                                     <p className="text-xs text-gray-500 mt-2">
                                         Navigateurs pris en charge : Chrome, Edge, Firefox, Safari (versions récentes).
-                                        Si un autre poste n'arrive pas à se connecter, vérifiez que le pare-feu de ce poste autorise l'application SSF.
                                     </p>
+                                    <AideConnexion aucunPoste={autres.length === 0} />
                                 </div>
                             )}
 
