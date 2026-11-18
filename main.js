@@ -122,7 +122,7 @@ app.whenReady().then(async () => {
     passerEnPrive: async (nomInterface) => {
       if (profilReseau && profils.some(p => p.interface === nomInterface)) {
         profilRefuse = (await profilReseau.passerEnPrive(nomInterface)).refuse;
-        await lireProfils();
+        await verifierPareFeu();
       }
       return reseau.infos();
     },
