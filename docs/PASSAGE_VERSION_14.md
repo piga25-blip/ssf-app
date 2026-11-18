@@ -1,15 +1,15 @@
 # Passage de la version réseau en version officielle (14.0.0)
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
-Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026**, **14.0.6**, **14.0.7** et **14.0.8 publiés le 24/10/2026**, **14.0.9 publié le 25/10/2026** (voir §6).
-Dernière mise à jour du document : 25/10/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, 14.0.6 à 14.0.8, kits en 14.0.8, 14.0.9).
+Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026**, **14.0.6**, **14.0.7** et **14.0.8 publiés le 24/10/2026**, **14.0.9 publié le 25/10/2026**, **14.0.10 publié le 18/11/2026** (voir §6).
+Dernière mise à jour du document : 18/11/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, 14.0.6 à 14.0.8, kits en 14.0.8, 14.0.9, 14.0.10).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
 
 | Dossier | Branche | Rôle |
 |---|---|---|
-| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.9)** : contient désormais le code réseau. Les corrections futures se font ici. |
+| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.10)** : contient désormais le code réseau. Les corrections futures se font ici. |
 | `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
@@ -256,6 +256,15 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 - **Kits passés en 14.0.9** (25/10/2026) : installateur Windows reconstruit (83 Mo) dans
   `dist/Kit-essai-terrain-14/`, `.dmg` 14.0.9 de la release dans `dist/Kit-essai-Mac-14/` ; fiches
   en 14.0.9, PDF refaits ; installateurs 14.0.8 retirés des kits. Notice Word : puce « Nouveautés de la 14.0.9 », copiée dans les kits.
+- **Version 14.0.10 publiée** (18/11/2026, release `v14.0.10`, Windows et Mac, merge `d6dcd6c`) :
+  aide « ❓ Un autre poste n'arrive pas à se connecter ? » dans la fenêtre « 🌐 Mode réseau »
+  (`Reseau.jsx`, rubrique dépliable, sur fond orangé tant qu'aucun poste n'est connecté). Origine :
+  un essai sur le Wi-Fi d'une autre box n'a pas permis de travailler en réseau, alors que le partage
+  de connexion d'un smartphone, le routeur de terrain et la Livebox fonctionnent. Cause la plus
+  probable : isolation des appareils (Wi-Fi « invité » d'une box, Wi-Fi publics). L'aide liste :
+  même réseau, Wi-Fi qui bloque, adresse, pare-feu ou antivirus, et la solution sûre (partage de
+  connexion ou routeur apporté ; Internet inutile). Installateur Windows : 79 Mo. Kits, fiches et
+  notice Word **pas encore** passés en 14.0.10.
 
 ## 7. Reste à faire
 
@@ -282,7 +291,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 ## 8. Retour en arrière, en cas de problème
 
 - La mise à jour automatique ne sait pas revenir à une version plus ancienne : un problème se
-  corrige en publiant une nouvelle version, par exemple **14.0.9** (depuis `C:\Projets\SSF`, `main`).
+  corrige en publiant une nouvelle version, par exemple **14.0.11** (depuis `C:\Projets\SSF`, `main`).
 - En urgence sur un PC : réinstaller la 13.42.1 (release GitHub v13.42.1). Comme l'ancienne
   mémoire n'est jamais effacée, la 13 retrouve les secours **tels qu'ils étaient avant la mise à
   jour** ; ce qui a été saisi avec la 14 serait à reprendre par « Exporter Tout » (14) puis
