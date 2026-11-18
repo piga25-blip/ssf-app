@@ -1,15 +1,15 @@
 # Passage de la version réseau en version officielle (14.0.0)
 
 Préparé le 05/10/2026, **publié le 05/10/2026** (release GitHub `v14.0.0`, Windows et Mac).
-Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026**, **14.0.6**, **14.0.7** et **14.0.8 publiés le 24/10/2026**, **14.0.9 publié le 25/10/2026**, **14.0.10 publié le 18/11/2026** (voir §6).
-Dernière mise à jour du document : 18/11/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, 14.0.6 à 14.0.8, kits en 14.0.8, 14.0.9, 14.0.10, kits en 14.0.10).
+Correctifs **14.0.1 publié le 06/10/2026**, **14.0.2 publié le 08/10/2026** **14.0.3** et **14.0.4 publiés le 16/10/2026**, **14.0.5 publié le 23/10/2026**, **14.0.6**, **14.0.7** et **14.0.8 publiés le 24/10/2026**, **14.0.9 publié le 25/10/2026**, **14.0.10** et **14.0.11 publiés le 18/11/2026** (voir §6).
+Dernière mise à jour du document : 18/11/2026 (routeur de terrain, partage de connexion d'un smartphone, kits, 14.0.3, base nationale, 14.0.4, 14.0.5, 14.0.6 à 14.0.8, kits en 14.0.8, 14.0.9, 14.0.10, kits en 14.0.10, 14.0.11 et ses kits).
 Ce document garde la trace de la préparation et liste ce qui reste à faire après la publication.
 
 ## 1. Les dossiers de travail
 
 | Dossier | Branche | Rôle |
 |---|---|---|
-| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.10)** : contient désormais le code réseau. Les corrections futures se font ici. |
+| `C:\Projets\SSF` | `main` | **Version officielle publiée (14.0.11)** : contient désormais le code réseau. Les corrections futures se font ici. |
 | `C:\Projets\SSF-Reseau` | `reseau-local` | Ancienne version réseau **de test** (« Application SSF Reseau (test) ») ; garde les anciens films tournés avec la version de test. |
 | `C:\Projets\SSF-v14` | `version-14` | Branche de préparation de la 14 ; `main` a été avancé dessus. N'est plus nécessaire pour publier. |
 
@@ -269,6 +269,20 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
   (Edge sans en-tête) ; la fiche terrain renvoie à la nouvelle rubrique d'aide (« En cas de problème
   de connexion ») ; installateurs 14.0.9 retirés des kits. Notice Word : puce « Nouveautés de la
   14.0.10 » et exemple de numéro en 14.0.10, copiée dans les kits.
+- **Version 14.0.11 publiée** (18/11/2026, release `v14.0.11`, Windows et Mac, merge `0ac95be`) :
+  profil du réseau Windows dans la fenêtre « 🌐 Mode réseau ». Nouveau module
+  `serveur/profil-reseau.js` : lecture sans droits (`Get-NetConnectionProfile`, et
+  `Get-NetFirewallProfile` pour la case « Bloquer toutes les connexions entrantes ») à l'activation
+  du mode réseau et à l'ouverture de la fenêtre ; sous chaque adresse, « réseau public » (avertissement
+  et bouton « 🏠 Passer ce réseau en privé », `Set-NetConnectionProfile` lancé avec la demande de
+  confirmation de Windows) ou « réseau privé » ; case « Bloquer toutes les connexions entrantes »
+  signalée. Pendant les tests, jamais lu ni modifié pour de vrai (simulation `SSF_PROFIL_RESEAU_TEST`).
+  Test `tests/verif-profil-reseau.js` ajouté à `npm test` (27 tests). **Non vérifié en réel** : le
+  passage en privé avec la demande de Windows, sur un PC en réseau public (à essayer sur le terrain).
+- **Kits passés en 14.0.11** (18/11/2026) : installateur Windows et `.dmg` 14.0.11 dans les kits,
+  installateurs 14.0.10 retirés ; fiches en 14.0.11, PDF refaits ; la fiche terrain cite le bouton
+  « 🏠 Passer ce réseau en privé » (partie 3 et « En cas de problème de connexion »). Notice Word :
+  puce « Nouveautés de la 14.0.11 », copiée dans les kits.
 
 ## 7. Reste à faire
 
@@ -295,7 +309,7 @@ En cas d'installation douteuse sur un PC : `dist/Diagnostic/diagnostic-ssf.cmd` 
 ## 8. Retour en arrière, en cas de problème
 
 - La mise à jour automatique ne sait pas revenir à une version plus ancienne : un problème se
-  corrige en publiant une nouvelle version, par exemple **14.0.11** (depuis `C:\Projets\SSF`, `main`).
+  corrige en publiant une nouvelle version, par exemple **14.0.12** (depuis `C:\Projets\SSF`, `main`).
 - En urgence sur un PC : réinstaller la 13.42.1 (release GitHub v13.42.1). Comme l'ancienne
   mémoire n'est jamais effacée, la 13 retrouve les secours **tels qu'ils étaient avant la mise à
   jour** ; ce qui a été saisi avec la 14 serait à reprendre par « Exporter Tout » (14) puis
